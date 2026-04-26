@@ -234,15 +234,16 @@ with st.sidebar:
             ensure_ascii=False, indent=2)
         st.download_button("📤 ייצוא JSON", profile_json, "profile.json", "application/json",
                            use_container_width=True)
-        up = st.file_uploader("📥 טעינת JSON", type="json", label_visibility="collapsed")
-        if up:
+        up = st.file_uploader("📥 בחר קובץ JSON", type="json", key="profile_upload")
+        if up is not None:
             try:
-                loaded = json.load(up)
+                loaded = json.loads(up.read().decode("utf-8"))
                 for k, v in loaded.items():
-                    if k in DEFAULTS: st.session_state[k] = v
-                st.success("הפרופיל נטען בהצלחה!"); st.rerun()
+                    if k in DEFAULTS:
+                        st.session_state[k] = v
+                st.success(f"✅ נטען! {len([k for k in loaded if k in DEFAULTS])} פרמטרים")
             except Exception as e:
-                st.error(str(e))
+                st.error(f"שגיאה: {e}")
 
     st.divider()
 
