@@ -242,14 +242,19 @@ with st.sidebar:
                            use_container_width=True)
         up = st.file_uploader("📥 בחר קובץ JSON", type="json", key="profile_upload")
         if up is not None:
-            try:
-                loaded = json.loads(up.read().decode("utf-8"))
-                for k, v in loaded.items():
-                    if k in DEFAULTS:
-                        st.session_state[k] = v
-                st.success(f"✅ נטען! {len([k for k in loaded if k in DEFAULTS])} פרמטרים")
-            except Exception as e:
-                st.error(f"שגיאה: {e}")
+            file_id = f"{up.name}_{up.size}"
+            if st.session_state.get("_loaded_profile_id") != file_id:
+                try:
+                    loaded = json.loads(up.read().decode("utf-8"))
+                    for k, v in loaded.items():
+                        if k in DEFAULTS:
+                            st.session_state[k] = v
+                    st.session_state["_loaded_profile_id"] = file_id
+                    st.success(f"✅ נטען! {len([k for k in loaded if k in DEFAULTS])} פרמטרים")
+                except Exception as e:
+                    st.error(f"שגיאה: {e}")
+            else:
+                st.success("✅ פרופיל טעון")
 
     st.divider()
 
@@ -595,23 +600,14 @@ with tabs[2]:
 with tabs[3]:
     st.markdown("<span class='section-title'>🏦 כמה זמן עד הון עצמי לדירה?</span>", unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
-    apt_price = c1.number_input("מחיר דירה (₪)", 500_000, 10_000_000, st.session_state.apt_price, 50_000)
-    eq_pct    = c2.slider("הון עצמי נדרש %", 10, 40, st.session_state.equity_pct)
+    apt_price = c1.number_input("מחיר דירה (₪)", 500_000, 10_000_000, st.session_state.apt_price, 50_000, key="tab3_apt")
+    eq_pct    = c2.slider("הון עצמי נדרש %", 10, 40, st.session_state.equity_pct, key="tab3_eq")
     existing  = c3.number_input("חיסכון קיים (₪)", 0, 5_000_000, init_sav_t, 10_000, key="ex_sav")
 
     equity_need = apt_price * eq_pct / 100
     gap         = max(0.0, equity_need - existing)
-    ms          = max(1.0, after_goal)
+    ms          = after_goal
     r_m         = return_p_t / 100 / 12
-
-    mn_s = math.ceil(gap / ms) if ms > 0 else float("inf")
-    if r_m > 0 and ms > 0:
-        S = existing; mn_c = 0
-        while S < equity_need and mn_c < 600:
-            S = S * (1 + r_m) + ms; mn_c += 1
-        if mn_c >= 600: mn_c = float("inf")
-    else:
-        mn_c = mn_s
 
     k1, k2, k3, k4 = st.columns(4)
     k1.metric("מחיר דירה",     fmt(apt_price))
@@ -621,16 +617,26 @@ with tabs[3]:
 
     st.divider()
     c1, c2 = st.columns(2)
-    if mn_s == float("inf"):
-        c1.error("⚠️ חיסכון חודשי שלילי — לא ניתן לצבור הון")
+    if ms <= 0:
+        c1.error("⚠️ אין חיסכון חיובי — יש להקטין הוצאות או להגדיל הכנסה")
+        c2.error("⚠️ אין חיסכון חיובי")
     else:
+        mn_s = math.ceil(gap / ms)
+        if r_m > 0:
+            S = existing; mn_c = 0
+            while S < equity_need and mn_c < 600:
+                S = S * (1 + r_m) + ms; mn_c += 1
+            if mn_c >= 600: mn_c = float("inf")
+        else:
+            mn_c = mn_s
+
         y, m = divmod(int(mn_s), 12)
         c1.metric("⏱️ זמן ללא ריבית", f"{y} שנים {m} חודשים")
-    if mn_c == float("inf"):
-        c2.error("⚠️ לא ניתן להגיע ליעד")
-    else:
-        y, m = divmod(int(mn_c), 12)
-        c2.metric(f"📈 זמן עם ריבית {return_p_t}%", f"{y} שנים {m} חודשים")
+        if mn_c == float("inf"):
+            c2.error("⚠️ לא ניתן להגיע ליעד")
+        else:
+            y, m = divmod(int(mn_c), 12)
+            c2.metric(f"📈 זמן עם ריבית {return_p_t}%", f"{y} שנים {m} חודשים")
 
     # Progress toward goal
     if gap > 0 and existing > 0:
@@ -653,10 +659,10 @@ with tabs[4]:
     c1, c2, c3 = st.columns(3)
     apt2      = c1.number_input("מחיר דירה (₪)", 500_000, 10_000_000, st.session_state.apt_price, 50_000, key="ap2")
     eq2       = c2.slider("הון עצמי %", 10, 40, st.session_state.equity_pct, key="eq2")
-    mrate     = c3.slider("ריבית משכנתא %", 1.0, 10.0, st.session_state.mortgage_rate, 0.1)
+    mrate     = c3.slider("ריבית משכנתא %", 1.0, 10.0, st.session_state.mortgage_rate, 0.1, key="tab4_mrate")
     c4, c5    = st.columns(2)
-    myears    = c4.slider("תקופת משכנתא (שנים)", 10, 30, st.session_state.mortgage_years)
-    apt_appre = c5.slider("עליית ערך דירה שנתית %", 0.0, 10.0, 4.0, 0.5)
+    myears    = c4.slider("תקופת משכנתא (שנים)", 10, 30, st.session_state.mortgage_years, key="tab4_myears")
+    apt_appre = c5.slider("עליית ערך דירה שנתית %", 0.0, 10.0, 4.0, 0.5, key="tab4_appre")
 
     eq_amount = apt2 * eq2 / 100
     principal = apt2 - eq_amount
