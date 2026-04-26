@@ -265,7 +265,7 @@ with tab_forecast:
         name=f"חיסכון + ריבית {return_p:.1f}%", line=dict(color="#10b981", width=2.5),
         fill="tonexty", fillcolor="rgba(16,185,129,0.07)",
     ))
-    fig_sav.add_hline(y=0, line_dash="dash", line_color="#ef444466")
+    fig_sav.add_hline(y=0, line_dash="dash", line_color="rgba(239,68,68,0.4)")
     fig_sav.update_layout(
         title="📈 חיסכון צבור — פשוט vs. עם ריבית",
         paper_bgcolor="#0f172a", plot_bgcolor="#080c14",
@@ -378,7 +378,7 @@ with tab_scenarios:
             legendgroup=r["name"],
         ))
 
-    fig_sc.add_hline(y=0, line_dash="dash", line_color="#ef444466")
+    fig_sc.add_hline(y=0, line_dash="dash", line_color="rgba(239,68,68,0.4)")
     fig_sc.update_layout(
         title="📊 השוואת חיסכון — כל התרחישים, 5 שנים",
         paper_bgcolor="#0f172a", plot_bgcolor="#080c14",
