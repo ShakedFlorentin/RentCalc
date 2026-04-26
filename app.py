@@ -224,6 +224,12 @@ PRESETS = {
     "נוח":     dict(food=3500, transport=1200, phone=120, subs=350, gym=280, misc=1000),
 }
 
+def _apply_preset():
+    chosen = st.session_state.get("preset", "ממוצע")
+    if chosen in PRESETS:
+        for k, v in PRESETS[chosen].items():
+            st.session_state[k] = v
+
 # ─── SIDEBAR ──────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("## 🏠 הגדרות")
@@ -351,10 +357,8 @@ with st.sidebar:
 
     # ── Living ────────────────────────────────────────────────────────────────
     st.markdown("### 🧾 הוצאות חיים")
-    preset = st.selectbox("פרסט הוצאות", ["ממוצע", "מינימלי", "נוח", "מותאם אישית"], key="preset")
-    if preset != "מותאם אישית":
-        for k, v in PRESETS[preset].items():
-            st.session_state[k] = v
+    preset = st.selectbox("פרסט הוצאות", ["ממוצע", "מינימלי", "נוח", "מותאם אישית"],
+                          key="preset", on_change=_apply_preset)
     with st.expander("פירוט הוצאות", expanded=(preset == "מותאם אישית")):
         food      = st.number_input("🛒 מזון וקניות",  step=50, key="food")
         transport = st.number_input("🚗 תחבורה",       step=50, key="transport")
