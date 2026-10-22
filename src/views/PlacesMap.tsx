@@ -1,0 +1,50 @@
+import { useEffect, useRef } from 'react'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
+import type { Place } from '../types'
+
+const PIN_COLORS: Record<string, string> = {
+  food: '#d7263d',
+  sight: '#8e2de2',
+  shopping: '#f08a24',
+  transport: '#2e86de',
+  other: '#3f7d5a',
+}
+
+export default function PlacesMap({ places, onPick }: { places: Place[]; onPick: (p: Place) => void }) {
+  const el = useRef<HTMLDivElement>(null)
+  const map = useRef<L.Map | null>(null)
+  const layer = useRef<L.LayerGroup | null>(null)
+
+  useEffect(() => {
+    map.current = L.map(el.current!, { zoomControl: false }).setView([35.0, 136.5], 6)
+    L.control.zoom({ position: 'bottomleft' }).addTo(map.current)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap',
+    }).addTo(map.current)
+    layer.current = L.layerGroup().addTo(map.current)
+    return () => {
+      map.current?.remove()
+      map.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!map.current || !layer.current) return
+    layer.current.clearLayers()
+    const pts = places.filter((p) => p.lat != null && p.lng != null)
+    for (const p of pts) {
+      const icon = L.divIcon({
+        className: '',
+        html: `<div class="pin${p.visited ? ' visited' : ''}" style="background:${PIN_COLORS[p.category] ?? PIN_COLORS.other}"></div>`,
+        iconSize: [22, 22],
+        iconAnchor: [11, 11],
+      })
+      L.marker([p.lat!, p.lng!], { icon, title: p.name }).on('click', () => onPick(p)).addTo(layer.current)
+    }
+    if (pts.length) map.current.fitBounds(L.latLngBounds(pts.map((p) => [p.lat!, p.lng!])), { padding: [30, 30], maxZoom: 15 })
+  }, [places, onPick])
+
+  return <div ref={el} className="map" />
+}

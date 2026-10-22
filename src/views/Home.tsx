@@ -128,11 +128,12 @@ function Settings(props: { trip: Trip; me: string; userId: string; onClose: () =
   const [name, setName] = useState(props.trip.name)
   const [start, setStart] = useState(props.trip.start_date ?? '')
   const [numDays, setNumDays] = useState(props.trip.num_days)
+  const [threshold, setThreshold] = useState(props.trip.match_threshold)
   const [myName, setMyName] = useState(props.me)
 
   const save = async () => {
     const ok = await mutate(
-      supabase.from('trips').update({ name, start_date: start || null, num_days: numDays }).eq('id', props.trip.id),
+      supabase.from('trips').update({ name, start_date: start || null, num_days: numDays, match_threshold: threshold }).eq('id', props.trip.id),
     )
     if (ok && myName.trim() && myName !== props.me) {
       await mutate(
@@ -156,6 +157,9 @@ function Settings(props: { trip: Trip; me: string; userId: string; onClose: () =
       </Field>
       <Field label="מספר ימים">
         <input type="number" min={1} max={60} value={numDays} onChange={(e) => setNumDays(+e.target.value)} />
+      </Field>
+      <Field label="כמה לייקים צריך למאצ׳?">
+        <input type="number" min={1} max={20} value={threshold} onChange={(e) => setThreshold(+e.target.value)} />
       </Field>
       <Field label="השם שלי">
         <input value={myName} onChange={(e) => setMyName(e.target.value)} />

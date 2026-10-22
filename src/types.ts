@@ -4,6 +4,7 @@ export type Trip = {
   start_date: string | null
   num_days: number
   join_code: string
+  match_threshold: number
 }
 
 export type Member = { trip_id: string; user_id: string; display_name: string }
@@ -27,6 +28,7 @@ export type ItineraryItem = {
   category: string
   done: boolean
   sort: number
+  place_id?: string | null
 }
 
 export type Booking = {
@@ -53,6 +55,11 @@ export type Place = {
   notes: string | null
   visited: boolean
   added_by: string | null
+  candidate_id: string | null
+  area: string | null
+  lat: number | null
+  lng: number | null
+  verdict: string | null
 }
 
 export type ChecklistItem = {
@@ -79,4 +86,51 @@ export const BOOKING_KINDS: Record<string, string> = {
   activity: '🎟️ כרטיס / אטרקציה',
   insurance: '🛡️ ביטוח',
   other: '📄 אחר',
+}
+
+export type Candidate = {
+  id: string
+  trip_id: string
+  name: string
+  name_ja: string | null
+  city: string
+  area: string | null
+  category: string
+  lat: number | null
+  lng: number | null
+  hype: string | null
+  reality: string | null
+  verdict: string | null
+  tabelog_score: number | null
+  google_score: number | null
+  price: string | null
+  tip: string | null
+  sources: string[]
+  added_by: string | null
+}
+
+export type Swipe = { trip_id: string; candidate_id: string; user_id: string; liked: boolean; created_at: string }
+
+export const CITY_HE: Record<string, string> = {
+  tokyo: 'טוקיו',
+  kyoto: 'קיוטו',
+  osaka: 'אוסקה',
+  nara: 'נארה',
+  daytrip: 'טיולי יום',
+}
+
+export const CARD_STYLE: Record<string, { emoji: string; label: string; bg: string }> = {
+  food: { emoji: '🍜', label: 'אוכל', bg: 'linear-gradient(135deg,#ff8a5b,#d7263d)' },
+  cafe: { emoji: '🍵', label: 'קפה וקינוחים', bg: 'linear-gradient(135deg,#9bc27a,#3f7d5a)' },
+  sight: { emoji: '⛩️', label: 'אטרקציה', bg: 'linear-gradient(135deg,#ff5f6d,#8e2de2)' },
+  shopping: { emoji: '🛍️', label: 'קניות', bg: 'linear-gradient(135deg,#f7b733,#fc4a1a)' },
+  nightlife: { emoji: '🍶', label: 'חיי לילה', bg: 'linear-gradient(135deg,#4b3f9e,#151032)' },
+  experience: { emoji: '🎌', label: 'חוויה', bg: 'linear-gradient(135deg,#36d1dc,#5b86e5)' },
+}
+
+export const VERDICTS: Record<string, { label: string; tone: string }> = {
+  gem: { label: '💎 פנינה נסתרת', tone: 'good' },
+  worth_it: { label: '👍 שווה את ההייפ', tone: 'good' },
+  overhyped: { label: '😐 מוגזם ברשתות', tone: 'meh' },
+  trap: { label: '🚨 מלכודת תיירים', tone: 'bad' },
 }

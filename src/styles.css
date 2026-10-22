@@ -288,3 +288,94 @@ main { padding: 14px 16px calc(96px + env(safe-area-inset-bottom)); }
 .sheet-head { display: flex; justify-content: space-between; align-items: center; }
 .field { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--muted); min-width: 0; }
 .field > * { color: var(--text); }
+
+/* Swipe game */
+.board { display: flex; flex-direction: column; gap: 8px; }
+.player { display: flex; gap: 8px; align-items: center; }
+.player-body { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.rank { font-size: 1.3rem; }
+.bar { height: 6px; background: var(--line); border-radius: 999px; overflow: hidden; }
+.bar div { height: 100%; background: var(--accent); transition: width 0.3s; }
+
+.deck { position: relative; height: 470px; }
+.swipe-card {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  touch-action: pan-y;
+  user-select: none;
+}
+.swipe-card.top { cursor: grab; }
+.swipe-card.under { transform: scale(0.95) translateY(10px); filter: brightness(0.96); }
+.card-hero { position: relative; height: 190px; flex: none; color: #fff; display: flex; align-items: flex-end; }
+.card-emoji { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); font-size: 4.2rem; filter: drop-shadow(0 4px 8px rgba(0,0,0,.25)); }
+.card-title { width: 100%; padding: 12px 16px; background: linear-gradient(transparent, rgba(0, 0, 0, 0.45)); }
+.card-title h2 { font-size: 1.35rem; }
+.ja { opacity: 0.9; font-size: 0.9rem; }
+.stamp {
+  position: absolute;
+  top: 18px;
+  padding: 4px 12px;
+  border: 3px solid currentColor;
+  border-radius: 10px;
+  font-weight: 800;
+  font-size: 1.5rem;
+  transform: rotate(-14deg);
+  background: rgba(255, 255, 255, 0.85);
+}
+.like-stamp { right: 16px; color: #2e9e5b; }
+.nope-stamp { left: 16px; color: #d7263d; transform: rotate(14deg); }
+.card-info { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 6px; font-size: 0.92rem; }
+.card-info p { margin: 0; }
+.verdict { align-self: flex-start; padding: 4px 10px; border-radius: 999px; font-weight: 700; font-size: 0.85rem; }
+.verdict.good { background: #e3f4ea; color: #1f7a45; }
+.verdict.meh { background: #fff3d6; color: #8a5a00; }
+.verdict.bad { background: #fde2e4; color: #b00020; }
+.scores { display: flex; gap: 10px; font-size: 0.85rem; color: var(--muted); }
+.swipe-buttons { display: flex; justify-content: center; align-items: center; gap: 18px; position: relative; }
+.round {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--card);
+  border: 1px solid var(--line);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  font-size: 1.7rem;
+  font-weight: 700;
+}
+.round:active { transform: scale(0.92); }
+.round.nope { color: #d7263d; }
+.round.like { color: #2e9e5b; }
+.small-round { width: 46px; height: 46px; font-size: 1.1rem; }
+.small-round:disabled { opacity: 0.35; }
+.left-count { position: absolute; left: 0; }
+.center-modal { align-items: center; }
+.match-pop {
+  width: min(340px, 90vw);
+  background: var(--card);
+  border-radius: 22px;
+  padding: 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: pop 0.35s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+.match-pop h2 { font-size: 2rem; color: var(--accent); }
+.match-pop p { margin: 0; }
+.confetti { font-size: 1.8rem; letter-spacing: 4px; }
+@keyframes pop { from { transform: scale(0.5); opacity: 0; } }
+
+/* Places */
+.group-title { margin-top: 6px; }
+.area-title { font-weight: 600; color: var(--muted); font-size: 0.9rem; }
+.map { height: 58vh; border-radius: 14px; border: 1px solid var(--line); z-index: 0; }
+.pin { width: 22px; height: 22px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4); }
+.pin.visited { opacity: 0.45; }
+.tabbar button { max-width: 110px; }

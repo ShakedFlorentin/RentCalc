@@ -10,9 +10,11 @@ import Itinerary from './views/Itinerary'
 import Bookings from './views/Bookings'
 import Places from './views/Places'
 import Lists from './views/Lists'
+import SwipeGame from './views/Swipe'
 
 const TABS = [
   { id: 'home', label: 'בית', icon: '🏠' },
+  { id: 'swipe', label: 'משחק', icon: '🔥' },
   { id: 'plan', label: 'מסלול', icon: '🗓️' },
   { id: 'bookings', label: 'הזמנות', icon: '🎫' },
   { id: 'places', label: 'מקומות', icon: '📍' },
@@ -108,6 +110,7 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
         {tab === 'home' && (
           <Home trip={trip} members={members} me={me} userId={props.userId} onOpenDay={openDay} onLeave={props.onLeave} />
         )}
+        {tab === 'swipe' && <SwipeGame trip={trip} userId={props.userId} members={members} />}
         {tab === 'plan' && <Itinerary trip={trip} day={day} setDay={setDay} />}
         {tab === 'bookings' && <Bookings tripId={tripId} />}
         {tab === 'places' && <Places trip={trip} me={me} />}
