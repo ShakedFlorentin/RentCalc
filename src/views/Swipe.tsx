@@ -1,4 +1,5 @@
 import { PointerEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../supabase'
 import { AUDIENCES, CARD_STYLE, CITY_HE, VERDICTS, type Candidate, type Member, type Swipe, type Trip } from '../types'
 import { mutate, useMediaIndex, useTripTable, withMedia } from '../lib'
@@ -221,8 +222,9 @@ function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked
   const [photo, setPhoto] = useState(0)
   const [broken, setBroken] = useState<Set<string>>(new Set())
   const start = useRef<number | null>(null)
+  const moved = useRef(false)
+  const onInfo = useRef(false)
   const style = CARD_STYLE[c.category] ?? CARD_STYLE.sight
-  const verdict = c.verdict ? VERDICTS[c.verdict] : null
   const photos = (c.photos ?? []).filter((u) => !broken.has(u))
   const cur = photos[Math.min(photo, photos.length - 1)]
 
@@ -234,16 +236,33 @@ function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked
   const down = (e: PointerEvent) => {
     if ((e.target as HTMLElement).closest('a,button')) return
     start.current = e.clientX
+    moved.current = false
+    onInfo.current = !!(e.target as HTMLElement).closest('.card-info')
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
   }
-  const move = (e: PointerEvent) => start.current !== null && setDx(e.clientX - start.current)
+  const move = (e: PointerEvent) => {
+    if (start.current === null) return
+    const d = e.clientX - start.current
+    if (Math.abs(d) > 6) moved.current = true
+    setDx(d)
+  }
   const up = () => {
     if (start.current === null) return
     start.current = null
+    // the card holds the pointer while dragging, so a tap on the text is caught here, not as a click
+    if (!moved.current && onInfo.current) {
+      setDx(0)
+      setMore(true)
+      return
+    }
     // RTL doesn't change the gesture: right = like, as on every dating app
     if (dx > 90) fly(1)
     else if (dx < -90) fly(-1)
     else setDx(0)
+  }
+  const decide = (dir: 1 | -1) => {
+    setMore(false)
+    fly(dir)
   }
   const cycle = (e: { stopPropagation: () => void }, step: number) => {
     e.stopPropagation()
@@ -322,63 +341,100 @@ function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked
           </div>
         </div>
       </div>
+      {/* a short preview; tapping it opens the whole card in a full-height sheet */}
       <div className="card-info">
-        <div className="row tags">
-          {verdict && <div className={'verdict ' + verdict.tone}>{verdict.label}</div>}
-          {c.audience && <div className={'verdict aud-' + c.audience}>{AUDIENCES[c.audience]}</div>}
-          {c.local_pick && <div className="verdict local">🇯🇵 מקומיים ממליצים</div>}
-        </div>
-        {(c.tabelog_score != null || c.google_score != null) && (
-          <div className="scores">
-            {c.tabelog_score != null && <span>Tabelog ⭐ <bdi>{c.tabelog_score}</bdi></span>}
-            {c.google_score != null && <span>Google ⭐ <bdi>{c.google_score}</bdi></span>}
-          </div>
-        )}
+        <Tags c={c} />
         {c.hype && (
           <div className="fact">
             <b>📱 ברשתות</b>
-            <p dir="auto">{c.hype}</p>
+            <p dir="auto" className="clamp">{c.hype}</p>
           </div>
         )}
         {c.reality && (
           <div className="fact">
             <b>🔍 בביקורות</b>
-            <p dir="auto">{c.reality}</p>
-          </div>
-        )}
-        {c.baby_notes && (
-          <div className="fact">
-            <b>{c.audience === 'adults' ? '🍸 למה בלי התינוק' : '👶 עם תינוק'}</b>
-            <p dir="auto">{c.baby_notes}</p>
-          </div>
-        )}
-        {more && c.tip && (
-          <div className="fact">
-            <b>💡 טיפ</b>
-            <p dir="auto">{c.tip}</p>
-          </div>
-        )}
-        {more && (
-          <MediaActions name={c.name} maps={c.maps_url} website={c.website_url} m={c} />
-        )}
-        {more && c.sources.length > 0 && (
-          <div className="row">
-            {c.sources.slice(0, 4).map((s, i) => (
-              <a key={s} className="pill" href={s} target="_blank" rel="noreferrer">
-                מקור {i + 1}
-              </a>
-            ))}
+            <p dir="auto" className="clamp">{c.reality}</p>
           </div>
         )}
       </div>
       {top && (
-          <button className="link more-btn" onClick={() => setMore(!more)} aria-expanded={more}>
-            {more ? 'פחות' : 'טיפ, קישורים וסרטון'} <span aria-hidden="true">{more ? '⌃' : '⌄'}</span>
-          </button>
+        <button className="link more-btn" onClick={() => setMore(true)}>
+          לקרוא הכול: טיפ, תינוק, קישורים וסרטון <span aria-hidden="true">⌃</span>
+        </button>
       )}
+      {more &&
+        createPortal(
+          <Sheet title={c.name} onClose={() => setMore(false)}>
+            <div className="card-full">
+              <Tags c={c} />
+              {c.hype && (
+                <div className="fact">
+                  <b>📱 ברשתות</b>
+                  <p dir="auto">{c.hype}</p>
+                </div>
+              )}
+              {c.reality && (
+                <div className="fact">
+                  <b>🔍 בביקורות</b>
+                  <p dir="auto">{c.reality}</p>
+                </div>
+              )}
+              {c.baby_notes && (
+                <div className="fact">
+                  <b>{c.audience === 'adults' ? '🍸 למה בלי התינוק' : '👶 עם תינוק'}</b>
+                  <p dir="auto">{c.baby_notes}</p>
+                </div>
+              )}
+              {c.tip && (
+                <div className="fact">
+                  <b>💡 טיפ</b>
+                  <p dir="auto">{c.tip}</p>
+                </div>
+              )}
+              <MediaActions name={c.name} maps={c.maps_url} website={c.website_url} m={c} />
+              {c.sources.length > 0 && (
+                <div className="row">
+                  {c.sources.slice(0, 4).map((s, i) => (
+                    <a key={s} className="pill" href={s} target="_blank" rel="noreferrer">
+                      מקור {i + 1}
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="sheet-decide">
+              <button className="round nope" onClick={() => decide(-1)} aria-label="דלג">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+              </button>
+              <button className="round like" onClick={() => decide(1)} aria-label="אהבתי">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path className="fill" d="M12 20.5s-7.5-4.6-9.2-9.4C1.6 7.7 4 4.5 7.2 4.5c1.9 0 3.4 1 4.8 2.8 1.4-1.8 2.9-2.8 4.8-2.8 3.2 0 5.6 3.2 4.4 6.6-1.7 4.8-9.2 9.4-9.2 9.4z" /></svg>
+              </button>
+            </div>
+          </Sheet>,
+          document.body,
+        )}
       <span className="tint like-tint" style={{ opacity: dx > 0 ? p * 0.35 : 0 }} aria-hidden="true" />
       <span className="tint nope-tint" style={{ opacity: dx < 0 ? p * 0.35 : 0 }} aria-hidden="true" />
     </div>
+  )
+}
+
+function Tags({ c }: { c: Candidate }) {
+  const verdict = c.verdict ? VERDICTS[c.verdict] : null
+  return (
+    <>
+      <div className="row tags">
+        {verdict && <div className={'verdict ' + verdict.tone}>{verdict.label}</div>}
+        {c.audience && <div className={'verdict aud-' + c.audience}>{AUDIENCES[c.audience]}</div>}
+        {c.local_pick && <div className="verdict local">🇯🇵 מקומיים ממליצים</div>}
+      </div>
+      {(c.tabelog_score != null || c.google_score != null) && (
+        <div className="scores">
+          {c.tabelog_score != null && <span>Tabelog ⭐ <bdi>{c.tabelog_score}</bdi></span>}
+          {c.google_score != null && <span>Google ⭐ <bdi>{c.google_score}</bdi></span>}
+        </div>
+      )}
+    </>
   )
 }
 
