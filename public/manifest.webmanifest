@@ -1,0 +1,11 @@
+{
+  "name": "הטיול ליפן",
+  "short_name": "יפן",
+  "dir": "rtl",
+  "lang": "he",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#faf7f2",
+  "theme_color": "#bc002d",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
