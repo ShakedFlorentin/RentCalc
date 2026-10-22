@@ -1,7 +1,7 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { supabase } from '../supabase'
 import { AUDIENCES, CATEGORIES, VERDICTS, type DayInfo, type ItineraryItem, type Place, type Trip } from '../types'
-import { mapsUrl, mutate, useTripTable } from '../lib'
+import { mapsUrl, mutate, useMediaIndex, useTripTable, withMedia } from '../lib'
 import { Empty, Field, Sheet } from '../ui'
 import { MediaActions, Thumb } from '../media'
 import PlacesMap from './PlacesMap'
@@ -9,7 +9,9 @@ import PlacesMap from './PlacesMap'
 const CITY_ORDER = ['טוקיו', 'קיוטו', 'נארה', 'אוסקה', 'טיול יום']
 
 export default function Places({ trip, me }: { trip: Trip; me: string }) {
-  const { rows, loading } = useTripTable<Place>('places', trip.id)
+  const { rows: rawRows, loading } = useTripTable<Place>('places', trip.id)
+  const media = useMediaIndex()
+  const rows = useMemo(() => rawRows.map((p) => withMedia(p, media)), [rawRows, media])
   const { rows: days } = useTripTable<DayInfo>('day_info', trip.id, 'day')
   const { rows: items } = useTripTable<ItineraryItem>('itinerary_items', trip.id, 'sort')
   const [view, setView] = useState<'list' | 'map'>('list')

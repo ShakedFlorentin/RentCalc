@@ -1,7 +1,7 @@
 import { PointerEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../supabase'
 import { AUDIENCES, CARD_STYLE, CITY_HE, VERDICTS, type Candidate, type Member, type Swipe, type Trip } from '../types'
-import { mutate, useTripTable } from '../lib'
+import { mutate, useMediaIndex, useTripTable, withMedia } from '../lib'
 import { Empty, Sheet } from '../ui'
 import { MediaActions } from '../media'
 
@@ -16,7 +16,9 @@ const LEVELS = [
 type Props = { trip: Trip; userId: string; members: Member[] }
 
 export default function SwipeGame({ trip, userId, members }: Props) {
-  const { rows: candidates, loading } = useTripTable<Candidate>('candidates', trip.id)
+  const { rows: rawCandidates, loading } = useTripTable<Candidate>('candidates', trip.id)
+  const media = useMediaIndex()
+  const candidates = useMemo(() => rawCandidates.map((c) => withMedia(c, media)), [rawCandidates, media])
   const { rows: swipes, reload: reloadSwipes } = useTripTable<Swipe>('swipes', trip.id)
   const [city, setCity] = useState('')
   const [aud, setAud] = useState('')

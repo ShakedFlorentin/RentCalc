@@ -83,3 +83,46 @@ export function fmtDateTime(iso: string | null) {
     minute: '2-digit',
   })
 }
+
+type MediaEntry = {
+  maps_url?: string
+  website_url?: string
+  photos?: string[]
+  instagram_url?: string
+  tiktok_url?: string
+  lat?: number
+  lng?: number
+}
+let mediaCache: Promise<Record<string, MediaEntry>> | null = null
+
+/** Links/photos collected per place name (public/media.json), shipped with the app. */
+export function useMediaIndex() {
+  const [index, setIndex] = useState<Record<string, MediaEntry>>({})
+  useEffect(() => {
+    mediaCache ??= fetch('./media.json')
+      .then((r) => (r.ok ? r.json() : {}))
+      .catch(() => ({}))
+    mediaCache.then(setIndex)
+  }, [])
+  return index
+}
+
+/** Fill a row's missing media fields from the index; values already in the database win. */
+export function withMedia<T extends { name: string }>(row: T, index: Record<string, MediaEntry>): T {
+  const m = index[row.name]
+  if (!m) return row
+  const r = row as Record<string, unknown>
+  const pick = (k: keyof MediaEntry) => (r[k] == null || (Array.isArray(r[k]) && !(r[k] as unknown[]).length) ? m[k] : r[k])
+  return {
+    ...row,
+    maps_url: pick('maps_url'),
+    website_url: pick('website_url'),
+    photos: pick('photos') ?? [],
+    instagram_url: pick('instagram_url'),
+    tiktok_url: pick('tiktok_url'),
+    // collected coordinates come straight from Google Maps, so they beat the scouts' estimates
+    lat: m.lat ?? r.lat,
+    lng: m.lng ?? r.lng,
+    ...('url' in r ? { url: r.url ?? m.maps_url ?? null } : {}),
+  }
+}
