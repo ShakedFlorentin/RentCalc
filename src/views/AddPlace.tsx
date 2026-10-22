@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { supabase } from '../supabase'
 import { AUDIENCES, CARD_STYLE, CITY_HE, VERDICTS, type Candidate } from '../types'
-import { aiError, mutate } from '../lib'
+import { aiError, mutate, samePlace } from '../lib'
 import { ArrowRight, Heart, List, PencilLine, Search, Star } from 'lucide-react'
 import { Field, Sheet } from '../ui'
 import { Icon } from '../icons'
 
 type Draft = Partial<Candidate> & { link?: string }
+/** A place already in the trip that looks like the one being added. */
+type Existing = { id: string; name: string; where: 'deck' | 'list'; exact: boolean }
 type Props = { tripId: string; userId: string; me: string; defaultTo: 'deck' | 'list'; onClose: () => void }
 
 /** Suggest a place from an Instagram/TikTok/Maps link (researched by Claude) or by hand. */
@@ -18,6 +20,34 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
   const [to, setTo] = useState(defaultTo)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
+  const [existing, setExisting] = useState<{ found: Existing; draft: Draft } | null>(null)
+
+  /** The trip's own copy of this place, in the game or on the list, if someone already added it. */
+  const findExisting = async (d: Draft): Promise<Existing | null> => {
+    const probe = { name: d.name ?? '', lat: d.lat, lng: d.lng }
+    const [deck, list] = await Promise.all([
+      supabase.from('candidates').select('id, name, lat, lng').eq('trip_id', tripId),
+      supabase.from('places').select('id, name, lat, lng').eq('trip_id', tripId),
+    ])
+    let best: Existing | null = null
+    for (const [rows, where] of [[list.data, 'list'], [deck.data, 'deck']] as const) {
+      for (const r of rows ?? []) {
+        const hit = samePlace(probe, r)
+        if (hit && (!best || (hit === 'exact' && !best.exact))) best = { id: r.id, name: r.name, where, exact: hit === 'exact' }
+      }
+    }
+    return best
+  }
+
+  /** "It's the same place": in the game, suggesting it means liking it; on the list there's nothing to add. */
+  const useExisting = async (e: Existing) => {
+    setBusy(true)
+    if (e.where === 'deck') {
+      await mutate(supabase.from('swipes').upsert({ trip_id: tripId, candidate_id: e.id, user_id: userId, liked: true }))
+    }
+    setBusy(false)
+    onClose()
+  }
 
   const research = async () => {
     if (!link.trim() && !note.trim()) return
@@ -33,9 +63,18 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
     setDraft({ ...data, link: link.trim() })
   }
 
-  const save = async (d: Draft) => {
+  const save = async (d: Draft, anyway = false) => {
     if (!d.name?.trim() || !d.city) return
     setBusy(true)
+    // two friends often add the same place: offer the one that's there instead of a second copy
+    if (!anyway) {
+      const found = await findExisting(d)
+      if (found) {
+        setExisting({ found, draft: d })
+        setBusy(false)
+        return
+      }
+    }
     const l = d.link?.trim() || null
     const social = {
       instagram_url: l && /instagram\.com/i.test(l) ? l : null,
@@ -80,13 +119,16 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
         .select('id')
         .single()
       ok = !error
-      if (error) alert('שגיאה: ' + error.message)
+      // 23505: someone added the same name a moment ago
+      if (error?.code === '23505') {
+        const found = await findExisting(d)
+        if (found) setExisting({ found, draft: d })
+      } else if (error) alert('שגיאה: ' + error.message)
       // suggesting a place counts as liking it
       else await supabase.from('swipes').insert({ trip_id: tripId, candidate_id: data.id, user_id: userId, liked: true })
     } else {
       const cat = d.category === 'cafe' ? 'food' : ['food', 'sight', 'shopping'].includes(d.category ?? '') ? d.category : 'other'
-      ok = await mutate(
-        supabase.from('places').insert({
+      const { error } = await supabase.from('places').insert({
           ...base,
           instagram_url: social.instagram_url,
           tiktok_url: social.tiktok_url,
@@ -94,8 +136,12 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
           category: cat,
           url: social.maps_url,
           notes: [d.tip, d.baby_notes && 'עם התינוק: ' + d.baby_notes].filter(Boolean).join('\n') || null,
-        }),
-      )
+        })
+      ok = !error
+      if (error?.code === '23505') {
+        const found = await findExisting(d)
+        if (found) setExisting({ found, draft: d })
+      } else if (error) alert('שגיאה: ' + error.message)
     }
     setBusy(false)
     if (ok) onClose()
@@ -111,6 +157,35 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
       </button>
     </div>
   )
+
+  if (existing) {
+    const { found, draft: d } = existing
+    return (
+      <Sheet title="כבר קיים בטיול" onClose={onClose}>
+        <p>
+          <b dir="auto">{found.name}</b> {found.where === 'deck' ? 'כבר במשחק.' : 'כבר ברשימת המקומות.'}
+          {!found.exact && ' נראה שזה אותו מקום.'}
+        </p>
+        <button className="primary" onClick={() => useExisting(found)} disabled={busy}>
+          {found.where === 'deck' ? (
+            <>
+              <Icon as={Heart} /> זה אותו מקום, לסמן לייק
+            </>
+          ) : (
+            'זה אותו מקום, סגירה'
+          )}
+        </button>
+        {!found.exact && (
+          <button className="secondary" onClick={() => (setExisting(null), save(d, true))} disabled={busy}>
+            זה מקום אחר, להוסיף בכל זאת
+          </button>
+        )}
+        <button className="link" onClick={() => setExisting(null)}>
+          חזרה לעריכה
+        </button>
+      </Sheet>
+    )
+  }
 
   if (draft || mode === 'manual') {
     return (

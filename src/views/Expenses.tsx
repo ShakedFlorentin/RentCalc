@@ -288,6 +288,25 @@ function ExpenseForm(props: {
       category,
       spent_on: date || japanToday(),
     }
+    // the same dinner entered by two people: same payer, amount and day is almost always one expense
+    if (!x.id) {
+      const { data: twin } = await supabase
+        .from('expenses')
+        .select('title, created_by')
+        .eq('trip_id', props.trip.id)
+        .eq('kind', 'expense')
+        .eq('paid_by', row.paid_by)
+        .eq('amount', row.amount)
+        .eq('currency', row.currency)
+        .eq('spent_on', row.spent_on)
+        .limit(1)
+        .maybeSingle()
+      const by = members.find((m) => m.user_id === twin?.created_by)?.display_name
+      if (twin && !confirm(`"${twin.title}" באותו סכום ובאותו יום כבר נרשמה${by ? ` על ידי ${by}` : ''}. לרשום שוב?`)) {
+        setBusy(false)
+        return
+      }
+    }
     const ok = await mutate(
       x.id
         ? supabase.from('expenses').update(row).eq('id', x.id)

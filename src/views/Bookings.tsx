@@ -2,7 +2,7 @@ import { Fragment, useEffect, useState } from 'react'
 import { Check, Download, Link as LinkIcon, Mail, Map as MapIcon, Paperclip, Plus, Users } from 'lucide-react'
 import { supabase } from '../supabase'
 import { BOOKING_KINDS, BOOKING_TABS, TOGETHER, type Booking, type Member, type Trip } from '../types'
-import { aiError, couplesOf, fmtDateTime, fromInputDateTime, mapsUrl, mutate, toInputDateTime, useTripTable } from '../lib'
+import { aiError, couplesOf, normName, fmtDateTime, fromInputDateTime, mapsUrl, mutate, toInputDateTime, useTripTable } from '../lib'
 import { Empty, Field, LoadNote, Sheet, Tabs, useRemembered } from '../ui'
 import { BOOKING_ICON, Icon } from '../icons'
 import { stripMarker } from './planUtils'
@@ -245,9 +245,10 @@ function BookingForm(props: { trip: Trip; couples: string[]; booking: Partial<Bo
       file_path: filePath,
       who: f.who || null,
     }
-    const ok = await mutate(
-      f.id ? supabase.from('bookings').update(row).eq('id', f.id) : supabase.from('bookings').insert(row),
-    )
+    const { error } = await (f.id ? supabase.from('bookings').update(row).eq('id', f.id) : supabase.from('bookings').insert(row))
+    const ok = !error
+    if (error?.code === '23505') alert('ההזמנה הזו כבר קיימת: אותו סוג, אותה כותרת ואותה שעה.')
+    else if (error) alert('שגיאה: ' + error.message)
     if (ok) {
       // the old attachment goes only once the row points at the new one
       if (file && f.file_path) await supabase.storage.from('docs').remove([f.file_path])
@@ -323,6 +324,11 @@ function BookingForm(props: { trip: Trip; couples: string[]; booking: Partial<Bo
 
 type Extracted = Pick<Booking, 'kind' | 'title' | 'starts_at' | 'ends_at' | 'confirmation' | 'location' | 'url' | 'notes'>
 
+/** Same stored time, whatever the timestamp's formatting ("…T07:00:00Z" vs "…07:00:00+00:00"). */
+function sameTime(a: string | null, b: string | null) {
+  return a === b || (!!a && !!b && Date.parse(a) === Date.parse(b))
+}
+
 /** A local time from the reader as a stored timestamp; a bare date gets `time`. */
 function wallClock(v: string | null, time: string) {
   if (!v) return null
@@ -339,6 +345,7 @@ function ImportSheet(props: { trip: Trip; couples: string[]; myCouple: string | 
   const [file, setFile] = useState<File | null>(null)
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState<{ kind: string; title: string }[] | null>(null)
+  const [skipped, setSkipped] = useState(0)
   const [err, setErr] = useState('')
 
   const run = async () => {
@@ -372,6 +379,23 @@ function ImportSheet(props: { trip: Trip; couples: string[]; myCouple: string | 
       return
     }
 
+    // the same confirmation imported by two people (or twice) adds nothing the second time
+    const { data: have } = await supabase.from('bookings').select('kind, title, starts_at, confirmation').eq('trip_id', trip.id)
+    const isDup = (b: (typeof bookings)[number]) =>
+      (have ?? []).some(
+        (h) =>
+          h.kind === b.kind &&
+          sameTime(h.starts_at, b.starts_at) &&
+          (normName(h.title) === normName(b.title) || (!!b.confirmation && h.confirmation === b.confirmation)),
+      )
+    const fresh = bookings.filter((b) => !isDup(b))
+    const skipped = bookings.length - fresh.length
+    if (!fresh.length) {
+      setErr(skipped > 1 ? 'כל ההזמנות באישור הזה כבר קיימות.' : 'ההזמנה הזו כבר קיימת.')
+      setBusy(false)
+      return
+    }
+
     // keep the original confirmation with the booking
     let filePath: string | null = null
     if (file) {
@@ -382,12 +406,13 @@ function ImportSheet(props: { trip: Trip; couples: string[]; myCouple: string | 
     }
     const ok = await mutate(
       supabase.from('bookings').insert(
-        bookings.map((b) => ({ trip_id: trip.id, ...b, file_path: filePath })),
+        fresh.map((b) => ({ trip_id: trip.id, ...b, file_path: filePath })),
       ),
     )
     if (ok) {
-      await fillHotelNights(trip, bookings)
-      setDone(bookings.map((b) => ({ kind: b.kind, title: b.title })))
+      await fillHotelNights(trip, fresh)
+      setSkipped(skipped)
+      setDone(fresh.map((b) => ({ kind: b.kind, title: b.title })))
     }
     setBusy(false)
   }
@@ -400,6 +425,7 @@ function ImportSheet(props: { trip: Trip; couples: string[]; myCouple: string | 
             <Icon as={BOOKING_ICON[d.kind] ?? BOOKING_ICON.other} /> {d.title}
           </div>
         ))}
+        {skipped > 0 && <p className="small">{skipped === 1 ? 'הזמנה אחת כבר הייתה קיימת ולא נוספה שוב.' : `${skipped} הזמנות כבר היו קיימות ולא נוספו שוב.`}</p>}
         <p className="muted small">אפשר ללחוץ על הזמנה כדי לתקן פרטים. מלונות נכתבו גם בלילות שלהם במסלול.</p>
         <button className="primary" onClick={onClose}>
           סגירה

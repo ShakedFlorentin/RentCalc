@@ -245,3 +245,34 @@ export function aiError(error: unknown, fallback: string) {
   if (status === 413) return 'הטקסט או הקובץ ארוכים מדי.'
   return fallback
 }
+
+/** A name for comparing: no case, spaces or punctuation (matches norm_name() in the database). */
+export function normName(s: string | null | undefined) {
+  return (s ?? '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '')
+}
+
+/** Metres between two points, near enough for "is this the same place". */
+export function metresBetween(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  const k = Math.PI / 180
+  const x = (b.lng - a.lng) * k * Math.cos(((a.lat + b.lat) / 2) * k)
+  const y = (b.lat - a.lat) * k
+  return Math.sqrt(x * x + y * y) * 6371000
+}
+
+/**
+ * Whether two places look like the same one: the same name, one name inside the other ("Fuunji" and
+ * "Fuunji Shinjuku"), or pins within 60 m of each other.
+ */
+export function samePlace(
+  a: { name: string; lat?: number | null; lng?: number | null },
+  b: { name: string; lat?: number | null; lng?: number | null },
+) {
+  const x = normName(a.name)
+  const y = normName(b.name)
+  if (x && x === y) return 'exact'
+  if (Math.min(x.length, y.length) >= 5 && (x.includes(y) || y.includes(x))) return 'similar'
+  if (a.lat != null && a.lng != null && b.lat != null && b.lng != null) {
+    if (metresBetween({ lat: a.lat, lng: a.lng }, { lat: b.lat, lng: b.lng }) < 60) return 'similar'
+  }
+  return null
+}
