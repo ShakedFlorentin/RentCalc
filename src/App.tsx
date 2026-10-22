@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import type { Session } from '@supabase/supabase-js'
 import { supabase } from './supabase'
 import type { Member, Trip } from './types'
-import { currentDay } from './lib'
+import { clearCache, currentDay, readCache, writeCache } from './lib'
+import { OfflineBanner } from './offline'
 import Login from './views/Login'
 import TripPicker from './views/TripPicker'
 import Home from './views/Home'
@@ -23,18 +23,36 @@ const TABS = [
 ] as const
 type Tab = (typeof TABS)[number]['id']
 
+// who was signed in, so the app still opens when an expired login can't be refreshed without a network
+const UID_KEY = 'userId'
+
 export default function App() {
-  const [session, setSession] = useState<Session | null | undefined>(undefined)
+  const [userId, setUserId] = useState<string | null | undefined>(undefined)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session))
-    const { data } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
+    supabase.auth.getSession().then(({ data, error }) => {
+      const id = data.session?.user.id ?? null
+      if (id) writeCache(UID_KEY, id)
+      // a refresh that failed for lack of network is not a sign-out: carry on as the same user
+      const offlineId = !id && error?.name === 'AuthRetryableFetchError' ? readCache<string>(UID_KEY)?.data : null
+      setUserId(id ?? offlineId ?? null)
+    })
+    const { data } = supabase.auth.onAuthStateChange((e, s) => {
+      // the first event repeats getSession above, which also knows about the offline case
+      if (e === 'INITIAL_SESSION') return
+      if (e === 'SIGNED_OUT') {
+        clearCache()
+        window.caches?.delete('docs').catch(() => {})
+      }
+      if (s) writeCache(UID_KEY, s.user.id)
+      setUserId(s?.user.id ?? null)
+    })
     return () => data.subscription.unsubscribe()
   }, [])
 
-  if (session === undefined) return <div className="center" role="status">טוען…</div>
-  if (!session) return <Login />
-  return <TripGate userId={session.user.id} />
+  if (userId === undefined) return <div className="center" role="status">טוען…</div>
+  if (!userId) return <Login />
+  return <TripGate userId={userId} />
 }
 
 function savedTrip() {
@@ -46,9 +64,20 @@ function savedTrip() {
 }
 
 function TripGate({ userId }: { userId: string }) {
-  const [tripId, setTripId] = useState<string | null | undefined>(undefined)
+  // open on the last trip at once (no waiting for a network that may not be there); the check below corrects it
+  const [tripId, setTripId] = useState<string | null | undefined>(() => savedTrip() ?? undefined)
   const [failed, setFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
+
+  const choose = (id: string | null) => {
+    try {
+      if (id) localStorage.setItem('tripId', id)
+      else localStorage.removeItem('tripId')
+    } catch {
+      // the choice just won't be remembered
+    }
+    setTripId(id)
+  }
 
   useEffect(() => {
     setFailed(false)
@@ -65,19 +94,9 @@ function TripGate({ userId }: { userId: string }) {
           return
         }
         const ids = (data ?? []).map((m) => m.trip_id as string)
-        setTripId(saved && ids.includes(saved) ? saved : (ids[0] ?? null))
+        choose(saved && ids.includes(saved) ? saved : (ids[0] ?? null))
       })
   }, [userId, attempt])
-
-  const choose = (id: string | null) => {
-    try {
-      if (id) localStorage.setItem('tripId', id)
-      else localStorage.removeItem('tripId')
-    } catch {
-      // the choice just won't be remembered
-    }
-    setTripId(id)
-  }
 
   if (failed) return <LoadError onRetry={() => setAttempt((a) => a + 1)} />
   if (tripId === undefined) return <div className="center" role="status">טוען…</div>
@@ -87,13 +106,18 @@ function TripGate({ userId }: { userId: string }) {
 
 function TripApp(props: { tripId: string; userId: string; onLeave: () => void }) {
   const { tripId } = props
-  const [trip, setTrip] = useState<Trip | null>(null)
-  const [members, setMembers] = useState<Member[]>([])
+  // the last good copy opens the app with no network
+  const [tripCache] = useState(() => readCache<Trip>('trip:' + tripId))
+  const [trip, setTrip] = useState<Trip | null>(tripCache?.data ?? null)
+  const [members, setMembers] = useState<Member[]>(() => readCache<Member[]>('members:' + tripId)?.data ?? [])
   const [tab, setTab] = useState<Tab>('home')
   const [day, setDay] = useState(1)
   const [moreSub, setMoreSub] = useRemembered('moreTab', 'money') as [MoreTab, (s: MoreTab) => void]
   const [failed, setFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
+  // when the trip and members shown were last confirmed by the server; the banner shows while they're a saved copy
+  const [syncedAt, setSyncedAt] = useState<number | null>(tripCache?.at ?? null)
+  const [stale, setStale] = useState(!!tripCache)
 
   useEffect(() => {
     const load = async () => {
@@ -101,11 +125,23 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
         supabase.from('trips').select('*').eq('id', tripId).single(),
         supabase.from('members').select('*').eq('trip_id', tripId).order('joined_at'),
       ])
-      if (t.data) setTrip(t.data as Trip)
-      if (m.data) setMembers(m.data as Member[])
+      if (t.data) {
+        setTrip(t.data as Trip)
+        writeCache('trip:' + tripId, t.data)
+      }
+      if (m.data) {
+        setMembers(m.data as Member[])
+        writeCache('members:' + tripId, m.data)
+      }
       setFailed(!!t.error)
+      setStale(!!t.error || !!m.error)
+      if (!t.error && !m.error) setSyncedAt(Date.now())
     }
     load()
+    // catch up after the phone wakes or comes back online, when realtime events may have been missed
+    const refresh = () => document.visibilityState === 'visible' && load()
+    document.addEventListener('visibilitychange', refresh)
+    window.addEventListener('online', refresh)
     const channel = supabase
       .channel(`trip:${tripId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'trips', filter: `id=eq.${tripId}` }, load)
@@ -113,6 +149,8 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
       .subscribe()
     return () => {
       supabase.removeChannel(channel)
+      document.removeEventListener('visibilitychange', refresh)
+      window.removeEventListener('online', refresh)
     }
   }, [tripId, attempt])
 
@@ -142,6 +180,7 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
           </span>
         </div>
       </header>
+      <OfflineBanner since={stale ? syncedAt : null} />
       <main className={'tab-' + tab}>
         {tab === 'home' && (
           <Home

@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import { BOOKING_KINDS, BOOKING_TABS, TOGETHER, type Booking, type Member, type Trip } from '../types'
 import { aiError, couplesOf, fmtDateTime, fromInputDateTime, mapsUrl, mutate, toInputDateTime, useTripTable } from '../lib'
@@ -95,11 +95,7 @@ export default function Bookings({ trip, members, userId }: Props) {
                       🔗 קישור
                     </a>
                   )}
-                  {b.file_path && (
-                    <button className="pill" onClick={() => openFile(b.file_path!)}>
-                      📎 מסמך
-                    </button>
-                  )}
+                  {b.file_path && <DocButtons path={b.file_path} />}
                 </div>
               </div>
           </Fragment>
@@ -114,15 +110,91 @@ export default function Bookings({ trip, members, userId }: Props) {
   )
 }
 
+// Booking documents are saved in Cache Storage so they open with no network (underground, in the air). The key is
+// only a unique URL-shaped name: nothing is ever fetched from it. Paths are uuids, so a saved copy never goes stale.
+const docKey = (path: string) => new URL('__doc/' + path.split('/').map(encodeURIComponent).join('/'), document.baseURI).href
+
+async function savedDoc(path: string) {
+  try {
+    return (await (await caches.open('docs')).match(docKey(path))) ?? null
+  } catch {
+    return null
+  }
+}
+
+async function saveDoc(path: string) {
+  try {
+    const { data } = await supabase.storage.from('docs').createSignedUrl(path, 600)
+    if (!data) return false
+    const res = await fetch(data.signedUrl)
+    if (!res.ok) return false
+    await (await caches.open('docs')).put(docKey(path), res)
+    return true
+  } catch {
+    return false
+  }
+}
+
 async function openFile(path: string) {
   // open the tab synchronously so mobile popup blockers allow it
   const win = window.open('', '_blank')
+  const go = (href: string) => (win ? (win.location.href = href) : (location.href = href))
+  const saved = await savedDoc(path)
+  if (saved) {
+    const href = URL.createObjectURL(await saved.blob())
+    go(href)
+    setTimeout(() => URL.revokeObjectURL(href), 10 * 60 * 1000)
+    return
+  }
   const { data, error } = await supabase.storage.from('docs').createSignedUrl(path, 600)
   if (error || !data) {
     win?.close()
-    alert('לא ניתן לפתוח את הקובץ')
-  } else if (win) win.location.href = data.signedUrl
-  else location.href = data.signedUrl
+    alert(navigator.onLine ? 'לא ניתן לפתוח את הקובץ' : 'אין חיבור, והמסמך לא נשמר לאופליין')
+  } else go(data.signedUrl)
+}
+
+/** A booking's document: open it, and keep a copy on the phone (saved automatically when online). */
+function DocButtons({ path }: { path: string }) {
+  const [saved, setSaved] = useState<boolean | null>(null)
+  const [busy, setBusy] = useState(false)
+  const save = async () => {
+    setBusy(true)
+    setSaved(await saveDoc(path))
+    setBusy(false)
+  }
+
+  useEffect(() => {
+    let live = true
+    savedDoc(path).then(async (hit) => {
+      if (!live) return
+      setSaved(!!hit)
+      // a few small PDFs per trip, so saving without asking is cheap and the document is there when it's needed
+      if (!hit && navigator.onLine) {
+        const ok = await saveDoc(path)
+        if (live) setSaved(ok)
+      }
+    })
+    return () => {
+      live = false
+    }
+  }, [path])
+
+  return (
+    <>
+      <button className="pill" onClick={() => openFile(path)}>
+        📎 מסמך
+      </button>
+      {saved ? (
+        <span className="small muted">✓ נשמר לאופליין</span>
+      ) : (
+        saved === false && (
+          <button className="pill" disabled={busy} onClick={save}>
+            {busy ? 'שומר…' : '📥 שמירה לאופליין'}
+          </button>
+        )
+      )}
+    </>
+  )
 }
 
 function BookingForm(props: { trip: Trip; couples: string[]; booking: Partial<Booking>; onClose: () => void }) {

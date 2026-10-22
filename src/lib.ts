@@ -2,11 +2,50 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from './supabase'
 import type { Member } from './types'
 
-/** Rows of one trip-scoped table, kept in sync with every member's edits via realtime. */
+const CACHE_PREFIX = 'cache:'
+
+/** The last good copy of some data, kept on the phone so the app opens with no network. */
+export function readCache<T>(key: string): { data: T; at: number } | null {
+  try {
+    const s = localStorage.getItem(CACHE_PREFIX + key)
+    return s ? JSON.parse(s) : null
+  } catch {
+    return null
+  }
+}
+
+export function writeCache(key: string, data: unknown) {
+  try {
+    localStorage.setItem(CACHE_PREFIX + key, JSON.stringify({ data, at: Date.now() }))
+  } catch {
+    // storage full or blocked: the app just won't have this copy offline
+  }
+}
+
+/** Forget every saved copy (on sign-out, so the next person on this phone doesn't see the old data). */
+export function clearCache() {
+  try {
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith(CACHE_PREFIX))
+      .forEach((k) => localStorage.removeItem(k))
+  } catch {
+    // nothing to clear
+  }
+}
+
+/**
+ * Rows of one trip-scoped table, kept in sync with every member's edits via realtime. The last good rows are
+ * saved on the phone and shown at once; `stale` means what's on screen hasn't been confirmed by the server yet.
+ */
 export function useTripTable<T>(table: string, tripId: string, order: string = 'created_at') {
-  const [rows, setRows] = useState<T[]>([])
-  const [loading, setLoading] = useState(true)
+  const key = `${table}:${tripId}:${order}`
+  const [cached] = useState(() => readCache<T[]>(key))
+  const [rows, setRows] = useState<T[]>(cached?.data ?? [])
+  const [loading, setLoading] = useState(!cached)
   const [error, setError] = useState('')
+  const [stale, setStale] = useState(!!cached)
+  const [updatedAt, setUpdatedAt] = useState<number | null>(cached?.at ?? null)
+  const haveRows = useRef(!!cached)
   // reloads can overlap when several changes arrive together; only the latest one may write
   const latest = useRef(0)
 
@@ -18,13 +57,20 @@ export function useTripTable<T>(table: string, tripId: string, order: string = '
       .eq('trip_id', tripId)
       .order(order)
     if (req !== latest.current) return
-    if (error) setError(error.message)
-    else {
+    if (error) {
+      // offline with a saved copy is expected, and the offline banner says so: don't nag on every screen
+      if (!(haveRows.current && navigator.onLine === false)) setError(error.message)
+      setStale(true)
+    } else {
       setRows(data as T[])
       setError('')
+      setStale(false)
+      setUpdatedAt(Date.now())
+      haveRows.current = true
+      writeCache(key, data)
     }
     setLoading(false)
-  }, [table, tripId, order])
+  }, [table, tripId, order, key])
 
   useEffect(() => {
     reload()
@@ -49,7 +95,7 @@ export function useTripTable<T>(table: string, tripId: string, order: string = '
     }
   }, [table, tripId, reload])
 
-  return { rows, loading, error, reload }
+  return { rows, loading, error, reload, stale, updatedAt }
 }
 
 export async function mutate(promise: PromiseLike<{ error: { message: string } | null }>) {
