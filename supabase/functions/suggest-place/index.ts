@@ -54,6 +54,7 @@ If the post names several places (a list or roundup), identify each one (up to 1
 - price level, booking/queue tips
 - with a milk-only baby: stroller access, a quiet spot or private room to nurse, nursing room nearby, smoking; or why it's better as an adults-only outing
 - honest verdict: hidden gem, worth it, overhyped, or tourist trap
+If you only have a link with no caption, search for the post itself (its URL, its code and the account) to find which places it shows.
 Be concise. If you can't identify any specific place, say so.`
 
 const EXTRACT = `Turn the research notes into place cards, one per real place the notes identified, in the order the post lists them (at most 10). Return an empty list if no specific real place was identified. Rules for each card:
@@ -65,6 +66,12 @@ const EXTRACT = `Turn the research notes into place cards, one per real place th
 - audience: "baby" if it works with the baby, otherwise "adults".
 - sources: the URLs the notes relied on.
 - Plain text only: no emoji, no exclamation marks.`
+
+const decode = (s: string) =>
+  s
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
+    .replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
 
 /** Caption of the shared post, so the model knows what it is about (posts themselves need a login). */
 async function postContext(link: string) {
@@ -86,15 +93,27 @@ async function postContext(link: string) {
       }
     }
     if (host === 'instagram.com') {
-      // Instagram serves Open Graph tags to link-preview crawlers
-      const r = await fetch(url, { headers: { 'User-Agent': 'facebookexternalhit/1.1' } })
-      if (r.ok) {
+      // Instagram serves Open Graph tags to link-preview crawlers; the public embed page carries the full caption
+      const code = url.pathname.match(/^\/(?:p|reel|reels|tv)\/([\w-]+)/)?.[1]
+      const pages = [
+        `https://www.instagram.com${url.pathname}`,
+        ...(code ? [`https://www.instagram.com/p/${code}/embed/captioned/`] : []),
+      ]
+      const parts: string[] = []
+      for (const page of pages) {
+        const r = await fetch(page, { headers: { 'User-Agent': 'facebookexternalhit/1.1' } }).catch(() => null)
+        if (!r?.ok) continue
         const html = await r.text()
-        const meta = (p: string) =>
-          html.match(new RegExp(`<meta[^>]+property="og:${p}"[^>]+content="([^"]*)"`, 'i'))?.[1] ?? ''
-        const text = [meta('title'), meta('description')].filter(Boolean).join(' — ')
-        if (text) return `Instagram post: ${text}`
+        for (const tag of html.match(/<meta[^>]+>/gi) ?? []) {
+          if (!/(property|name)="(og:title|og:description|description)"/i.test(tag)) continue
+          const c = tag.match(/content="([^"]*)"/i)?.[1]
+          if (c) parts.push(decode(c))
+        }
+        const cap = html.match(/class="Caption"[^>]*>([\s\S]*?)<div class="CaptionComments/i)?.[1]
+        if (cap) parts.push(decode(cap.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, ' ')))
       }
+      const text = [...new Set(parts.map((x) => x.trim()).filter(Boolean))].join(' — ').slice(0, 4000)
+      if (text) return `Instagram post: ${text}`
     }
   } catch {
     // fall back to the link alone
@@ -153,6 +172,7 @@ Deno.serve(async (req) => {
   if ((link?.length ?? 0) > 500 || (text?.length ?? 0) > 1000) return json({ error: 'too long' }, 413)
 
   const caption = link ? await postContext(link) : ''
+  console.log('caption', caption.length, caption.slice(0, 300))
   const ask = [link && `Link: ${link}`, caption, text && `Note from the member: ${text}`].filter(Boolean).join('\n')
 
   const client = new Anthropic({ apiKey: await anthropicKey(admin) })
@@ -196,6 +216,7 @@ Deno.serve(async (req) => {
     const places = card.parsed_output.places
       .slice(0, MAX_PLACES)
       .map((p) => ({ ...p, sources: p.sources.length ? p.sources : fallback }))
+    console.log('places', places.length, places.map((p) => p.name).join(' | ') || notes.slice(0, 500))
     return json({ places })
   } catch (error) {
     if (error instanceof Anthropic.AuthenticationError) return json({ error: 'ANTHROPIC_API_KEY is missing or invalid' }, 500)
