@@ -471,7 +471,7 @@ html[dir='rtl'] .ja { text-align: right; }
 .tint { position: absolute; inset: 0; pointer-events: none; opacity: 0; }
 .like-tint { background: var(--like); }
 .nope-tint { background: var(--nope); }
-.card-info { flex: 1; min-height: 0; overflow: hidden; padding: 12px 16px 6px; display: flex; flex-direction: column; gap: 10px; font-size: 0.9375rem; cursor: pointer; }
+.card-info { flex: 1; min-height: 0; overflow: hidden; -webkit-mask-image: linear-gradient(#000 80%, transparent); mask-image: linear-gradient(#000 80%, transparent); padding: 12px 16px 6px; display: flex; flex-direction: column; gap: 10px; font-size: 0.9375rem; cursor: pointer; }
 .clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; }
 @media (max-height: 700px) { .clamp { -webkit-line-clamp: 2; line-clamp: 2; } }
 /* the whole card, read in a sheet at full height */
@@ -577,3 +577,4 @@ html[dir='rtl'] .ja { text-align: right; }
   @media (prefers-contrast: more) { :root { --line: #8a8378; --muted: #d2cbbf; } }
 }
 .chip.add-chip { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+.dishes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }

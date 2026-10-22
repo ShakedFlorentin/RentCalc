@@ -30,6 +30,8 @@ const PlaceDraft = z.object({
   tip: z.string().nullable(),
   audience: z.enum(['baby', 'adults']),
   baby_notes: z.string().nullable(),
+  serves: z.string().nullable(),
+  dishes: z.array(z.string()),
   sources: z.array(z.string()),
 })
 
@@ -38,6 +40,7 @@ A member shared a place (a social-media post, a map link, or just a name). Work 
 - what it is and what people rave about online
 - Tabelog score (search in Japanese too) and Google rating; only report numbers you actually see
 - full address, neighbourhood and coordinates
+- for a restaurant, cafe or bar: what it serves (cuisine, signature dishes or drinks, format such as counter course or street stall)
 - price level, booking/queue tips
 - with a milk-only baby: stroller access, a quiet spot or private room to nurse, nursing room nearby, smoking; or why it's better as an adults-only outing
 - honest verdict: hidden gem, worth it, overhyped, or tourist trap
@@ -47,6 +50,7 @@ const EXTRACT = `Turn the research notes into the place card. Rules:
 - found=false if the notes did not identify one specific real place.
 - city: tokyo, kyoto, osaka, nara, or daytrip for anywhere else.
 - hype, reality, tip, baby_notes, price: one short sentence each in natural, casual Hebrew; keep place names, brand names (Tabelog, Google) and numbers as they are.
+- serves: for a restaurant, cafe or bar, one or two short Hebrew sentences on what it serves, explaining Japanese dish names in plain words (e.g. "אוקונומיאקי (פנקייק כרוב על הפלנצ׳ה)"); null for other places. dishes: 2-4 signature items as short Hebrew labels, or [].
 - tabelog_score / google_score / lat / lng: only if stated in the notes, else null.
 - audience: "baby" if it works with the baby, otherwise "adults".
 - sources: the URLs the notes relied on.`

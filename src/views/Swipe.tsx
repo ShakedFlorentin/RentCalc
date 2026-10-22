@@ -2,7 +2,7 @@ import { PointerEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../supabase'
 import { AUDIENCES, CARD_STYLE, CITY_HE, VERDICTS, type Candidate, type Member, type Swipe, type Trip } from '../types'
-import { mutate, useMediaIndex, useTripTable, withMedia } from '../lib'
+import { matchFor, mutate, useMediaIndex, useTripTable, withMedia } from '../lib'
 import AddPlace from './AddPlace'
 import { Empty, Sheet } from '../ui'
 import { MediaActions } from '../media'
@@ -24,7 +24,7 @@ export default function SwipeGame({ trip, userId, members }: Props) {
   const { rows: swipes, reload: reloadSwipes } = useTripTable<Swipe>('swipes', trip.id)
   const [city, setCity] = useState('')
   const [aud, setAud] = useState('')
-  const [match, setMatch] = useState<{ c: Candidate; names: string[] } | null>(null)
+  const [match, setMatch] = useState<{ c: Candidate; names: string[]; who: string | null } | null>(null)
   const [history, setHistory] = useState<string[]>([])
   const knownMatches = useRef<Set<string> | null>(null)
 
@@ -37,25 +37,32 @@ export default function SwipeGame({ trip, userId, members }: Props) {
     for (const s of swipes) if (s.liked) m.set(s.candidate_id, [...(m.get(s.candidate_id) ?? []), s.user_id])
     return m
   }, [swipes])
-  const matchedIds = useMemo(
-    () => new Set([...likes].filter(([, us]) => us.length >= trip.match_threshold).map(([id]) => id)),
-    [likes, trip.match_threshold],
-  )
+  // candidate id → whose list it went on (a couple, or null for everyone)
+  const matches = useMemo(() => {
+    const m = new Map<string, string | null>()
+    for (const [id, us] of likes) {
+      const hit = matchFor(us, members, trip.match_threshold)
+      if (hit) m.set(id, hit.who)
+    }
+    return m
+  }, [likes, members, trip.match_threshold])
+  const matchedIds = useMemo(() => new Set(matches.keys()), [matches])
 
   // celebrate every new match, whoever made it
   useEffect(() => {
     if (loading) return
     if (knownMatches.current === null) {
-      knownMatches.current = new Set(matchedIds)
+      knownMatches.current = new Set([...matches].map(([id, who]) => id + who))
       return
     }
-    for (const id of matchedIds) {
-      if (knownMatches.current.has(id)) continue
-      knownMatches.current.add(id)
+    // keyed with the owner too, so a couple's match turning into everyone's is celebrated again
+    for (const [id, who] of matches) {
+      if (knownMatches.current.has(id + who)) continue
+      knownMatches.current.add(id + who)
       const c = candidates.find((x) => x.id === id)
-      if (c) setMatch({ c, names: (likes.get(id) ?? []).map((u) => nameOf(members, u)) })
+      if (c) setMatch({ c, who, names: (likes.get(id) ?? []).map((u) => nameOf(members, u)) })
     }
-  }, [matchedIds, loading, candidates, likes, members])
+  }, [matches, loading, candidates, likes, members])
 
   const mine = new Set(swipes.filter((s) => s.user_id === userId).map((s) => s.candidate_id))
   const cities = Object.keys(CITY_HE).filter((c) => candidates.some((x) => x.city === c))
@@ -202,7 +209,7 @@ export default function SwipeGame({ trip, userId, members }: Props) {
             <div className="confetti">🎉🍣🏯🎌🍜🎉</div>
             <h2>זה מאצ׳!</h2>
             <p>
-              <b dir="auto">{match.c.name}</b> נכנס לרשימה שלכם
+              <b dir="auto">{match.c.name}</b> נכנס {match.who ? `לרשימה של ${match.who}` : 'לרשימה של כולם'}
             </p>
             <p className="muted">{match.names.join(' · ')} אהבו</p>
             <button className="primary" onClick={() => setMatch(null)}>
@@ -344,7 +351,13 @@ function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked
       {/* a short preview; tapping it opens the whole card in a full-height sheet */}
       <div className="card-info">
         <Tags c={c} />
-        {c.hype && (
+        {c.serves && (
+          <div className="fact">
+            <b>🍽️ מה מגישים</b>
+            <p dir="auto" className="clamp">{c.serves}</p>
+          </div>
+        )}
+        {c.hype && !c.serves && (
           <div className="fact">
             <b>📱 ברשתות</b>
             <p dir="auto" className="clamp">{c.hype}</p>
@@ -367,6 +380,21 @@ function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked
           <Sheet title={c.name} onClose={() => setMore(false)}>
             <div className="card-full">
               <Tags c={c} />
+              {c.serves && (
+                <div className="fact">
+                  <b>🍽️ מה מגישים</b>
+                  <p dir="auto">{c.serves}</p>
+                  {!!c.dishes?.length && (
+                    <div className="dishes">
+                      {c.dishes.map((d) => (
+                        <span key={d} className="pill" dir="auto">
+                          {d}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
               {c.hype && (
                 <div className="fact">
                   <b>📱 ברשתות</b>

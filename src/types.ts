@@ -7,7 +7,7 @@ export type Trip = {
   match_threshold: number
 }
 
-export type Member = { trip_id: string; user_id: string; display_name: string }
+export type Member = { trip_id: string; user_id: string; display_name: string; couple: string | null }
 
 export type DayInfo = {
   trip_id: string
@@ -48,6 +48,8 @@ export type Booking = {
   url: string | null
   notes: string | null
   file_path: string | null
+  /** whose booking this is; null means the whole group */
+  who: string | null
 }
 
 export type Place = {
@@ -69,6 +71,8 @@ export type Place = {
   instagram_url?: string | null
   tiktok_url?: string | null
   photos?: string[] | null
+  /** whose list it is on: a couple, or null for the whole group */
+  who?: string | null
 }
 
 export type ChecklistItem = {
@@ -101,6 +105,9 @@ export type Candidate = {
   id: string
   trip_id: string
   name: string
+  /** what a restaurant, cafe or bar serves, in Hebrew */
+  serves?: string | null
+  dishes?: string[] | null
   name_ja: string | null
   city: string
   area: string | null

@@ -1,14 +1,31 @@
 import { useState } from 'react'
 import { supabase } from '../supabase'
-import { BOOKING_KINDS, type Booking, type Trip } from '../types'
-import { fmtDateTime, fromInputDateTime, mapsUrl, mutate, toInputDateTime, useTripTable } from '../lib'
+import { BOOKING_KINDS, TOGETHER, type Booking, type Member, type Trip } from '../types'
+import { couplesOf, fmtDateTime, fromInputDateTime, mapsUrl, mutate, toInputDateTime, useTripTable } from '../lib'
 import { Empty, Field, Sheet } from '../ui'
 
-export default function Bookings({ trip }: { trip: Trip }) {
+type Props = { trip: Trip; members: Member[]; userId: string }
+
+export default function Bookings({ trip, members, userId }: Props) {
   const tripId = trip.id
   const [importing, setImporting] = useState(false)
   const { rows, loading } = useTripTable<Booking>('bookings', tripId, 'starts_at')
   const [edit, setEdit] = useState<Partial<Booking> | null>(null)
+  const couples = couplesOf(members)
+  const myCouple = members.find((m) => m.user_id === userId)?.couple ?? null
+  // '' = everything, 'group' = the whole group's bookings, or a couple's name (their own plus the group's)
+  const [whose, setWhose] = useState('')
+  const shown = rows.filter((b) => !whose || (whose === 'group' ? !b.who : !b.who || b.who === whose))
+  // one section per booking kind, in the order of BOOKING_KINDS; rows are already sorted by start time
+  const sections = Object.keys(BOOKING_KINDS)
+    .map((k) => ({
+      kind: k,
+      // each couple's bookings together (the group's first), by time within each
+      items: shown
+        .filter((b) => (BOOKING_KINDS[b.kind] ? b.kind : 'other') === k)
+        .sort((a, b) => (a.who ?? '').localeCompare(b.who ?? '')),
+    }))
+    .filter((s) => s.items.length)
 
   return (
     <div className="stack">
@@ -16,48 +33,71 @@ export default function Bookings({ trip }: { trip: Trip }) {
       <button className="secondary" onClick={() => setImporting(true)}>
         📩 הוספה מאישור הזמנה (מייל / PDF / צילום מסך)
       </button>
-      {!loading && rows.length === 0 && <Empty>עוד אין הזמנות. לחצו על ＋ כדי להוסיף</Empty>}
-      {rows.map((b) => (
-        <div key={b.id} className="card booking" onClick={() => setEdit(b)}>
-          <div className="row spread">
-            <b>{BOOKING_KINDS[b.kind]?.split(' ')[0]} {b.title}</b>
-            {b.file_path && <span title="קובץ מצורף">📎</span>}
-          </div>
-          {b.starts_at && (
-            <div className="muted small">
-              {fmtDateTime(b.starts_at)}
-              {b.ends_at && ` ← ${fmtDateTime(b.ends_at)}`}
-            </div>
-          )}
-          {b.confirmation && (
-            <div className="small">
-              אישור: <b className="code" dir="ltr">{b.confirmation}</b>
-            </div>
-          )}
-          <div className="row" onClick={(e) => e.stopPropagation()}>
-            {b.location && (
-              <a className="pill" href={mapsUrl(b.location)} target="_blank" rel="noreferrer">
-                🗺️ מפה
-              </a>
-            )}
-            {b.url && (
-              <a className="pill" href={b.url} target="_blank" rel="noreferrer">
-                🔗 קישור
-              </a>
-            )}
-            {b.file_path && (
-              <button className="pill" onClick={() => openFile(b.file_path!)}>
-                📎 מסמך
-              </button>
-            )}
-          </div>
+      {couples.length > 1 && (
+        <div className="chips scroll">
+          <button className={'chip' + (!whose ? ' on' : '')} onClick={() => setWhose('')}>
+            הכל
+          </button>
+          {couples.map((c) => (
+            <button key={c} className={'chip' + (whose === c ? ' on' : '')} onClick={() => setWhose(c)}>
+              💑 {c}
+            </button>
+          ))}
+          <button className={'chip' + (whose === 'group' ? ' on' : '')} onClick={() => setWhose('group')}>
+            👥 של כולם
+          </button>
         </div>
+      )}
+      {!loading && rows.length === 0 && <Empty>עוד אין הזמנות. לחצו על ＋ כדי להוסיף</Empty>}
+      {sections.map((s) => (
+        <section key={s.kind} className="stack">
+          <h2 className="group-title">
+            {BOOKING_KINDS[s.kind]} <span className="muted small">{s.items.length}</span>
+          </h2>
+          {s.items.map((b) => (
+            <div key={b.id} className="card booking" onClick={() => setEdit(b)}>
+              <div className="row spread">
+                <b>{BOOKING_KINDS[b.kind]?.split(' ')[0]} {b.title}</b>
+                {b.file_path && <span title="קובץ מצורף">📎</span>}
+              </div>
+              {couples.length > 1 && <div className={'who-tag' + (b.who ? ' apart' : '')}>{b.who ? `💑 ${b.who}` : `👥 ${TOGETHER}`}</div>}
+              {b.starts_at && (
+                <div className="muted small">
+                  {fmtDateTime(b.starts_at)}
+                  {b.ends_at && ` ← ${fmtDateTime(b.ends_at)}`}
+                </div>
+              )}
+              {b.confirmation && (
+                <div className="small">
+                  אישור: <b className="code" dir="ltr">{b.confirmation}</b>
+                </div>
+              )}
+              <div className="row" onClick={(e) => e.stopPropagation()}>
+                {b.location && (
+                  <a className="pill" href={mapsUrl(b.location)} target="_blank" rel="noreferrer">
+                    🗺️ מפה
+                  </a>
+                )}
+                {b.url && (
+                  <a className="pill" href={b.url} target="_blank" rel="noreferrer">
+                    🔗 קישור
+                  </a>
+                )}
+                {b.file_path && (
+                  <button className="pill" onClick={() => openFile(b.file_path!)}>
+                    📎 מסמך
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </section>
       ))}
       <button className="fab" aria-label="הזמנה חדשה" onClick={() => setEdit({ kind: 'flight' })}>
         ＋
       </button>
-      {edit && <BookingForm tripId={tripId} booking={edit} onClose={() => setEdit(null)} />}
-      {importing && <ImportSheet trip={trip} onClose={() => setImporting(false)} />}
+      {edit && <BookingForm tripId={tripId} couples={couples} booking={edit} onClose={() => setEdit(null)} />}
+      {importing && <ImportSheet trip={trip} couples={couples} myCouple={myCouple} onClose={() => setImporting(false)} />}
     </div>
   )
 }
@@ -73,7 +113,7 @@ async function openFile(path: string) {
   else location.href = data.signedUrl
 }
 
-function BookingForm(props: { tripId: string; booking: Partial<Booking>; onClose: () => void }) {
+function BookingForm(props: { tripId: string; couples: string[]; booking: Partial<Booking>; onClose: () => void }) {
   const [f, setF] = useState<Partial<Booking>>(props.booking)
   const [file, setFile] = useState<File | null>(null)
   const [busy, setBusy] = useState(false)
@@ -106,6 +146,7 @@ function BookingForm(props: { tripId: string; booking: Partial<Booking>; onClose
       url: f.url || null,
       notes: f.notes || null,
       file_path: filePath,
+      who: f.who || null,
     }
     const ok = await mutate(
       f.id ? supabase.from('bookings').update(row).eq('id', f.id) : supabase.from('bookings').insert(row),
@@ -131,6 +172,7 @@ function BookingForm(props: { tripId: string; booking: Partial<Booking>; onClose
           ))}
         </select>
       </Field>
+      {props.couples.length > 1 && <WhoField value={f.who ?? ''} couples={props.couples} onChange={(who) => setF({ ...f, who })} />}
       <Field label="כותרת">
         <input value={f.title ?? ''} onChange={set('title')} placeholder="למשל: אל על TLV → NRT" />
       </Field>
@@ -178,7 +220,10 @@ function BookingForm(props: { tripId: string; booking: Partial<Booking>; onClose
 type Extracted = Pick<Booking, 'kind' | 'title' | 'starts_at' | 'ends_at' | 'confirmation' | 'location' | 'url' | 'notes'>
 
 /** Paste a confirmation email or attach its PDF/screenshot; Claude reads it and the bookings are added. */
-function ImportSheet({ trip, onClose }: { trip: Trip; onClose: () => void }) {
+function ImportSheet(props: { trip: Trip; couples: string[]; myCouple: string | null; onClose: () => void }) {
+  const { trip, onClose } = props
+  // a confirmation usually covers one couple, so start from the importer's
+  const [who, setWho] = useState(props.myCouple ?? '')
   const [text, setText] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [busy, setBusy] = useState(false)
@@ -220,6 +265,7 @@ function ImportSheet({ trip, onClose }: { trip: Trip; onClose: () => void }) {
           starts_at: b.starts_at ? fromInputDateTime(b.starts_at.slice(0, 16)) : null,
           ends_at: b.ends_at ? fromInputDateTime(b.ends_at.slice(0, 16)) : null,
           file_path: filePath,
+          who: who || null,
         })),
       ),
     )
@@ -252,6 +298,7 @@ function ImportSheet({ trip, onClose }: { trip: Trip; onClose: () => void }) {
         מדביקים את המייל של האישור (Booking, Agoda, חברת תעופה…) או מצרפים PDF / צילום מסך. Claude קורא את הפרטים
         וההזמנה נוספת אוטומטית.
       </p>
+      {props.couples.length > 1 && <WhoField value={who} couples={props.couples} onChange={setWho} />}
       <Field label="טקסט האישור">
         <textarea value={text} onChange={(e) => setText(e.target.value)} rows={7} dir="auto" placeholder="להדביק כאן…" />
       </Field>
@@ -263,6 +310,21 @@ function ImportSheet({ trip, onClose }: { trip: Trip; onClose: () => void }) {
         {busy ? 'קורא את האישור…' : 'קריאה והוספה'}
       </button>
     </Sheet>
+  )
+}
+
+function WhoField(props: { value: string; couples: string[]; onChange: (who: string) => void }) {
+  return (
+    <Field label="של מי">
+      <select value={props.value} onChange={(e) => props.onChange(e.target.value)}>
+        <option value="">👥 של כולם</option>
+        {props.couples.map((c) => (
+          <option key={c} value={c}>
+            💑 {c}
+          </option>
+        ))}
+      </select>
+    </Field>
   )
 }
 

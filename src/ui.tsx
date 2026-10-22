@@ -1,11 +1,12 @@
-import { ReactNode, PointerEvent, useEffect, useRef, useState } from 'react'
+import { ReactNode, useEffect, useRef } from 'react'
 
 /** Bottom sheet: grabber, drag-down to dismiss, Escape, scroll lock, focus return. */
 export function Sheet(props: { title: string; onClose: () => void; children: ReactNode }) {
   const { onClose } = props
-  const [dy, setDy] = useState(0)
-  const startY = useRef<number | null>(null)
   const ref = useRef<HTMLDivElement>(null)
+  const close = useRef(onClose)
+  close.current = onClose
+  const openedAt = useRef(performance.now())
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
@@ -21,23 +22,90 @@ export function Sheet(props: { title: string; onClose: () => void; children: Rea
     }
   }, [onClose])
 
-  const down = (e: PointerEvent) => {
-    if ((e.target as HTMLElement).closest('button')) return
-    startY.current = e.clientY
-    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
-  }
-  const move = (e: PointerEvent) => {
-    if (startY.current !== null) setDy(Math.max(0, e.clientY - startY.current))
-  }
-  const up = () => {
-    if (startY.current === null) return
-    startY.current = null
-    if (dy > 110) onClose()
-    else setDy(0)
-  }
+  // Pull down anywhere on the sheet to close it: from the header always, from the content once it is scrolled to
+  // the top. A short fast flick closes it too. Touch listeners are attached by hand because React's are passive
+  // and the pull has to stop the content from scrolling.
+  useEffect(() => {
+    const sheet = ref.current
+    const body = sheet?.querySelector<HTMLElement>('.sheet-body')
+    if (!sheet || !body) return
+    let y0 = 0
+    let t0 = 0
+    let dy = 0
+    let dragging = false
+    let canDrag = false
+    const set = (y: number, animate: boolean) => {
+      sheet.style.transition = animate ? 'transform 0.22s ease-out' : 'none'
+      sheet.style.transform = y ? `translateY(${y}px)` : ''
+    }
+    const release = () => {
+      if (!dragging) return
+      dragging = false
+      const speed = dy / Math.max(1, performance.now() - t0)
+      if (dy > Math.min(120, sheet.offsetHeight * 0.25) || (dy > 30 && speed > 0.5)) {
+        set(sheet.offsetHeight, true)
+        setTimeout(() => close.current(), 200)
+      } else set(0, true)
+    }
+    const start = (y: number, target: EventTarget | null) => {
+      const el = target as HTMLElement
+      canDrag = !el.closest('input, textarea, select, .leaflet-container') && (!!el.closest('.sheet-head') || body.scrollTop <= 0)
+      y0 = y
+      dy = 0
+      dragging = false
+    }
+    const move = (y: number) => {
+      if (!canDrag) return false
+      const d = y - y0
+      if (!dragging) {
+        if (d < 8) {
+          // pulling up means scrolling the content, so leave it to the browser
+          if (d < -4) canDrag = false
+          return false
+        }
+        dragging = true
+        y0 = y
+        t0 = performance.now()
+      }
+      dy = Math.max(0, y - y0)
+      set(dy, false)
+      return true
+    }
+
+    const ts = (e: TouchEvent) => start(e.touches[0].clientY, e.target)
+    const tm = (e: TouchEvent) => {
+      if (move(e.touches[0].clientY) && e.cancelable) e.preventDefault()
+    }
+    // mouse: only from the header, like a window title bar
+    const md = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest('.sheet-head') || (e.target as HTMLElement).closest('button')) return
+      start(e.clientY, e.target)
+      const mm = (ev: MouseEvent) => move(ev.clientY)
+      const mu = () => {
+        release()
+        window.removeEventListener('mousemove', mm)
+        window.removeEventListener('mouseup', mu)
+      }
+      window.addEventListener('mousemove', mm)
+      window.addEventListener('mouseup', mu)
+    }
+    sheet.addEventListener('touchstart', ts, { passive: true })
+    sheet.addEventListener('touchmove', tm, { passive: false })
+    sheet.addEventListener('touchend', release)
+    sheet.addEventListener('touchcancel', release)
+    sheet.addEventListener('mousedown', md)
+    return () => {
+      sheet.removeEventListener('touchstart', ts)
+      sheet.removeEventListener('touchmove', tm)
+      sheet.removeEventListener('touchend', release)
+      sheet.removeEventListener('touchcancel', release)
+      sheet.removeEventListener('mousedown', md)
+    }
+  }, [])
 
   return (
-    <div className="backdrop" onClick={onClose}>
+    // the click that follows the tap which opened the sheet lands on the backdrop; don't let it close the sheet
+    <div className="backdrop" onClick={() => performance.now() - openedAt.current > 450 && onClose()}>
       <div
         ref={ref}
         tabIndex={-1}
@@ -45,10 +113,9 @@ export function Sheet(props: { title: string; onClose: () => void; children: Rea
         aria-modal="true"
         aria-label={props.title}
         className="sheet"
-        style={{ transform: dy ? `translateY(${dy}px)` : undefined, transition: startY.current === null ? 'transform 0.25s ease-out' : 'none' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="sheet-head" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
+        <div className="sheet-head">
           <span className="grabber" aria-hidden="true" />
           <button className="sheet-close" onClick={onClose}>
             סגור

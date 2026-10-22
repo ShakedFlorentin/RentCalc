@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { supabase } from '../supabase'
-import { AUDIENCES, CATEGORIES, VERDICTS, type DayInfo, type ItineraryItem, type Place, type Trip } from '../types'
-import { mapsUrl, mutate, useMediaIndex, useTripTable, withMedia } from '../lib'
+import { AUDIENCES, CATEGORIES, TOGETHER, VERDICTS, type DayInfo, type ItineraryItem, type Member, type Place, type Trip } from '../types'
+import { couplesOf, mapsUrl, mutate, useMediaIndex, useTripTable, withMedia } from '../lib'
 import { Empty, Field, Sheet } from '../ui'
 import { MediaActions, Thumb } from '../media'
 import PlacesMap from './PlacesMap'
@@ -9,7 +9,9 @@ import AddPlace from './AddPlace'
 
 const CITY_ORDER = ['טוקיו', 'קיוטו', 'נארה', 'אוסקה', 'טיול יום']
 
-export default function Places({ trip, me, userId }: { trip: Trip; me: string; userId: string }) {
+type Props = { trip: Trip; me: string; userId: string; members: Member[] }
+
+export default function Places({ trip, me, userId, members }: Props) {
   const { rows: rawRows, loading } = useTripTable<Place>('places', trip.id)
   const media = useMediaIndex()
   // places with neither a match nor an author were pre-seeded with the trip, before anyone chose anything
@@ -23,6 +25,15 @@ export default function Places({ trip, me, userId }: { trip: Trip; me: string; u
   const [city, setCity] = useState('')
   const [cat, setCat] = useState('')
   const [aud, setAud] = useState('')
+  const couples = couplesOf(members)
+  const myCouple = members.find((m) => m.user_id === userId)?.couple ?? null
+  // whose places: 'mine' = the group's plus my couple's, 'all', 'together' = the group's only, or a couple's name
+  const [whose, setWhose] = useState(myCouple ? 'mine' : 'all')
+  const whoOk = (p: Place) =>
+    whose === 'all' ||
+    (whose === 'mine' && (!p.who || p.who.split(' + ').includes(myCouple ?? ''))) ||
+    (whose === 'together' && !p.who) ||
+    (p.who ?? '').split(' + ').includes(whose)
   const [edit, setEdit] = useState<Partial<Place> | null>(null)
   const [adding, setAdding] = useState(false)
   const [planning, setPlanning] = useState<Place | null>(null)
@@ -32,7 +43,7 @@ export default function Places({ trip, me, userId }: { trip: Trip; me: string; u
   const cities = [...new Set(rows.map((p) => p.city).filter(Boolean))] as string[]
   cities.sort((a, b) => rank(a) - rank(b))
   const shown = rows.filter(
-    (p) => (!city || p.city === city) && (!cat || p.category === cat) && (!aud || p.audience === aud),
+    (p) => whoOk(p) && (!city || p.city === city) && (!cat || p.category === cat) && (!aud || p.audience === aud),
   )
   const plannedIds = new Set(items.map((i) => i.place_id).filter(Boolean))
 
@@ -67,6 +78,26 @@ export default function Places({ trip, me, userId }: { trip: Trip; me: string; u
           🗺️ מפה
         </button>
       </div>
+      {couples.length > 1 && (
+        <div className="chips scroll">
+          {myCouple && (
+            <button className={'chip' + (whose === 'mine' ? ' on' : '')} onClick={() => setWhose('mine')}>
+              שלנו + של כולם
+            </button>
+          )}
+          <button className={'chip' + (whose === 'together' ? ' on' : '')} onClick={() => setWhose('together')}>
+            👥 {TOGETHER}
+          </button>
+          {couples.map((c) => (
+            <button key={c} className={'chip' + (whose === c ? ' on' : '')} onClick={() => setWhose(c)}>
+              💑 {c}
+            </button>
+          ))}
+          <button className={'chip' + (whose === 'all' ? ' on' : '')} onClick={() => setWhose('all')}>
+            הכל
+          </button>
+        </div>
+      )}
       <div className="segmented">
         <button className={!aud ? 'on' : ''} onClick={() => setAud('')}>
           הכל
@@ -164,6 +195,7 @@ function PlaceRow(props: { p: Place; planned: boolean; onEdit: (p: Place) => voi
           {CATEGORIES[p.category]?.split(' ')[0]} {p.audience && AUDIENCES[p.audience].split(' ')[0]}{' '}
           {p.verdict && VERDICTS[p.verdict]?.label}
           {p.added_by && <> · <bdi>{p.added_by}</bdi></>}
+          {p.who && <> · 💑 <bdi>{p.who}</bdi></>}
           {props.planned && ' · 🗓️ במסלול'}
         </div>
         {p.notes && (
@@ -197,12 +229,19 @@ function buildPlan(places: Place[], days: DayInfo[]) {
 
   for (const [city, ps] of byCity) {
     // Nara is a day trip: use the day whose notes mention it
-    const cityDays = days
-      .filter((d) => d.city === city || (city === 'נארה' && d.notes?.includes('נארה')))
-      .map((d) => d.day)
+    const inCity = days.filter((d) => d.city === city || (city === 'נארה' && d.notes?.includes('נארה')))
+    for (const [who, wps] of groupBy(ps, (p) => p.who ?? '')) {
+      // a group place needs everyone there; a couple's place fits any day that couple is in Japan
+      const fits = (d: DayInfo) => !d.who || (!!who && who.split(' + ').every((c) => c === d.who))
+      planCity(wps, inCity.filter(fits).map((d) => d.day))
+    }
+  }
+  return { rows, skipped }
+
+  function planCity(ps: Place[], cityDays: number[]) {
     if (!cityDays.length) {
       skipped += ps.length
-      continue
+      return
     }
     const areaLng = new Map<string, number>()
     for (const p of ps) if (p.lng != null && !areaLng.has(p.area ?? '')) areaLng.set(p.area ?? '', p.lng)
@@ -224,7 +263,12 @@ function buildPlan(places: Place[], days: DayInfo[]) {
       })
     })
   }
-  return { rows, skipped }
+}
+
+function groupBy<T>(xs: T[], key: (x: T) => string) {
+  const m = new Map<string, T[]>()
+  for (const x of xs) m.set(key(x), [...(m.get(key(x)) ?? []), x])
+  return m
 }
 
 function rank(city: string | null) {

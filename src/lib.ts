@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from './supabase'
+import type { Member } from './types'
 
 /** Rows of one trip-scoped table, kept in sync with every member's edits via realtime. */
 export function useTripTable<T>(table: string, tripId: string, order: string = 'created_at') {
@@ -98,6 +99,9 @@ type MediaEntry = {
   tip?: string
   baby_notes?: string
   price?: string
+  // what a restaurant, cafe or bar serves
+  serves?: string
+  dishes?: string[]
 }
 let mediaCache: Promise<Record<string, MediaEntry>> | null = null
 
@@ -138,7 +142,26 @@ export function withMedia<T extends { name: string }>(row: T, index: Record<stri
           tip: m.tip ?? r.tip,
           baby_notes: m.baby_notes ?? r.baby_notes,
           price: m.price ?? r.price,
+          serves: m.serves ?? r.serves,
+          dishes: m.dishes ?? r.dishes,
         }
       : {}),
   }
+}
+
+/** The couples in the trip, in a stable order. */
+export function couplesOf(members: Member[]) {
+  return [...new Set(members.map((m) => m.couple).filter((c): c is string => !!c))].sort()
+}
+
+/**
+ * Who a place is matched for, mirroring the on_swipe trigger: both members of a couple liking it puts it on that
+ * couple's list, and every couple agreeing makes it the whole group's (who = null). Undefined means no match yet.
+ */
+export function matchFor(likers: string[], members: Member[], threshold: number): { who: string | null } | undefined {
+  const couples = couplesOf(members)
+  if (!couples.length) return likers.length >= threshold ? { who: null } : undefined
+  const agreed = couples.filter((c) => members.filter((m) => m.couple === c).every((m) => likers.includes(m.user_id)))
+  if (!agreed.length) return undefined
+  return { who: agreed.length === couples.length ? null : agreed.join(' + ') }
 }
