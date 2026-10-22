@@ -61,7 +61,8 @@ const EXTRACT = `Turn the research notes into the place card. Rules:
 - todo / special / highlights / time_needed: for sights, experiences and shopping (null / [] for restaurants, cafes and bars). todo: 2-3 Hebrew sentences on what you actually do there, as a visit plays out. special: 1-2 Hebrew sentences on what sets it apart, specific rather than generic praise. highlights: 2-4 short Hebrew labels of what not to miss. time_needed: e.g. "שעה-שעתיים" or "חצי יום".
 - tabelog_score / google_score / lat / lng: only if stated in the notes, else null.
 - audience: "baby" if it works with the baby, otherwise "adults".
-- sources: the URLs the notes relied on.`
+- sources: the URLs the notes relied on.
+- Plain text only: no emoji, no exclamation marks.`
 
 /** Caption of the shared post, so the model knows what it is about (posts themselves need a login). */
 async function postContext(link: string) {

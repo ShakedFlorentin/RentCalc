@@ -33,7 +33,7 @@ Return one entry per separate booking (e.g. an outbound and a return flight are 
 - confirmation: the booking/confirmation/PNR number exactly as written.
 - location: full street address (hotel, restaurant) or departure airport/station.
 - url: a link to manage the booking if present.
-- notes: a short Hebrew summary of what matters on the trip: room type or table/course, number of guests, breakfast, cancellation deadline, total price and currency, baggage. Max 3 lines.
+- notes: a short Hebrew summary of what matters on the trip: room type or table/course, number of guests, breakfast, cancellation deadline, total price and currency, baggage. Max 3 lines, plain text, no emoji.
 Only use information that is in the document. If it is not a booking, return an empty list.`
 
 const MAX_BYTES = 15 * 1024 * 1024
