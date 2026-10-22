@@ -480,7 +480,7 @@ html[dir='rtl'] .ja { text-align: right; }
 .verdict.local { background: #fff1f2; color: #be123c; }
 .scores { display: flex; gap: 14px; font-size: 0.875rem; color: var(--muted); }
 
-.swipe-buttons { flex: none; display: flex; justify-content: center; align-items: center; gap: 22px; position: relative; min-height: 76px; }
+.swipe-buttons { flex: none; display: flex; justify-content: center; align-items: center; gap: 22px; position: relative; direction: ltr; /* ✕ on the left, ♥ on the right, matching swipe-right = like */ min-height: 76px; }
 .round {
   display: grid;
   place-items: center;
