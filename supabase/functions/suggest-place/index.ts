@@ -35,7 +35,7 @@ const PlaceDraft = z.object({
   sources: z.array(z.string()),
 })
 
-const RESEARCH = `You help two Israeli couples plan a ~14-day Tokyo → Kyoto → Osaka trip. One couple brings a 5-month-old baby who only drinks milk.
+const RESEARCH = `You help two Israeli couples plan a December trip to Japan (Tokyo, Kyoto, Osaka and day trips). One couple brings a 5-month-old baby who only drinks milk.
 A member shared a place (a social-media post, a map link, or just a name). Work out exactly which real place in Japan it is, then research it:
 - what it is and what people rave about online
 - Tabelog score (search in Japanese too) and Google rating; only report numbers you actually see
