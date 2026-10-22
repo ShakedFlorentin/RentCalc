@@ -20,7 +20,7 @@ export type DayInfo = {
 }
 
 export const TOGETHER = 'כולם ביחד'
-export const WHO_OPTIONS = ['שקד ומאור', 'אלמוג וסניר']
+export const WHO_OPTIONS = ['שקד ומאור', 'אלמוג ושניר']
 
 export type ItineraryItem = {
   id: string
