@@ -9,6 +9,21 @@ import { Icon } from '../icons'
 type Draft = Partial<Candidate> & { link?: string }
 /** A place already in the trip that looks like the one being added. */
 type Existing = { id: string; name: string; where: 'deck' | 'list'; exact: boolean }
+type Row = { id: string; name: string; lat: number | null; lng: number | null }
+type TripPlaces = { deck: Row[]; list: Row[] }
+
+function existingIn(trip: TripPlaces, d: Draft): Existing | null {
+  const probe = { name: d.name ?? '', lat: d.lat, lng: d.lng }
+  let best: Existing | null = null
+  for (const [rows, where] of [[trip.list, 'list'], [trip.deck, 'deck']] as const) {
+    for (const r of rows) {
+      const hit = samePlace(probe, r)
+      if (hit && (!best || (hit === 'exact' && !best.exact))) best = { id: r.id, name: r.name, where, exact: hit === 'exact' }
+    }
+  }
+  return best
+}
+
 type Props = { tripId: string; userId: string; me: string; defaultTo: 'deck' | 'list'; onClose: () => void }
 
 /** Suggest a place from an Instagram/TikTok/Maps link (researched by Claude) or by hand. */
@@ -21,23 +36,19 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const [existing, setExisting] = useState<{ found: Existing; draft: Draft } | null>(null)
+  // a post that names several places: each with what's already in the trip, and whether it's ticked
+  const [many, setMany] = useState<{ d: Draft; found: Existing | null; on: boolean }[] | null>(null)
 
-  /** The trip's own copy of this place, in the game or on the list, if someone already added it. */
-  const findExisting = async (d: Draft): Promise<Existing | null> => {
-    const probe = { name: d.name ?? '', lat: d.lat, lng: d.lng }
+  /** The trip's places, in the game and on the list, to check new ones against. */
+  const loadTrip = async (): Promise<TripPlaces> => {
     const [deck, list] = await Promise.all([
       supabase.from('candidates').select('id, name, lat, lng').eq('trip_id', tripId),
       supabase.from('places').select('id, name, lat, lng').eq('trip_id', tripId),
     ])
-    let best: Existing | null = null
-    for (const [rows, where] of [[list.data, 'list'], [deck.data, 'deck']] as const) {
-      for (const r of rows ?? []) {
-        const hit = samePlace(probe, r)
-        if (hit && (!best || (hit === 'exact' && !best.exact))) best = { id: r.id, name: r.name, where, exact: hit === 'exact' }
-      }
-    }
-    return best
+    return { deck: deck.data ?? [], list: list.data ?? [] }
   }
+  /** The trip's own copy of this place, in the game or on the list, if someone already added it. */
+  const findExisting = async (d: Draft, trip?: TripPlaces) => existingIn(trip ?? (await loadTrip()), d)
 
   /** "It's the same place": in the game, suggesting it means liking it; on the list there's nothing to add. */
   const useExisting = async (e: Existing) => {
@@ -59,8 +70,37 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
       setErr(aiError(error, 'החיפוש לא הצליח. אפשר לנסות שוב או למלא ידנית.'))
       return
     }
-    if (!data.found) setErr('לא זוהה מקום מסוים. בדקו את הפרטים או השלימו ידנית.')
-    setDraft({ ...data, link: link.trim() })
+    // older function versions return one place; newer ones a list
+    const found: Draft[] = ((data.places ?? (data.found ? [data] : [])) as Draft[]).map((p) => ({ ...p, link: link.trim() }))
+    if (found.length > 1) {
+      const trip = await loadTrip()
+      setMany(found.map((d) => {
+        const ex = existingIn(trip, d)
+        return { d, found: ex, on: !ex }
+      }))
+      return
+    }
+    if (!found.length) setErr('לא זוהה מקום מסוים. בדקו את הפרטים או השלימו ידנית.')
+    setDraft(found[0] ?? { found: false, link: link.trim(), city: 'tokyo', category: 'food', audience: 'baby' } as Draft)
+  }
+
+  /** Adds the ticked places; ones already in the game get my like, ones already on the list are skipped. */
+  const addMany = async () => {
+    if (!many) return
+    setBusy(true)
+    const trip = await loadTrip()
+    let added = 0
+    for (const m of many.filter((x) => x.on)) {
+      const ex = existingIn(trip, m.d)
+      if (ex) {
+        if (ex.where === 'deck')
+          await supabase.from('swipes').upsert({ trip_id: tripId, candidate_id: ex.id, user_id: userId, liked: true })
+        continue
+      }
+      if ((await insertDraft(m.d)) === 'ok') added++
+    }
+    setBusy(false)
+    if (added || many.some((x) => x.on)) onClose()
   }
 
   const save = async (d: Draft, anyway = false) => {
@@ -75,6 +115,18 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
         return
       }
     }
+    const res = await insertDraft(d)
+    if (res === 'dup') {
+      const found = await findExisting(d)
+      if (found) setExisting({ found, draft: d })
+    }
+    setBusy(false)
+    if (res === 'ok') onClose()
+  }
+
+  /** Writes one place to the game (with my like) or straight to the list. */
+  const insertDraft = async (d: Draft): Promise<'ok' | 'dup' | 'error'> => {
+    if (!d.name?.trim() || !d.city) return 'error'
     const l = d.link?.trim() || null
     const social = {
       instagram_url: l && /instagram\.com/i.test(l) ? l : null,
@@ -91,7 +143,6 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
       audience: d.audience ?? null,
       added_by: me,
     }
-    let ok: boolean
     if (to === 'deck') {
       const { data, error } = await supabase
         .from('candidates')
@@ -118,14 +169,15 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
         })
         .select('id')
         .single()
-      ok = !error
       // 23505: someone added the same name a moment ago
-      if (error?.code === '23505') {
-        const found = await findExisting(d)
-        if (found) setExisting({ found, draft: d })
-      } else if (error) alert('שגיאה: ' + error.message)
+      if (error?.code === '23505') return 'dup'
+      if (error) {
+        alert('שגיאה: ' + error.message)
+        return 'error'
+      }
       // suggesting a place counts as liking it
-      else await supabase.from('swipes').insert({ trip_id: tripId, candidate_id: data.id, user_id: userId, liked: true })
+      await supabase.from('swipes').insert({ trip_id: tripId, candidate_id: data.id, user_id: userId, liked: true })
+      return 'ok'
     } else {
       const cat = d.category === 'cafe' ? 'food' : ['food', 'sight', 'shopping'].includes(d.category ?? '') ? d.category : 'other'
       const { error } = await supabase.from('places').insert({
@@ -137,14 +189,13 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
           url: social.maps_url,
           notes: [d.tip, d.baby_notes && 'עם התינוק: ' + d.baby_notes].filter(Boolean).join('\n') || null,
         })
-      ok = !error
-      if (error?.code === '23505') {
-        const found = await findExisting(d)
-        if (found) setExisting({ found, draft: d })
-      } else if (error) alert('שגיאה: ' + error.message)
+      if (error?.code === '23505') return 'dup'
+      if (error) {
+        alert('שגיאה: ' + error.message)
+        return 'error'
+      }
+      return 'ok'
     }
-    setBusy(false)
-    if (ok) onClose()
   }
 
   const destination = (
@@ -182,6 +233,54 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
         )}
         <button className="link" onClick={() => setExisting(null)}>
           חזרה לעריכה
+        </button>
+      </Sheet>
+    )
+  }
+
+  if (many) {
+    const picked = many.filter((m) => m.on).length
+    return (
+      <Sheet title={`נמצאו ${many.length} מקומות`} onClose={onClose}>
+        <p className="muted small">מסמנים את המקומות להוסיף. מקום שכבר קיים בטיול לא יתווסף שוב; אם הוא במשחק, יסומן לך לייק.</p>
+        <div className="stack">
+          {many.map((m, i) => {
+            const style = CARD_STYLE[m.d.category ?? ''] ?? CARD_STYLE.sight
+            const verdict = m.d.verdict ? VERDICTS[m.d.verdict] : null
+            return (
+              <label key={i} className="card pick-row">
+                <input
+                  type="checkbox"
+                  checked={m.on}
+                  onChange={() => setMany(many.map((x, j) => (j === i ? { ...x, on: !x.on } : x)))}
+                />
+                <span className="pick-body">
+                  <b dir="auto">{m.d.name}</b>
+                  <span className="muted small">
+                    {[CITY_HE[m.d.city ?? ''], m.d.area, style.label].filter(Boolean).join(' · ')}
+                  </span>
+                  {(m.d.serves || m.d.todo || m.d.reality) && (
+                    <span className="small clamp" dir="auto">
+                      {m.d.serves || m.d.todo || m.d.reality}
+                    </span>
+                  )}
+                  <span className="row">
+                    {verdict && <span className={'verdict ' + verdict.tone}>{verdict.label}</span>}
+                    {m.found && (
+                      <span className="verdict meh">{m.found.where === 'deck' ? 'כבר במשחק' : 'כבר ברשימה'}</span>
+                    )}
+                  </span>
+                </span>
+              </label>
+            )
+          })}
+        </div>
+        {destination}
+        <button className="primary" onClick={addMany} disabled={busy || !picked}>
+          {busy ? 'מוסיף…' : picked === 1 ? 'הוספת מקום אחד' : `הוספת ${picked} מקומות`}
+        </button>
+        <button className="link" onClick={() => setMany(null)}>
+          <Icon as={ArrowRight} /> חזרה
         </button>
       </Sheet>
     )

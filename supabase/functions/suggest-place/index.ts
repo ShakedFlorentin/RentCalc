@@ -15,7 +15,6 @@ const MODEL = 'claude-haiku-5-5'
 const DAILY_LIMIT = 30
 
 const PlaceDraft = z.object({
-  found: z.boolean(),
   name: z.string(),
   name_ja: z.string().nullable(),
   city: z.enum(['tokyo', 'kyoto', 'osaka', 'nara', 'daytrip']),
@@ -40,9 +39,13 @@ const PlaceDraft = z.object({
   time_needed: z.string().nullable(),
   sources: z.array(z.string()),
 })
+// a post can be a roundup ("10 ramen spots in Tokyo"), so the answer is a list; empty when nothing was identified
+const PlaceList = z.object({ places: z.array(PlaceDraft) })
+const MAX_PLACES = 10
 
 const RESEARCH = `You help two Israeli couples plan a December trip to Japan (Tokyo, Kyoto, Osaka and day trips). One couple brings a 5-month-old baby who only drinks milk.
-A member shared a place (a social-media post, a map link, or just a name). Work out exactly which real place in Japan it is, then research it:
+A member shared a place (a social-media post, a map link, or just a name). Work out exactly which real place (or places) in Japan it is about, then research it.
+If the post names several places (a list or roundup), identify each one (up to 10) and research each briefly; one short paragraph per place is enough. For each place:
 - what it is and what people rave about online
 - Tabelog score (search in Japanese too) and Google rating; only report numbers you actually see
 - full address, neighbourhood and coordinates
@@ -51,10 +54,9 @@ A member shared a place (a social-media post, a map link, or just a name). Work 
 - price level, booking/queue tips
 - with a milk-only baby: stroller access, a quiet spot or private room to nurse, nursing room nearby, smoking; or why it's better as an adults-only outing
 - honest verdict: hidden gem, worth it, overhyped, or tourist trap
-Be concise. If you can't identify one specific place, say so.`
+Be concise. If you can't identify any specific place, say so.`
 
-const EXTRACT = `Turn the research notes into the place card. Rules:
-- found=false if the notes did not identify one specific real place.
+const EXTRACT = `Turn the research notes into place cards, one per real place the notes identified, in the order the post lists them (at most 10). Return an empty list if no specific real place was identified. Rules for each card:
 - city: tokyo, kyoto, osaka, nara, or daytrip for anywhere else.
 - hype, reality, tip, baby_notes, price: one short sentence each in natural, casual Hebrew; keep place names, brand names (Tabelog, Google) and numbers as they are.
 - serves: for a restaurant, cafe or bar, one or two short Hebrew sentences on what it serves, explaining Japanese dish names in plain words (e.g. "אוקונומיאקי (פנקייק כרוב על הפלנצ׳ה)"); null for other places. dishes: 2-4 signature items as short Hebrew labels, or [].
@@ -160,10 +162,10 @@ Deno.serve(async (req) => {
     for (let i = 0; i < 4; i++) {
       research = await client.messages.create({
         model: MODEL,
-        max_tokens: 4000,
+        max_tokens: 8000,
         output_config: { effort: 'low' },
         system: RESEARCH,
-        tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 6 }],
+        tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 10 }],
         messages,
       })
       if (research.stop_reason !== 'pause_turn') break
@@ -177,8 +179,8 @@ Deno.serve(async (req) => {
 
     const card = await client.messages.parse({
       model: MODEL,
-      max_tokens: 4000,
-      output_config: { effort: 'low', format: zodOutputFormat(PlaceDraft) },
+      max_tokens: 12000,
+      output_config: { effort: 'low', format: zodOutputFormat(PlaceList) },
       system: EXTRACT,
       messages: [{ role: 'user', content: `${ask}\n\nResearch notes:\n${notes}` }],
     })
@@ -190,8 +192,11 @@ Deno.serve(async (req) => {
     const found = research.content.flatMap((b) =>
       b.type === 'web_search_tool_result' && Array.isArray(b.content) ? b.content.map((r) => r.url) : [],
     )
-    const sources = card.parsed_output.sources.length ? card.parsed_output.sources : [...new Set([...cited, ...found])].slice(0, 5)
-    return json({ ...card.parsed_output, sources })
+    const fallback = [...new Set([...cited, ...found])].slice(0, 5)
+    const places = card.parsed_output.places
+      .slice(0, MAX_PLACES)
+      .map((p) => ({ ...p, sources: p.sources.length ? p.sources : fallback }))
+    return json({ places })
   } catch (error) {
     if (error instanceof Anthropic.AuthenticationError) return json({ error: 'ANTHROPIC_API_KEY is missing or invalid' }, 500)
     if (error instanceof Anthropic.RateLimitError) return json({ error: 'busy, try again in a minute' }, 429)
