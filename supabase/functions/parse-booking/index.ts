@@ -1,5 +1,5 @@
 // Reads a booking confirmation (pasted text, PDF or screenshot) and returns structured bookings.
-// Needs the ANTHROPIC_API_KEY secret on the Supabase project.
+// The Claude key comes from the ANTHROPIC_API_KEY secret or Supabase Vault (anthropic_api_key).
 import Anthropic from 'npm:@anthropic-ai/sdk'
 import { zodOutputFormat } from 'npm:@anthropic-ai/sdk/helpers/zod'
 import { z } from 'npm:zod@3'
@@ -38,6 +38,15 @@ Only use information that is in the document. If it is not a booking, return an 
 
 const MAX_BYTES = 15 * 1024 * 1024
 
+/** The Claude key: a function secret if one is set, otherwise the copy kept in Supabase Vault. */
+async function anthropicKey() {
+  const env = Deno.env.get('ANTHROPIC_API_KEY')
+  if (env) return env
+  const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+  const { data } = await admin.rpc('get_anthropic_key')
+  return (data as string | null) ?? undefined
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   const json = (body: unknown, status = 200) =>
@@ -70,7 +79,7 @@ Deno.serve(async (req) => {
   }
   content.push({ type: 'text', text: text?.trim() ? text : 'Extract the bookings from the attached document.' })
 
-  const client = new Anthropic()
+  const client = new Anthropic({ apiKey: await anthropicKey() })
   try {
     const response = await client.messages.parse({
       model: 'claude-haiku-5-5',

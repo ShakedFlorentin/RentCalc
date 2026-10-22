@@ -1,5 +1,5 @@
 // Turns an Instagram / TikTok / Google Maps link or a place name into a researched place card.
-// Needs the ANTHROPIC_API_KEY secret on the Supabase project.
+// The Claude key comes from the ANTHROPIC_API_KEY secret or Supabase Vault (anthropic_api_key).
 import Anthropic from 'npm:@anthropic-ai/sdk'
 import { zodOutputFormat } from 'npm:@anthropic-ai/sdk/helpers/zod'
 import { z } from 'npm:zod@3'
@@ -78,6 +78,15 @@ async function postContext(link: string) {
   return ''
 }
 
+/** The Claude key: a function secret if one is set, otherwise the copy kept in Supabase Vault. */
+async function anthropicKey() {
+  const env = Deno.env.get('ANTHROPIC_API_KEY')
+  if (env) return env
+  const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+  const { data } = await admin.rpc('get_anthropic_key')
+  return (data as string | null) ?? undefined
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   const json = (body: unknown, status = 200) =>
@@ -96,7 +105,7 @@ Deno.serve(async (req) => {
   const caption = link ? await postContext(link) : ''
   const ask = [link && `Link: ${link}`, caption, text && `Note from the member: ${text}`].filter(Boolean).join('\n')
 
-  const client = new Anthropic()
+  const client = new Anthropic({ apiKey: await anthropicKey() })
   try {
     const messages: Anthropic.MessageParam[] = [{ role: 'user', content: ask }]
     let research: Anthropic.Message | null = null
