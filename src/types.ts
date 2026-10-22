@@ -61,6 +61,9 @@ export type Place = {
   lng: number | null
   verdict: string | null
   audience: string | null
+  instagram_url?: string | null
+  tiktok_url?: string | null
+  photos?: string[] | null
 }
 
 export type ChecklistItem = {
@@ -111,6 +114,11 @@ export type Candidate = {
   audience: string | null
   baby_notes: string | null
   local_pick: boolean
+  maps_url?: string | null
+  website_url?: string | null
+  instagram_url?: string | null
+  tiktok_url?: string | null
+  photos?: string[] | null
 }
 
 export type Swipe = { trip_id: string; candidate_id: string; user_id: string; liked: boolean; created_at: string }

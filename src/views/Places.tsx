@@ -3,6 +3,7 @@ import { supabase } from '../supabase'
 import { AUDIENCES, CATEGORIES, VERDICTS, type DayInfo, type ItineraryItem, type Place, type Trip } from '../types'
 import { mapsUrl, mutate, useTripTable } from '../lib'
 import { Empty, Field, Sheet } from '../ui'
+import { MediaActions, Thumb } from '../media'
 import PlacesMap from './PlacesMap'
 
 const CITY_ORDER = ['טוקיו', 'קיוטו', 'נארה', 'אוסקה', 'טיול יום']
@@ -112,7 +113,7 @@ export default function Places({ trip, me }: { trip: Trip; me: string }) {
               <h2 className="group-title">{c}</h2>
               {[...areas].map(([a, ps]) => (
                 <div key={a} className="stack">
-                  <div className="area-title">📍 {a}</div>
+                  <div className="area-title" dir="auto">📍 {a}</div>
                   {ps.map((p) => (
                     <PlaceRow key={p.id} p={p} planned={plannedIds.has(p.id)} onEdit={setEdit} onPlan={setPlanning} />
                   ))}
@@ -123,7 +124,7 @@ export default function Places({ trip, me }: { trip: Trip; me: string }) {
         </>
       )}
 
-      <button className="fab" onClick={() => setEdit({ category: 'food', city: city || null })}>
+      <button className="fab" aria-label="הוספת מקום" onClick={() => setEdit({ category: 'food', city: city || null })}>
         ＋
       </button>
       {edit && <PlaceForm tripId={trip.id} me={me} place={edit} onClose={() => setEdit(null)} />}
@@ -136,22 +137,24 @@ function PlaceRow(props: { p: Place; planned: boolean; onEdit: (p: Place) => voi
   const { p } = props
   const mapLink = p.url || (p.lat != null ? `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}` : mapsUrl(p.name + ' ' + (p.city ?? '')))
   return (
-    <div className={'item card' + (p.visited ? ' done' : '')}>
+    <div className={'item card place-row' + (p.visited ? ' done' : '')}>
       <button
         className="check"
         aria-label="היינו"
+        aria-pressed={p.visited}
         onClick={() => mutate(supabase.from('places').update({ visited: !p.visited }).eq('id', p.id))}
       >
         {p.visited ? '✓' : ''}
       </button>
+      <Thumb photos={p.photos} emoji={CATEGORIES[p.category]?.split(' ')[0] ?? '📍'} />
       <div className="item-body" onClick={() => props.onEdit(p)}>
         <div className="item-title" dir="auto">
           {p.name}
         </div>
-        <div className="muted small">
+        <div className="muted small meta">
           {CATEGORIES[p.category]?.split(' ')[0]} {p.audience && AUDIENCES[p.audience].split(' ')[0]}{' '}
           {p.verdict && VERDICTS[p.verdict]?.label}
-          {p.added_by && ` · ${p.added_by}`}
+          {p.added_by && <> · <bdi>{p.added_by}</bdi></>}
           {props.planned && ' · 🗓️ במסלול'}
         </div>
         {p.notes && (
@@ -159,15 +162,16 @@ function PlaceRow(props: { p: Place; planned: boolean; onEdit: (p: Place) => voi
             {p.notes}
           </div>
         )}
+        <MediaActions name={p.name} maps={p.url || null} m={{ ...p, lat: p.url ? null : p.lat, lng: p.url ? null : p.lng }} compact />
+        {!p.url && p.lat == null && (
+          <a className="action compact-link" href={mapLink} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
+            📍 <span>חיפוש במפות</span>
+          </a>
+        )}
       </div>
-      <div className="col">
-        <a className="icon" href={mapLink} target="_blank" rel="noreferrer">
-          🗺️
-        </a>
-        <button className="icon" onClick={() => props.onPlan(p)} aria-label="הוספה למסלול">
-          🗓️
-        </button>
-      </div>
+      <button className="icon" onClick={() => props.onPlan(p)} aria-label="הוספה למסלול">
+        🗓️
+      </button>
     </div>
   )
 }

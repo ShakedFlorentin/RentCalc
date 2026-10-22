@@ -71,7 +71,7 @@ export default function Itinerary({ trip, day, setDay }: Props) {
         </div>
       ))}
 
-      <button className="fab" onClick={() => setEditItem({ day, category: 'sight' })}>
+      <button className="fab" aria-label="פעילות חדשה" onClick={() => setEditItem({ day, category: 'sight' })}>
         ＋
       </button>
 

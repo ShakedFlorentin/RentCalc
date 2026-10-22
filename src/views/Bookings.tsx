@@ -48,7 +48,7 @@ export default function Bookings({ tripId }: { tripId: string }) {
           </div>
         </div>
       ))}
-      <button className="fab" onClick={() => setEdit({ kind: 'flight' })}>
+      <button className="fab" aria-label="הזמנה חדשה" onClick={() => setEdit({ kind: 'flight' })}>
         ＋
       </button>
       {edit && <BookingForm tripId={tripId} booking={edit} onClose={() => setEdit(null)} />}
