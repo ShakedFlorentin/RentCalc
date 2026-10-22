@@ -1,16 +1,21 @@
 import { useState } from 'react'
 import { supabase } from '../supabase'
-import { BOOKING_KINDS, type Booking } from '../types'
+import { BOOKING_KINDS, type Booking, type Trip } from '../types'
 import { fmtDateTime, fromInputDateTime, mapsUrl, mutate, toInputDateTime, useTripTable } from '../lib'
 import { Empty, Field, Sheet } from '../ui'
 
-export default function Bookings({ tripId }: { tripId: string }) {
+export default function Bookings({ trip }: { trip: Trip }) {
+  const tripId = trip.id
+  const [importing, setImporting] = useState(false)
   const { rows, loading } = useTripTable<Booking>('bookings', tripId, 'starts_at')
   const [edit, setEdit] = useState<Partial<Booking> | null>(null)
 
   return (
     <div className="stack">
       <p className="muted small">טיסות, מלונות, כרטיסים ומסמכים – הכל במקום אחד. השעות הן לפי השעון המקומי במקום.</p>
+      <button className="secondary" onClick={() => setImporting(true)}>
+        📩 הוספה מאישור הזמנה (מייל / PDF / צילום מסך)
+      </button>
       {!loading && rows.length === 0 && <Empty>עוד אין הזמנות. לחצו על ＋ כדי להוסיף</Empty>}
       {rows.map((b) => (
         <div key={b.id} className="card booking" onClick={() => setEdit(b)}>
@@ -52,6 +57,7 @@ export default function Bookings({ tripId }: { tripId: string }) {
         ＋
       </button>
       {edit && <BookingForm tripId={tripId} booking={edit} onClose={() => setEdit(null)} />}
+      {importing && <ImportSheet trip={trip} onClose={() => setImporting(false)} />}
     </div>
   )
 }
@@ -167,4 +173,118 @@ function BookingForm(props: { tripId: string; booking: Partial<Booking>; onClose
       )}
     </Sheet>
   )
+}
+
+type Extracted = Pick<Booking, 'kind' | 'title' | 'starts_at' | 'ends_at' | 'confirmation' | 'location' | 'url' | 'notes'>
+
+/** Paste a confirmation email or attach its PDF/screenshot; Claude reads it and the bookings are added. */
+function ImportSheet({ trip, onClose }: { trip: Trip; onClose: () => void }) {
+  const [text, setText] = useState('')
+  const [file, setFile] = useState<File | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [done, setDone] = useState<string[] | null>(null)
+  const [err, setErr] = useState('')
+
+  const run = async () => {
+    if (!text.trim() && !file) return
+    setBusy(true)
+    setErr('')
+    const payload: { text: string; file?: { data: string; media_type: string } } = { text }
+    if (file) payload.file = { data: await toBase64(file), media_type: file.type }
+    const { data, error } = await supabase.functions.invoke('parse-booking', { body: payload })
+    if (error || !data?.bookings) {
+      setErr('לא הצלחתי לקרוא את האישור. אפשר לנסות שוב או להוסיף ידנית.')
+      setBusy(false)
+      return
+    }
+    const bookings = data.bookings as Extracted[]
+    if (!bookings.length) {
+      setErr('לא מצאתי הזמנה בטקסט הזה.')
+      setBusy(false)
+      return
+    }
+
+    // keep the original confirmation with the booking
+    let filePath: string | null = null
+    if (file) {
+      const ext = file.name.includes('.') ? file.name.split('.').pop() : 'bin'
+      filePath = `${trip.id}/${crypto.randomUUID()}.${ext}`
+      const up = await supabase.storage.from('docs').upload(filePath, file, { contentType: file.type })
+      if (up.error) filePath = null
+    }
+    const ok = await mutate(
+      supabase.from('bookings').insert(
+        bookings.map((b) => ({
+          trip_id: trip.id,
+          ...b,
+          starts_at: b.starts_at ? fromInputDateTime(b.starts_at.slice(0, 16)) : null,
+          ends_at: b.ends_at ? fromInputDateTime(b.ends_at.slice(0, 16)) : null,
+          file_path: filePath,
+        })),
+      ),
+    )
+    if (ok) {
+      await fillHotelNights(trip, bookings)
+      setDone(bookings.map((b) => `${BOOKING_KINDS[b.kind]?.split(' ')[0] ?? ''} ${b.title}`))
+    }
+    setBusy(false)
+  }
+
+  if (done) {
+    return (
+      <Sheet title="נוסף! ✅" onClose={onClose}>
+        {done.map((d) => (
+          <div key={d} dir="auto">
+            {d}
+          </div>
+        ))}
+        <p className="muted small">אפשר ללחוץ על הזמנה כדי לתקן פרטים. מלונות נכתבו גם בלילות שלהם במסלול.</p>
+        <button className="primary" onClick={onClose}>
+          סגירה
+        </button>
+      </Sheet>
+    )
+  }
+
+  return (
+    <Sheet title="הוספה מאישור הזמנה" onClose={onClose}>
+      <p className="muted small">
+        מדביקים את המייל של האישור (Booking, Agoda, חברת תעופה…) או מצרפים PDF / צילום מסך. Claude קורא את הפרטים
+        וההזמנה נוספת אוטומטית.
+      </p>
+      <Field label="טקסט האישור">
+        <textarea value={text} onChange={(e) => setText(e.target.value)} rows={7} dir="auto" placeholder="להדביק כאן…" />
+      </Field>
+      <Field label="או קובץ">
+        <input type="file" accept="application/pdf,image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+      </Field>
+      {err && <p className="msg">{err}</p>}
+      <button className="primary" onClick={run} disabled={busy || (!text.trim() && !file)}>
+        {busy ? 'קורא את האישור…' : 'קריאה והוספה'}
+      </button>
+    </Sheet>
+  )
+}
+
+function toBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader()
+    r.onload = () => resolve(String(r.result).split(',')[1] ?? '')
+    r.onerror = () => reject(r.error)
+    r.readAsDataURL(file)
+  })
+}
+
+/** Write each hotel's name on the trip days it covers (needs the trip start date). */
+async function fillHotelNights(trip: Trip, bookings: Extracted[]) {
+  if (!trip.start_date) return
+  const day1 = Date.parse(trip.start_date + 'T00:00:00Z')
+  const rows: { trip_id: string; day: number; hotel: string }[] = []
+  for (const b of bookings) {
+    if (b.kind !== 'hotel' || !b.starts_at || !b.ends_at) continue
+    const first = Math.round((Date.parse(b.starts_at.slice(0, 10) + 'T00:00:00Z') - day1) / 86400000) + 1
+    const last = Math.round((Date.parse(b.ends_at.slice(0, 10) + 'T00:00:00Z') - day1) / 86400000)
+    for (let d = Math.max(first, 1); d <= Math.min(last, trip.num_days); d++) rows.push({ trip_id: trip.id, day: d, hotel: b.title })
+  }
+  if (rows.length) await supabase.from('day_info').upsert(rows)
 }

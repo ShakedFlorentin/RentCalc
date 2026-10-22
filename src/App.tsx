@@ -117,7 +117,7 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
         )}
         {tab === 'swipe' && <SwipeGame trip={trip} userId={props.userId} members={members} />}
         {tab === 'plan' && <Itinerary trip={trip} day={day} setDay={setDay} />}
-        {tab === 'bookings' && <Bookings tripId={tripId} />}
+        {tab === 'bookings' && <Bookings trip={trip} />}
         {tab === 'places' && <Places trip={trip} me={me} />}
         {tab === 'lists' && <Lists tripId={tripId} members={members} />}
       </main>
