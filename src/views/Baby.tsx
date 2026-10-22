@@ -5,6 +5,8 @@ import { mutate, useTripTable } from '../lib'
 import { Empty, LoadNote } from '../ui'
 import { PHRASES } from '../phrases'
 import { PhraseList } from './Essentials'
+import { Icon, type LucideIcon } from '../icons'
+import { Baby as BabyIcon, Check, Droplets, Luggage, Milk, ShoppingCart, Plus, Sparkles, Stethoscope, Train, Trash2, Languages, Plane } from 'lucide-react'
 import '../styles/info.css'
 
 type Props = { trip: Trip; members: Member[]; userId: string }
@@ -55,7 +57,7 @@ export default function Baby({ trip }: Props) {
   return (
     <div className="stack">
       <section className="info-sec">
-        <h2 className="info-h">🧳 מה לארוז לתינוק</h2>
+        <h2 className="info-h"><Icon as={Luggage} /> מה לארוז לתינוק</h2>
         {items.length > 0 && (
           <div className="progress">
             <div style={{ width: `${(doneCount / items.length) * 100}%` }} />
@@ -66,14 +68,14 @@ export default function Baby({ trip }: Props) {
         )}
         <form className="add-row" onSubmit={add}>
           <input value={text} onChange={(e) => setText(e.target.value)} placeholder="להוסיף…" />
-          <button className="primary">＋</button>
+          <button className="primary" aria-label="הוספה"><Icon as={Plus} size="1.25em" /></button>
         </form>
         {error && <LoadNote onRetry={reload} />}
         {!loading && !error && items.length === 0 && (
           <>
             <Empty>הרשימה ריקה</Empty>
             <button className="secondary" onClick={addPreset} disabled={busy}>
-              ✨ להוסיף רשימה מוכנה
+              <Icon as={Sparkles} /> להוסיף רשימה מוכנה
             </button>
           </>
         )}
@@ -84,7 +86,7 @@ export default function Baby({ trip }: Props) {
               aria-label={i.done ? 'לבטל סימון' : 'לסמן כבוצע'}
               onClick={() => mutate(supabase.from('checklist_items').update({ done: !i.done }).eq('id', i.id))}
             >
-              {i.done ? '✓' : ''}
+              {i.done ? <Icon as={Check} size="1em" strokeWidth={3} /> : null}
             </button>
             <div className="item-body">{i.text}</div>
             <button
@@ -92,17 +94,21 @@ export default function Baby({ trip }: Props) {
               aria-label="מחיקה"
               onClick={() => confirm(`למחוק את "${i.text}"?`) && mutate(supabase.from('checklist_items').delete().eq('id', i.id))}
             >
-              🗑️
+              <Icon as={Trash2} size="1.25em" />
             </button>
           </div>
         ))}
       </section>
 
       <section className="info-sec">
-        <h2 className="info-h">🇯🇵 ביפן עם תינוק</h2>
+        <h2 className="info-h"><Icon as={Plane} /> ביפן עם תינוק</h2>
         {TIPS.map((t) => (
           <details key={t.title} className="card tip">
-            <summary>{t.title}</summary>
+            <summary>
+              <span>
+                <Icon as={t.icon} /> {t.title}
+              </span>
+            </summary>
             <ul>
               {t.points.map((p) => (
                 <li key={p}>{p}</li>
@@ -113,7 +119,7 @@ export default function Baby({ trip }: Props) {
       </section>
 
       <section className="info-sec">
-        <h2 className="info-h">🗣️ משפטים לתינוק</h2>
+        <h2 className="info-h"><Icon as={Languages} /> משפטים לתינוק</h2>
         <p className="muted small info-note">לוחצים כדי להציג במסך מלא.</p>
         <PhraseList phrases={PHRASES.filter((p) => p.baby)} />
       </section>
@@ -121,9 +127,10 @@ export default function Baby({ trip }: Props) {
   )
 }
 
-const TIPS: { title: string; points: string[] }[] = [
+const TIPS: { title: string; icon: LucideIcon; points: string[] }[] = [
   {
-    title: '🍼 חדרי הנקה ותינוקות',
+    title: 'חדרי הנקה ותינוקות',
+    icon: BabyIcon,
     points: [
       'יש בכלבו, בקניונים, בתחנות גדולות ובשדות תעופה. מחפשים שלט 授乳室 (junyūshitsu) או ベビールーム (bebī rūmu), או סמל של בקבוק ותינוק.',
       'בכלבו הם בדרך כלל בקומת הילדים או ליד השירותים. לא מוצאים? שואלים בדלפק המידע (案内所) או את עובדי התחנה.',
@@ -132,7 +139,8 @@ const TIPS: { title: string; points: string[] }[] = [
     ],
   },
   {
-    title: '🛒 קניית תמ"ל וחיתולים',
+    title: 'קניית תמ"ל וחיתולים',
+    icon: ShoppingCart,
     points: [
       'דראגסטורים (Matsumoto Kiyoshi, Sundrug ועוד) וחנויות תינוקות כמו Akachan Honpo (赤ちゃん本舗) מוכרים תמ"ל, חיתולים ומגבונים.',
       'ב-Akachan Honpo יש החזר מס לתיירים בקנייה מעל 5,000 ין (לא כולל מע"מ), בדלפק ייעודי בחנות. בודקים בסניף.',
@@ -141,16 +149,18 @@ const TIPS: { title: string; points: string[] }[] = [
     ],
   },
   {
-    title: '🧃 תמ"ל נוזלי מוכן לשתייה',
+    title: 'תמ"ל נוזלי מוכן לשתייה',
+    icon: Milk,
     points: [
       'קיים ביפן מאז 2019: Meiji Hohoemi Raku Raku Milk (ほほえみ らくらくミルク) ועוד, ממותגים כמו Glico. אין צורך לערבב או לחמם.',
-      'נמכר בדראגסטורים, בחנויות תינוקות ובאינטרנט. יקר יותר מאבקה, אבל מצוין לטיסה, לרכבת וליום עמוס.',
+      'נמכר בדראגסטורים, בחנויות תינוקות ובאינטרנט. יקר יותר מאבקה, אבל נוח לטיסה, לרכבת וליום עמוס.',
       'שופכים לבקבוק ולא מאכילים ישר מהפחית. אם מחממים, לא על להבה ולא במיקרוגל.',
-      'לפני הקנייה בודקים שזה מתאים לגיל שלו (לפי האריזה). לא בדקתי איפה בדיוק במלאי כרגע, אז כדאי לחפש בדראגסטור גדול.',
+      'לפני הקנייה בודקים שזה מתאים לגיל שלו (לפי האריזה). הזמינות משתנה, כדאי לחפש בדראגסטור גדול.',
     ],
   },
   {
-    title: '♨️ מים חמים',
+    title: 'מים חמים',
+    icon: Droplets,
     points: [
       'תמ"ל מכינים עם מים ב-70 מעלות ומעלה, ואז מקררים. תרמוס מלא בבוקר הוא הפתרון הכי אמין.',
       'בחדרי תינוקות בקניונים ובכלבו לפעמים יש מים חמים (בערך 70–80 מעלות), וגם בשדות התעופה ובפארקי שעשועים.',
@@ -159,7 +169,8 @@ const TIPS: { title: string; points: string[] }[] = [
     ],
   },
   {
-    title: '🚆 עגלה ברכבות ובתחנות',
+    title: 'עגלה ברכבות ובתחנות',
+    icon: Train,
     points: [
       'המעליות בתחנות קיימות, אבל לפעמים בקצה הרחוק של הרציף ובכמה חילופים. משאירים זמן נוסף במעבר.',
       'עם עגלה משתמשים במעלית ולא במדרגות נעות. בקהל גדול מקפלים ונושאים אותו במנשא.',
@@ -169,7 +180,8 @@ const TIPS: { title: string; points: string[] }[] = [
     ],
   },
   {
-    title: '🚑 חירום רפואי לתינוק',
+    title: 'חירום רפואי לתינוק',
+    icon: Stethoscope,
     points: [
       'חום גבוה, קשיי נשימה או תינוק שלא מגיב: 119 (חינם). אומרים 救急 (kyūkyū) ו-赤ちゃん (akachan). בהרבה ערים מחברים מתורגמן, לא מנתקים.',
       '#8000 הוא קו ייעוץ טלפוני של אחיות לילדים, בערבים ובלילות ובסופי שבוע וחגים (השעות משתנות לפי המחוז). הוא לא נותן אבחנה, ובעיקר ביפנית. אין הבטחה לאנגלית, ולכן מבקשים מצוות המלון להתקשר.',

@@ -6,7 +6,14 @@
 .info-title { font-weight: 600; }
 .info-value { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.9375rem; }
 .pill.soft { background: var(--fill); color: var(--text); }
-button.pill { min-height: 36px; }
+button.pill, .info-card .pill { min-height: 44px; }
+.info-h { display: flex; align-items: center; gap: 8px; }
+.info-card .pill, .info-sec .secondary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.area-title .ic { margin-inline-end: 2px; }
+
+/* sub-tabs of the "more" screen and the list switcher: icon beside text, 44px targets */
+.more-tabs button, .list-tabs button { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; white-space: nowrap; }
+.list-tabs button { padding-inline: 6px; }
 
 /* tap-to-call emergency numbers: big enough to hit in a panic */
 .sos-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -39,8 +46,8 @@ button.pill { min-height: 36px; }
 .tip { padding: 0; }
 .tip summary { list-style: none; cursor: pointer; padding: 14px 16px; min-height: 52px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .tip summary::-webkit-details-marker { display: none; }
-.tip summary::after { content: '▾'; color: var(--muted); transition: transform 0.15s; }
-.tip[open] summary::after { transform: rotate(180deg); }
+.tip summary::after { content: ''; flex: none; width: 7px; height: 7px; border-inline-end: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); margin-block-end: 3px; transition: transform 0.15s; }
+.tip[open] summary::after { transform: rotate(-135deg); margin-block-end: -3px; }
 .tip ul { margin: 0; padding: 0 34px 14px 16px; display: flex; flex-direction: column; gap: 8px; font-size: 0.9375rem; line-height: 1.5; }
 
 /* full-screen card to hold up to someone; always light with dark text so it reads in sunlight */
@@ -60,7 +67,7 @@ button.pill { min-height: 36px; }
   animation: fade 0.15s;
   cursor: pointer;
 }
-.show-close { position: absolute; top: calc(10px + env(safe-area-inset-top)); inset-inline-start: 10px; width: 48px; height: 48px; font-size: 1.5rem; color: #555; }
+.show-close { display: grid; place-items: center; position: absolute; top: calc(10px + env(safe-area-inset-top)); inset-inline-start: 10px; width: 48px; height: 48px; font-size: 1.5rem; color: #555; }
 .info-end { height: 56px; }
 .show-big { text-wrap: balance;font-size: clamp(2rem, 11vw, 3.5rem); font-weight: 800; line-height: 1.3; overflow-wrap: anywhere; white-space: pre-wrap; }
 .show-big.s { font-size: clamp(1.5rem, 8vw, 2.5rem); }

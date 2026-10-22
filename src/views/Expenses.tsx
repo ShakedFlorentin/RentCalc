@@ -1,23 +1,39 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { supabase } from '../supabase'
 import type { Expense, Member, Trip } from '../types'
 import { couplesOf, fmtDay, mutate, useTripTable } from '../lib'
 import { balances, convert, coupleTotals, fmtMoney, simplify, toMinor, SYMBOL, type Cur, type Transfer } from '../money'
 import { Empty, Field, LoadNote, Sheet, useRemembered } from '../ui'
+import { Icon, type LucideIcon } from '../icons'
+import { ArrowLeft, BedDouble, Handshake, Package, Plus, ShoppingBag, Ticket, TrainFront, Users, Utensils } from 'lucide-react'
 import '../styles/expenses.css'
 
 type Props = { trip: Trip; members: Member[]; userId: string }
 
-const CATS: Record<string, string> = {
-  food: '🍜 אוכל',
-  transport: '🚄 תחבורה',
-  lodging: '🏨 לינה',
-  sights: '🎟️ אטרקציות',
-  shopping: '🛍️ קניות',
-  other: '📦 אחר',
+const CATS: Record<string, { label: string; icon: LucideIcon }> = {
+  food: { label: 'אוכל', icon: Utensils },
+  transport: { label: 'תחבורה', icon: TrainFront },
+  lodging: { label: 'לינה', icon: BedDouble },
+  sights: { label: 'אטרקציות', icon: Ticket },
+  shopping: { label: 'קניות', icon: ShoppingBag },
+  other: { label: 'אחר', icon: Package },
 }
 const flip = (c: Cur): Cur => (c === 'JPY' ? 'ILS' : 'JPY')
-const emojiOf = (e: Expense) => (e.kind === 'settlement' ? '🤝' : (CATS[e.category ?? '']?.split(' ')[0] ?? '📦'))
+const iconOf = (e: Expense): LucideIcon => (e.kind === 'settlement' ? Handshake : (CATS[e.category ?? '']?.icon ?? Package))
+
+/** A name with the arrow showing who pays whom (points from payer to receiver in RTL). */
+const Pays = ({ from, to }: { from: string; to: string }) => (
+  <>
+    {from} <Icon as={ArrowLeft} /> {to}
+  </>
+)
+
+/** A couple's name in a small pill. */
+const CouplePill = ({ name }: { name: string }) => (
+  <span className="exp-couple">
+    <Icon as={Users} /> {name}
+  </span>
+)
 
 /** Today by the date in Japan, whatever timezone the phone is still set to. */
 const japanToday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tokyo' })
@@ -76,7 +92,7 @@ export default function Expenses({ trip, members, userId }: Props) {
         </div>
         <div className={'exp-big' + (mine > 0 ? ' plus' : mine < 0 ? ' minus' : '')}>
           {mine === 0 ? (
-            'הכל מסודר'
+            'אין יתרה פתוחה'
           ) : (
             <>
               {mine > 0 ? 'מגיע לך ' : 'עליך להחזיר '}
@@ -94,19 +110,19 @@ export default function Expenses({ trip, members, userId }: Props) {
 
       {error && <LoadNote onRetry={reload} />}
       {!loading && !error && rows.length === 0 && (
-        <Empty>מוסיפים הוצאה עם ＋, בוחרים מי שילם ועל מי מחלקים, ופה רואים מי חייב למי.</Empty>
+        <Empty>אין הוצאות עדיין. מוסיפים הוצאה, בוחרים מי שילם ובין מי מחלקים, ופה רואים מי חייב למי.</Empty>
       )}
 
       {rows.length > 0 && (
         <>
           <div className="card">
             <h3 className="exp-h">מי מחזיר למי</h3>
-            {transfers.length === 0 && <p className="muted small">אין חובות פתוחים 🎉</p>}
+            {transfers.length === 0 && <p className="muted small">אין חובות פתוחים.</p>}
             {transfers.map((t) => (
               <div key={t.from + t.to} className="exp-transfer">
                 <div className="exp-transfer-who">
                   <b>
-                    {nameOf(t.from)} ← {nameOf(t.to)}
+                    <Pays from={nameOf(t.from)} to={nameOf(t.to)} />
                   </b>
                   <span className="exp-num">{money(t.amount)}</span>
                 </div>
@@ -133,7 +149,7 @@ export default function Expenses({ trip, members, userId }: Props) {
             </div>
             {group === 'couples' && couples.length > 0
               ? couples.map((c) => (
-                  <Balance key={c} name={`💑 ${c}`} net={byCouple[c]?.net ?? 0} note={`שילמו ${fmtMoney(byCouple[c]?.paid ?? 0, show)}`} cur={show} />
+                  <Balance key={c} name={<CouplePill name={c} />} net={byCouple[c]?.net ?? 0} note={`שילמו ${fmtMoney(byCouple[c]?.paid ?? 0, show)}`} cur={show} />
                 ))
               : members.map((m) => (
                   <Balance key={m.user_id} name={m.display_name} net={bal[m.user_id] ?? 0} cur={show} />
@@ -155,11 +171,11 @@ export default function Expenses({ trip, members, userId }: Props) {
                   : setEdit(e)
               return (
                 <button key={e.id} className="card exp-row" onClick={open}>
-                  <span className="exp-emoji" aria-hidden="true">
-                    {emojiOf(e)}
+                  <span className="exp-icon" aria-hidden="true">
+                    <Icon as={iconOf(e)} size="1.25em" />
                   </span>
                   <span className="exp-main">
-                    <b>{settlement ? `החזר: ${nameOf(e.paid_by)} ← ${nameOf(e.split_among[0])}` : e.title}</b>
+                    <b>{settlement ? <>החזר: <Pays from={nameOf(e.paid_by)} to={nameOf(e.split_among[0])} /></> : e.title}</b>
                     {!settlement && (
                       <span className="muted small">
                         שולם ע״י {nameOf(e.paid_by)} · בין: {splitLabel(e.split_among)}
@@ -181,7 +197,7 @@ export default function Expenses({ trip, members, userId }: Props) {
       ))}
 
       <button className="fab" aria-label="הוצאה חדשה" onClick={() => setEdit({})}>
-        ＋
+        <Icon as={Plus} size="1.5em" />
       </button>
       {edit && <ExpenseForm trip={trip} members={members} couples={couples} userId={userId} expense={edit} onClose={() => setEdit(null)} />}
       {settle && (
@@ -206,7 +222,7 @@ export default function Expenses({ trip, members, userId }: Props) {
   )
 }
 
-function Balance(props: { name: string; net: number; note?: string; cur: Cur }) {
+function Balance(props: { name: ReactNode; net: number; note?: string; cur: Cur }) {
   const { net, cur } = props
   return (
     <div className="exp-bal">
@@ -246,11 +262,11 @@ function ExpenseForm(props: {
   const all = members.map((m) => m.user_id)
   const same = (a: string[], b: string[]) => a.length === b.length && a.every((id) => b.includes(id))
   const quick = [
-    { label: 'כולם', ids: all },
+    { label: 'כולם', couple: false, ids: all },
     ...(couples.length > 1
-      ? couples.map((c) => ({ label: `💑 ${c}`, ids: members.filter((m) => m.couple === c).map((m) => m.user_id) }))
+      ? couples.map((c) => ({ label: c, couple: true, ids: members.filter((m) => m.couple === c).map((m) => m.user_id) }))
       : []),
-    { label: 'רק אני', ids: [userId] },
+    { label: 'רק אני', couple: false, ids: [userId] },
   ]
   const toggle = (id: string) => setSplit(split.includes(id) ? split.filter((s) => s !== id) : [...split, id])
 
@@ -263,7 +279,7 @@ function ExpenseForm(props: {
     const row = {
       trip_id: props.trip.id,
       kind: 'expense' as const,
-      title: title.trim() || CATS[category].split(' ').slice(1).join(' '),
+      title: title.trim() || (CATS[category]?.label ?? CATS.other.label),
       // agorot at most, so a typed 12.345 doesn't leave a half-agora in the books
       amount: currency === 'JPY' ? Math.round(n) : Math.round(n * 100) / 100,
       currency,
@@ -313,7 +329,7 @@ function ExpenseForm(props: {
       <div className="chips">
         {Object.entries(CATS).map(([k, v]) => (
           <button key={k} className={'chip' + (category === k ? ' on' : '')} onClick={() => setCategory(k)}>
-            {v}
+            <Icon as={v.icon} /> {v.label}
           </button>
         ))}
       </div>
@@ -332,7 +348,7 @@ function ExpenseForm(props: {
         <div className="chips">
           {quick.map((q) => (
             <button key={q.label} className={'chip' + (same(split, q.ids) ? ' on' : '')} onClick={() => setSplit(q.ids)}>
-              {q.label}
+              {q.couple && <Icon as={Users} />} {q.label}
             </button>
           ))}
         </div>
@@ -412,7 +428,7 @@ function SettleSheet(props: {
     <Sheet title={row ? 'עריכת החזר' : 'סימון כהוחזר'} onClose={props.onClose}>
       <p>
         <b>
-          {props.nameOf(t.from)} ← {props.nameOf(t.to)}
+          <Pays from={props.nameOf(t.from)} to={props.nameOf(t.to)} />
         </b>
       </p>
       <Field label={`סכום שהוחזר (${SYMBOL[cur]})`}>
@@ -420,7 +436,7 @@ function SettleSheet(props: {
       </Field>
       {err && <p className="msg" role="alert">{err}</p>}
       <button className="primary" onClick={save} disabled={busy}>
-        {busy ? 'שומר…' : row ? 'שמירה' : 'אישור, הוחזר'}
+        {busy ? 'שומר…' : row ? 'שמירה' : 'אישור החזר'}
       </button>
       {row && (
         <button className="danger" onClick={remove}>
