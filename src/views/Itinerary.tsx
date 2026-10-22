@@ -46,7 +46,7 @@ export default function Itinerary({ trip, day, setDay }: Props) {
         </div>
         {trip.start_date && <div className="muted">{fmtDay(dayDate(trip.start_date, day))}</div>}
         <div className={'who-tag' + (info?.who ? ' apart' : '')}>{info?.who ? `👤 רק ${info.who}` : `👥 ${TOGETHER}`}</div>
-        {info?.hotel && <div>🏨 {info.hotel}</div>}
+        {info?.hotel && <div style={{ whiteSpace: 'pre-line' }}>🏨 {info.hotel}</div>}
         {info?.notes && <div className="notes">{info.notes}</div>}
       </section>
 

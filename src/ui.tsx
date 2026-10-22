@@ -1,5 +1,7 @@
 import { ReactNode, useEffect, useRef, useState } from 'react'
 
+const stop = (e: { stopPropagation: () => void }) => e.stopPropagation()
+
 /** Bottom sheet: grabber, drag-down to dismiss, Escape, scroll lock, focus return. */
 export function Sheet(props: { title: string; onClose: () => void; children: ReactNode }) {
   const { onClose } = props
@@ -8,8 +10,9 @@ export function Sheet(props: { title: string; onClose: () => void; children: Rea
   close.current = onClose
   const openedAt = useRef(performance.now())
 
+  // runs once per opening: re-running on every parent render would pull focus out of the field being typed in
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close.current()
     window.addEventListener('keydown', onKey)
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
@@ -20,7 +23,7 @@ export function Sheet(props: { title: string; onClose: () => void; children: Rea
       document.body.style.overflow = prev
       opener?.focus?.({ preventScroll: true })
     }
-  }, [onClose])
+  }, [])
 
   // Pull down anywhere on the sheet to close it: from the header always, from the content once it is scrolled to
   // the top. A short fast flick closes it too. Touch listeners are attached by hand because React's are passive
@@ -108,7 +111,16 @@ export function Sheet(props: { title: string; onClose: () => void; children: Rea
 
   return (
     // the click that follows the tap which opened the sheet lands on the backdrop; don't let it close the sheet
-    <div className="backdrop" onClick={() => performance.now() - openedAt.current > 450 && onClose()}>
+    <div
+      className="backdrop"
+      onClick={() => performance.now() - openedAt.current > 450 && onClose()}
+      // a sheet opened from inside a swipe card is portalled, but React still bubbles its pointer events to the
+      // card, where a sideways drift while closing the sheet would swipe the card
+      onPointerDown={stop}
+      onPointerMove={stop}
+      onPointerUp={stop}
+      onPointerCancel={stop}
+    >
       <div
         ref={ref}
         tabIndex={-1}
@@ -189,4 +201,16 @@ export function useRemembered(key: string, initial: string) {
     }
   }
   return [value, set] as const
+}
+
+/** Shown when a list couldn't be refreshed; the rows already on screen stay. */
+export function LoadNote({ onRetry }: { onRetry: () => void }) {
+  return (
+    <p className="msg" role="alert">
+      לא הצלחתי לעדכן מהשרת – בדקו את החיבור.{' '}
+      <button className="link" onClick={onRetry}>
+        לנסות שוב
+      </button>
+    </p>
+  )
 }

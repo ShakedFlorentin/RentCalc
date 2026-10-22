@@ -2,14 +2,14 @@ import { Fragment, useState } from 'react'
 import { supabase } from '../supabase'
 import { BOOKING_KINDS, BOOKING_TABS, TOGETHER, type Booking, type Member, type Trip } from '../types'
 import { couplesOf, fmtDateTime, fromInputDateTime, mapsUrl, mutate, toInputDateTime, useTripTable } from '../lib'
-import { Empty, Field, Sheet, Tabs, useRemembered } from '../ui'
+import { Empty, Field, LoadNote, Sheet, Tabs, useRemembered } from '../ui'
 
 type Props = { trip: Trip; members: Member[]; userId: string }
 
 export default function Bookings({ trip, members, userId }: Props) {
   const tripId = trip.id
   const [importing, setImporting] = useState(false)
-  const { rows, loading } = useTripTable<Booking>('bookings', tripId, 'starts_at')
+  const { rows, loading, error, reload } = useTripTable<Booking>('bookings', tripId, 'starts_at')
   const [edit, setEdit] = useState<Partial<Booking> | null>(null)
   const couples = couplesOf(members)
   const myCouple = members.find((m) => m.user_id === userId)?.couple ?? null
@@ -51,7 +51,8 @@ export default function Bookings({ trip, members, userId }: Props) {
           </button>
         </div>
       )}
-      {!loading && items.length === 0 && (
+      {error && <LoadNote onRetry={reload} />}
+      {!loading && !error && items.length === 0 && (
         <Empty>
           אין עדיין {BOOKING_TABS[current].split(' ').slice(1).join(' ')}
           {whose && ' בסינון הזה'}. אפשר להוסיף מאישור הזמנה או עם ＋
@@ -107,7 +108,7 @@ export default function Bookings({ trip, members, userId }: Props) {
       <button className="fab" aria-label="הזמנה חדשה" onClick={() => setEdit({ kind: current, who: myCouple })}>
         ＋
       </button>
-      {edit && <BookingForm tripId={tripId} couples={couples} booking={edit} onClose={() => setEdit(null)} />}
+      {edit && <BookingForm trip={trip} couples={couples} booking={edit} onClose={() => setEdit(null)} />}
       {importing && <ImportSheet trip={trip} couples={couples} myCouple={myCouple} onClose={() => setImporting(false)} />}
     </div>
   )
@@ -124,7 +125,8 @@ async function openFile(path: string) {
   else location.href = data.signedUrl
 }
 
-function BookingForm(props: { tripId: string; couples: string[]; booking: Partial<Booking>; onClose: () => void }) {
+function BookingForm(props: { trip: Trip; couples: string[]; booking: Partial<Booking>; onClose: () => void }) {
+  const tripId = props.trip.id
   const [f, setF] = useState<Partial<Booking>>(props.booking)
   const [file, setFile] = useState<File | null>(null)
   const [busy, setBusy] = useState(false)
@@ -136,18 +138,17 @@ function BookingForm(props: { tripId: string; couples: string[]; booking: Partia
     let filePath = f.file_path ?? null
     if (file) {
       const ext = file.name.includes('.') ? file.name.split('.').pop() : 'bin'
-      const path = `${props.tripId}/${crypto.randomUUID()}.${ext}`
+      const path = `${tripId}/${crypto.randomUUID()}.${ext}`
       const { error } = await supabase.storage.from('docs').upload(path, file, { contentType: file.type })
       if (error) {
         alert('העלאת הקובץ נכשלה: ' + error.message)
         setBusy(false)
         return
       }
-      if (filePath) await supabase.storage.from('docs').remove([filePath])
       filePath = path
     }
     const row = {
-      trip_id: props.tripId,
+      trip_id: tripId,
       kind: f.kind ?? 'other',
       title: f.title.trim(),
       starts_at: f.starts_at || null,
@@ -162,6 +163,13 @@ function BookingForm(props: { tripId: string; couples: string[]; booking: Partia
     const ok = await mutate(
       f.id ? supabase.from('bookings').update(row).eq('id', f.id) : supabase.from('bookings').insert(row),
     )
+    if (ok) {
+      // the old attachment goes only once the row points at the new one
+      if (file && f.file_path) await supabase.storage.from('docs').remove([f.file_path])
+      if (row.kind === 'hotel') await fillHotelNights(props.trip, [row])
+    } else if (file && filePath) {
+      await supabase.storage.from('docs').remove([filePath])
+    }
     setBusy(false)
     if (ok) props.onClose()
   }
@@ -230,6 +238,13 @@ function BookingForm(props: { tripId: string; couples: string[]; booking: Partia
 
 type Extracted = Pick<Booking, 'kind' | 'title' | 'starts_at' | 'ends_at' | 'confirmation' | 'location' | 'url' | 'notes'>
 
+/** A local time from the reader as a stored timestamp; a bare date gets `time`. */
+function wallClock(v: string | null, time: string) {
+  if (!v) return null
+  const m = v.match(/^(\d{4}-\d{2}-\d{2})(?:[T ](\d{2}:\d{2}))?/)
+  return m ? fromInputDateTime(`${m[1]}T${m[2] ?? time}`) : null
+}
+
 /** Paste a confirmation email or attach its PDF/screenshot; Claude reads it and the bookings are added. */
 function ImportSheet(props: { trip: Trip; couples: string[]; myCouple: string | null; onClose: () => void }) {
   const { trip, onClose } = props
@@ -246,14 +261,26 @@ function ImportSheet(props: { trip: Trip; couples: string[]; myCouple: string | 
     setBusy(true)
     setErr('')
     const payload: { text: string; file?: { data: string; media_type: string } } = { text }
-    if (file) payload.file = { data: await toBase64(file), media_type: file.type }
+    try {
+      if (file) payload.file = { data: await toBase64(file), media_type: file.type }
+    } catch {
+      setErr('לא הצלחתי לקרוא את הקובץ. אפשר לנסות קובץ אחר או להדביק את הטקסט.')
+      setBusy(false)
+      return
+    }
     const { data, error } = await supabase.functions.invoke('parse-booking', { body: payload })
     if (error || !data?.bookings) {
       setErr('לא הצלחתי לקרוא את האישור. אפשר לנסות שוב או להוסיף ידנית.')
       setBusy(false)
       return
     }
-    const bookings = data.bookings as Extracted[]
+    // times come back as local wall-clock "YYYY-MM-DDTHH:mm", sometimes as a bare date
+    const bookings = (data.bookings as Extracted[]).map((b) => ({
+      ...b,
+      starts_at: wallClock(b.starts_at, b.kind === 'hotel' ? '15:00' : '00:00'),
+      ends_at: wallClock(b.ends_at, b.kind === 'hotel' ? '11:00' : '00:00'),
+      who: who || null,
+    }))
     if (!bookings.length) {
       setErr('לא מצאתי הזמנה בטקסט הזה.')
       setBusy(false)
@@ -270,14 +297,7 @@ function ImportSheet(props: { trip: Trip; couples: string[]; myCouple: string | 
     }
     const ok = await mutate(
       supabase.from('bookings').insert(
-        bookings.map((b) => ({
-          trip_id: trip.id,
-          ...b,
-          starts_at: b.starts_at ? fromInputDateTime(b.starts_at.slice(0, 16)) : null,
-          ends_at: b.ends_at ? fromInputDateTime(b.ends_at.slice(0, 16)) : null,
-          file_path: filePath,
-          who: who || null,
-        })),
+        bookings.map((b) => ({ trip_id: trip.id, ...b, file_path: filePath })),
       ),
     )
     if (ok) {
@@ -348,16 +368,32 @@ function toBase64(file: File): Promise<string> {
   })
 }
 
-/** Write each hotel's name on the trip days it covers (needs the trip start date). */
-async function fillHotelNights(trip: Trip, bookings: Extracted[]) {
+/**
+ * Write each hotel on the trip nights it covers (needs the trip start date). A couple's hotel becomes its own line,
+ * "💑 couple: hotel", so the two couples' hotels sit side by side on nights they stay apart.
+ */
+async function fillHotelNights(trip: Trip, bookings: Pick<Booking, 'kind' | 'title' | 'starts_at' | 'ends_at' | 'who'>[]) {
   if (!trip.start_date) return
   const day1 = Date.parse(trip.start_date + 'T00:00:00Z')
-  const rows: { trip_id: string; day: number; hotel: string }[] = []
+  const nights = new Map<number, { who: string | null; title: string }[]>()
   for (const b of bookings) {
     if (b.kind !== 'hotel' || !b.starts_at || !b.ends_at) continue
     const first = Math.round((Date.parse(b.starts_at.slice(0, 10) + 'T00:00:00Z') - day1) / 86400000) + 1
     const last = Math.round((Date.parse(b.ends_at.slice(0, 10) + 'T00:00:00Z') - day1) / 86400000)
-    for (let d = Math.max(first, 1); d <= Math.min(last, trip.num_days); d++) rows.push({ trip_id: trip.id, day: d, hotel: b.title })
+    for (let d = Math.max(first, 1); d <= Math.min(last, trip.num_days); d++)
+      nights.set(d, [...(nights.get(d) ?? []), { who: b.who, title: b.title }])
   }
-  if (rows.length) await supabase.from('day_info').upsert(rows)
+  if (!nights.size) return
+  const { data: existing } = await supabase.from('day_info').select('day, hotel').eq('trip_id', trip.id)
+  const rows = [...nights].map(([day, stays]) => {
+    let lines: string[] = ((existing?.find((r) => r.day === day)?.hotel as string | null) ?? '').split('\n').filter(Boolean)
+    for (const s of stays) {
+      // the group's hotel replaces the night; a couple's replaces only that couple's line
+      if (!s.who) lines = [s.title]
+      else lines = [...lines.filter((l) => !l.startsWith(`💑 ${s.who}:`)), `💑 ${s.who}: ${s.title}`]
+    }
+    return { trip_id: trip.id, day, hotel: lines.join('\n') }
+  })
+  const { error } = await supabase.from('day_info').upsert(rows)
+  if (error) alert('ההזמנה נשמרה, אבל לא הצלחתי לרשום את המלון בימים במסלול: ' + error.message)
 }

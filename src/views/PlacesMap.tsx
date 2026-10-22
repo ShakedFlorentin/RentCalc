@@ -15,6 +15,7 @@ export default function PlacesMap({ places, onPick }: { places: Place[]; onPick:
   const el = useRef<HTMLDivElement>(null)
   const map = useRef<L.Map | null>(null)
   const layer = useRef<L.LayerGroup | null>(null)
+  const fitted = useRef('')
 
   useEffect(() => {
     map.current = L.map(el.current!, { zoomControl: false }).setView([35.0, 136.5], 6)
@@ -43,7 +44,13 @@ export default function PlacesMap({ places, onPick }: { places: Place[]; onPick:
       })
       L.marker([p.lat!, p.lng!], { icon, title: p.name }).on('click', () => onPick(p)).addTo(layer.current)
     }
-    if (pts.length) map.current.fitBounds(L.latLngBounds(pts.map((p) => [p.lat!, p.lng!])), { padding: [30, 30], maxZoom: 15 })
+    // refit only when the set of places changes (a filter or a new place), not when tapping a pin or a friend's edit
+    // re-renders, or the map would jump away from where the viewer zoomed in
+    const key = pts.map((p) => p.id).sort().join()
+    if (pts.length && key !== fitted.current) {
+      fitted.current = key
+      map.current.fitBounds(L.latLngBounds(pts.map((p) => [p.lat!, p.lng!])), { padding: [30, 30], maxZoom: 15 })
+    }
   }, [places, onPick])
 
   return <div ref={el} className="map" />

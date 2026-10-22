@@ -36,27 +36,49 @@ export default function App() {
   return <TripGate userId={session.user.id} />
 }
 
+function savedTrip() {
+  try {
+    return localStorage.getItem('tripId')
+  } catch {
+    return null
+  }
+}
+
 function TripGate({ userId }: { userId: string }) {
   const [tripId, setTripId] = useState<string | null | undefined>(undefined)
+  const [failed, setFailed] = useState(false)
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
+    setFailed(false)
     supabase
       .from('members')
       .select('trip_id')
       .eq('user_id', userId)
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        const saved = savedTrip()
+        // offline or a server hiccup is not "you have no trip": keep the last trip, or offer a retry
+        if (error) {
+          if (saved) setTripId(saved)
+          else setFailed(true)
+          return
+        }
         const ids = (data ?? []).map((m) => m.trip_id as string)
-        const saved = localStorage.getItem('tripId')
         setTripId(saved && ids.includes(saved) ? saved : (ids[0] ?? null))
       })
-  }, [userId])
+  }, [userId, attempt])
 
   const choose = (id: string | null) => {
-    if (id) localStorage.setItem('tripId', id)
-    else localStorage.removeItem('tripId')
+    try {
+      if (id) localStorage.setItem('tripId', id)
+      else localStorage.removeItem('tripId')
+    } catch {
+      // the choice just won't be remembered
+    }
     setTripId(id)
   }
 
+  if (failed) return <LoadError onRetry={() => setAttempt((a) => a + 1)} />
   if (tripId === undefined) return <div className="center" role="status">טוען…</div>
   if (!tripId) return <TripPicker onPick={choose} />
   return <TripApp tripId={tripId} userId={userId} onLeave={() => choose(null)} />
@@ -68,6 +90,8 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
   const [members, setMembers] = useState<Member[]>([])
   const [tab, setTab] = useState<Tab>('home')
   const [day, setDay] = useState(1)
+  const [failed, setFailed] = useState(false)
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     const load = async () => {
@@ -77,6 +101,7 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
       ])
       if (t.data) setTrip(t.data as Trip)
       if (m.data) setMembers(m.data as Member[])
+      setFailed(!!t.error)
     }
     load()
     const channel = supabase
@@ -87,13 +112,13 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [tripId])
+  }, [tripId, attempt])
 
   useEffect(() => {
     if (trip) setDay(currentDay(trip.start_date, trip.num_days) ?? 1)
   }, [trip?.start_date, trip?.num_days])
 
-  if (!trip) return <div className="center" role="status">טוען…</div>
+  if (!trip) return failed ? <LoadError onRetry={() => setAttempt((a) => a + 1)} /> : <div className="center" role="status">טוען…</div>
   const me = members.find((m) => m.user_id === props.userId)?.display_name ?? ''
   const openDay = (d: number) => {
     setDay(d)
@@ -131,6 +156,17 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
           </button>
         ))}
       </nav>
+    </div>
+  )
+}
+
+function LoadError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="center stack" role="alert">
+      <p>לא הצלחתי להתחבר. בדקו את החיבור לאינטרנט.</p>
+      <button className="primary" onClick={onRetry}>
+        לנסות שוב
+      </button>
     </div>
   )
 }

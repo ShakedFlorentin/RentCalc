@@ -21,7 +21,7 @@ export default function SwipeGame({ trip, userId, members }: Props) {
   const { rows: rawCandidates, loading } = useTripTable<Candidate>('candidates', trip.id)
   const media = useMediaIndex()
   const candidates = useMemo(() => rawCandidates.map((c) => withMedia(c, media)), [rawCandidates, media])
-  const { rows: swipes, reload: reloadSwipes } = useTripTable<Swipe>('swipes', trip.id)
+  const { rows: swipes, loading: swipesLoading, reload: reloadSwipes } = useTripTable<Swipe>('swipes', trip.id)
   const [city, setCity] = useState('')
   const [aud, setAud] = useState('')
   const [match, setMatch] = useState<{ c: Candidate; names: string[]; who: string | null } | null>(null)
@@ -50,7 +50,8 @@ export default function SwipeGame({ trip, userId, members }: Props) {
 
   // celebrate every new match, whoever made it
   useEffect(() => {
-    if (loading) return
+    // wait for everything a match is made of, or the matches that already exist look new
+    if (loading || swipesLoading || !members.length) return
     if (knownMatches.current === null) {
       knownMatches.current = new Set([...matches].map(([id, who]) => id + who))
       return
@@ -62,7 +63,7 @@ export default function SwipeGame({ trip, userId, members }: Props) {
       const c = candidates.find((x) => x.id === id)
       if (c) setMatch({ c, who, names: (likes.get(id) ?? []).map((u) => nameOf(members, u)) })
     }
-  }, [matches, loading, candidates, likes, members])
+  }, [matches, loading, swipesLoading, candidates, likes, members])
 
   const mine = new Set(swipes.filter((s) => s.user_id === userId).map((s) => s.candidate_id))
   const cities = Object.keys(CITY_HE).filter((c) => candidates.some((x) => x.city === c))
@@ -78,6 +79,7 @@ export default function SwipeGame({ trip, userId, members }: Props) {
       setHistory((h) => [...h, c.id])
       reloadSwipes()
     }
+    return ok
   }
 
   const undo = async () => {
@@ -170,7 +172,8 @@ export default function SwipeGame({ trip, userId, members }: Props) {
             ))}
           </div>
           <p className="small muted">
-            מקום נכנס לרשימה כשלפחות {trip.match_threshold} מכם אוהבים אותו. כל החלקה שווה 10 XP, כל מאצ׳ 50 XP.
+            מקום נכנס לרשימה של זוג כששניהם אוהבים אותו, ולרשימה של כולם כששני הזוגות אוהבים. כל החלקה שווה 10 XP, כל
+            מאצ׳ 50 XP.
           </p>
         </Sheet>
       )}
@@ -222,7 +225,7 @@ export default function SwipeGame({ trip, userId, members }: Props) {
   )
 }
 
-function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked: boolean) => void }) {
+function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked: boolean) => Promise<boolean> }) {
   const [dx, setDx] = useState(0)
   const [leaving, setLeaving] = useState<0 | 1 | -1>(0)
   const [more, setMore] = useState(false)
@@ -238,7 +241,13 @@ function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked
   const fly = (dir: 1 | -1) => {
     setLeaving(dir)
     navigator.vibrate?.(12)
-    setTimeout(() => onSwipe(dir === 1), 200)
+    setTimeout(async () => {
+      // the swipe didn't save (e.g. offline): bring the card back instead of leaving it off-screen on top
+      if (!(await onSwipe(dir === 1))) {
+        setLeaving(0)
+        setDx(0)
+      }
+    }, 200)
   }
   const down = (e: PointerEvent) => {
     if ((e.target as HTMLElement).closest('a,button')) return

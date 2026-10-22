@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from './supabase'
 import type { Member } from './types'
 
@@ -6,14 +6,23 @@ import type { Member } from './types'
 export function useTripTable<T>(table: string, tripId: string, order: string = 'created_at') {
   const [rows, setRows] = useState<T[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  // reloads can overlap when several changes arrive together; only the latest one may write
+  const latest = useRef(0)
 
   const reload = useCallback(async () => {
+    const req = ++latest.current
     const { data, error } = await supabase
       .from(table)
       .select('*')
       .eq('trip_id', tripId)
       .order(order)
-    if (!error) setRows(data as T[])
+    if (req !== latest.current) return
+    if (error) setError(error.message)
+    else {
+      setRows(data as T[])
+      setError('')
+    }
     setLoading(false)
   }, [table, tripId, order])
 
@@ -26,13 +35,21 @@ export function useTripTable<T>(table: string, tripId: string, order: string = '
         { event: '*', schema: 'public', table, filter: `trip_id=eq.${tripId}` },
         () => reload(),
       )
+      // realtime can't filter deletes by column, so listen to every delete on the table
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table }, () => reload())
       .subscribe()
+    // catch up after the phone wakes or comes back online, when realtime events may have been missed
+    const refresh = () => document.visibilityState === 'visible' && reload()
+    document.addEventListener('visibilitychange', refresh)
+    window.addEventListener('online', refresh)
     return () => {
       supabase.removeChannel(channel)
+      document.removeEventListener('visibilitychange', refresh)
+      window.removeEventListener('online', refresh)
     }
   }, [table, tripId, reload])
 
-  return { rows, loading, reload }
+  return { rows, loading, error, reload }
 }
 
 export async function mutate(promise: PromiseLike<{ error: { message: string } | null }>) {
@@ -56,12 +73,12 @@ export function fmtDay(d: Date | null) {
   return d ? d.toLocaleDateString('he-IL', { weekday: 'short', day: 'numeric', month: 'numeric' }) : ''
 }
 
-/** Today's trip day (1-based), or null when not currently on the trip. */
+/** Today's trip day (1-based) by the date in Japan, or null when not currently on the trip. */
 export function currentDay(start: string | null, numDays: number): number | null {
   if (!start) return null
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const diff = Math.round((today.getTime() - new Date(start + 'T00:00:00').getTime()) / 86400000)
+  // the trip runs on Japan's calendar, whatever timezone the phone is still set to
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tokyo' })
+  const diff = Math.round((Date.parse(today + 'T00:00:00Z') - Date.parse(start + 'T00:00:00Z')) / 86400000)
   return diff >= 0 && diff < numDays ? diff + 1 : null
 }
 

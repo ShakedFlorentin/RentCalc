@@ -75,7 +75,7 @@ export default function Lists({ tripId, members }: { tripId: string; members: Me
           <button
             className="icon faint"
             aria-label="מחיקה"
-            onClick={() => mutate(supabase.from('checklist_items').delete().eq('id', i.id))}
+            onClick={() => confirm(`למחוק את "${i.text}"?`) && mutate(supabase.from('checklist_items').delete().eq('id', i.id))}
           >
             🗑️
           </button>

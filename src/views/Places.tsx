@@ -1,8 +1,8 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { supabase } from '../supabase'
-import { AUDIENCES, CATEGORIES, TOGETHER, VERDICTS, type DayInfo, type ItineraryItem, type Member, type Place, type Trip } from '../types'
+import { AUDIENCES, CATEGORIES, VERDICTS, type DayInfo, type ItineraryItem, type Member, type Place, type Trip } from '../types'
 import { couplesOf, mapsUrl, mutate, useMediaIndex, useTripTable, withMedia } from '../lib'
-import { Empty, Field, Sheet, Tabs, useRemembered } from '../ui'
+import { Empty, Field, LoadNote, Sheet, Tabs, useRemembered } from '../ui'
 import { MediaActions, Thumb } from '../media'
 import PlacesMap from './PlacesMap'
 import AddPlace from './AddPlace'
@@ -16,12 +16,12 @@ const PLACE_TABS: Record<string, string> = {
   other: '📌 אחר',
 }
 
-const CITY_ORDER = ['טוקיו', 'קיוטו', 'נארה', 'אוסקה', 'טיול יום']
+const CITY_ORDER = ['טוקיו', 'קיוטו', 'נארה', 'אוסקה', 'טיולי יום', 'טיול יום']
 
 type Props = { trip: Trip; me: string; userId: string; members: Member[] }
 
 export default function Places({ trip, me, userId, members }: Props) {
-  const { rows: rawRows, loading } = useTripTable<Place>('places', trip.id)
+  const { rows: rawRows, loading, error, reload } = useTripTable<Place>('places', trip.id)
   const media = useMediaIndex()
   // places with neither a match nor an author were pre-seeded with the trip, before anyone chose anything
   const rows = useMemo(
@@ -36,18 +36,18 @@ export default function Places({ trip, me, userId, members }: Props) {
   const [aud, setAud] = useState('')
   const couples = couplesOf(members)
   const myCouple = members.find((m) => m.user_id === userId)?.couple ?? null
-  // whose places: 'mine' = the group's plus my couple's, 'all', 'together' = the group's only, or a couple's name
-  const [whose, setWhose] = useState(myCouple ? 'mine' : 'all')
+  // whose places: 'all', 'together' = the group's only, or a couple's name = that couple's plus the group's,
+  // since a place both couples liked is on each couple's trip too
+  const [whose, setWhose] = useState(myCouple ?? 'all')
   const whoOk = (p: Place) =>
-    whose === 'all' ||
-    (whose === 'mine' && (!p.who || p.who.split(' + ').includes(myCouple ?? ''))) ||
-    (whose === 'together' && !p.who) ||
-    (p.who ?? '').split(' + ').includes(whose)
+    whose === 'all' || (whose === 'together' ? !p.who : !p.who || p.who.split(' + ').includes(whose))
   const [edit, setEdit] = useState<Partial<Place> | null>(null)
   const [adding, setAdding] = useState(false)
   const [planning, setPlanning] = useState<Place | null>(null)
-  const [picked, setPicked] = useState<Place | null>(null)
-  const onPick = useCallback((p: Place) => setPicked(p), [])
+  // keep the id, not the row, so the card under the map shows live data (visited, edits, deletion)
+  const [pickedId, setPickedId] = useState<string | null>(null)
+  const onPick = useCallback((p: Place) => setPickedId(p.id), [])
+  const picked = rows.find((p) => p.id === pickedId) ?? null
 
   const cities = [...new Set(rows.map((p) => p.city).filter(Boolean))] as string[]
   cities.sort((a, b) => rank(a) - rank(b))
@@ -70,8 +70,21 @@ export default function Places({ trip, me, userId, members }: Props) {
     areas.set(a, [...(areas.get(a) ?? []), p])
   }
 
+  const planBusy = useRef(false)
   const autoPlan = async () => {
-    const plan = buildPlan(rows.filter((p) => !plannedIds.has(p.id)), days)
+    // a second tap before the itinerary reloads would plan the same places again
+    if (planBusy.current) return
+    planBusy.current = true
+    try {
+      await runAutoPlan()
+    } finally {
+      planBusy.current = false
+    }
+  }
+  const runAutoPlan = async () => {
+    const { data: planned } = await supabase.from('itinerary_items').select('place_id').eq('trip_id', trip.id)
+    const done = new Set((planned ?? []).map((i) => i.place_id))
+    const plan = buildPlan(rows.filter((p) => !done.has(p.id)), days)
     if (!plan.rows.length) {
       alert('אין מקומות חדשים לשבץ' + (plan.skipped ? ` (${plan.skipped} בלי יום מתאים לעיר שלהם)` : ''))
       return
@@ -96,19 +109,15 @@ export default function Places({ trip, me, userId, members }: Props) {
       <div className="chips scroll filters-row">
         {couples.length > 1 && (
           <>
-            {myCouple && (
-              <button className={'chip' + (whose === 'mine' ? ' on' : '')} onClick={() => setWhose('mine')}>
-                שלנו + של כולם
-              </button>
-            )}
-            <button className={'chip' + (whose === 'together' ? ' on' : '')} onClick={() => setWhose('together')}>
-              👥 {TOGETHER}
-            </button>
-            {couples.map((c) => (
+            {/* my couple first */}
+            {[...couples].sort((a, b) => Number(b === myCouple) - Number(a === myCouple)).map((c) => (
               <button key={c} className={'chip' + (whose === c ? ' on' : '')} onClick={() => setWhose(c)}>
-                💑 {c}
+                💑 {c === myCouple ? 'שלנו' : c}
               </button>
             ))}
+            <button className={'chip' + (whose === 'together' ? ' on' : '')} onClick={() => setWhose('together')}>
+              👥 רק של כולם
+            </button>
             <button className={'chip' + (whose === 'all' ? ' on' : '')} onClick={() => setWhose('all')}>
               כל הזוגות
             </button>
@@ -145,13 +154,14 @@ export default function Places({ trip, me, userId, members }: Props) {
           <button className="secondary" onClick={autoPlan}>
             🪄 סדרו לי את המקומות בימים
           </button>
-          {!loading && shown.length === 0 && <Empty>אין עדיין מקומות – החליקו במשחק 🔥 כדי לקבל מאצ׳ים</Empty>}
+          {error && <LoadNote onRetry={reload} />}
+          {!loading && !error && shown.length === 0 && <Empty>אין עדיין מקומות – החליקו במשחק 🔥 כדי לקבל מאצ׳ים</Empty>}
           {[...groups].map(([c, areas]) => (
             <section key={c} className="stack">
               <h2 className="group-title">{c}</h2>
               {[...areas].map(([a, ps]) => (
                 <div key={a} className="stack">
-                  <div className="area-title" dir="auto">📍 {a}</div>
+                  {a !== '—' && <div className="area-title" dir="auto">📍 {a}</div>}
                   {ps.map((p) => (
                     <PlaceRow key={p.id} p={p} planned={plannedIds.has(p.id)} onEdit={setEdit} onPlan={setPlanning} />
                   ))}
