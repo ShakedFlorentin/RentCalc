@@ -1,1 +1,0 @@
-{"root":["./src/App.tsx","./src/lib.ts","./src/main.tsx","./src/supabase.ts","./src/types.ts","./src/ui.tsx","./src/views/Bookings.tsx","./src/views/Home.tsx","./src/views/Itinerary.tsx","./src/views/Lists.tsx","./src/views/Login.tsx","./src/views/Places.tsx","./src/views/TripPicker.tsx"],"version":"5.6.3"}
