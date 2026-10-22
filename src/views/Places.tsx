@@ -11,7 +11,11 @@ const CITY_ORDER = ['טוקיו', 'קיוטו', 'נארה', 'אוסקה', 'טי�
 export default function Places({ trip, me }: { trip: Trip; me: string }) {
   const { rows: rawRows, loading } = useTripTable<Place>('places', trip.id)
   const media = useMediaIndex()
-  const rows = useMemo(() => rawRows.map((p) => withMedia(p, media)), [rawRows, media])
+  // places with neither a match nor an author were pre-seeded with the trip, before anyone chose anything
+  const rows = useMemo(
+    () => rawRows.filter((p) => p.candidate_id || p.added_by).map((p) => withMedia(p, media)),
+    [rawRows, media],
+  )
   const { rows: days } = useTripTable<DayInfo>('day_info', trip.id, 'day')
   const { rows: items } = useTripTable<ItineraryItem>('itinerary_items', trip.id, 'sort')
   const [view, setView] = useState<'list' | 'map'>('list')
