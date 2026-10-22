@@ -28,8 +28,8 @@ export default function Login() {
   return (
     <div className="login">
       <div className="hinomaru" />
-      <h1>הטיול ליפן 🇯🇵</h1>
-      <p className="muted">מתכננים ועוקבים יחד</p>
+      <h1>הטיול ליפן</h1>
+      <p className="muted">מסלול, הזמנות והוצאות במקום אחד</p>
       <form onSubmit={submit} className="card">
         <input
           placeholder="שם (שקד / מאור / אלמוג / שניר)"

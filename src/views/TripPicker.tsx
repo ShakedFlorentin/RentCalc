@@ -5,7 +5,7 @@ import { Field } from '../ui'
 export default function TripPicker({ onPick }: { onPick: (id: string) => void }) {
   const [name, setName] = useState('')
   const [code, setCode] = useState('')
-  const [tripName, setTripName] = useState('יפן 🇯🇵')
+  const [tripName, setTripName] = useState('יפן')
   const [start, setStart] = useState('')
   const [err, setErr] = useState('')
 
@@ -30,16 +30,16 @@ export default function TripPicker({ onPick }: { onPick: (id: string) => void })
 
   return (
     <div className="login">
-      <h1>ברוכים הבאים 👋</h1>
+      <h1>הצטרפות לטיול</h1>
       <div className="card">
         <Field label="איך קוראים לך?">
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="השם שיופיע לחברים" />
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="השם שיוצג לשאר המשתתפים" />
         </Field>
       </div>
 
       <form onSubmit={join} className="card">
         <h3>הצטרפות לטיול קיים</h3>
-        <p className="muted small">בקשו את קוד הטיול ממי שיצר אותו (מופיע במסך הבית שלו)</p>
+        <p className="muted small">את קוד הטיול מקבלים ממי שיצר אותו, והוא מופיע במסך הבית שלו</p>
         <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="קוד טיול" dir="ltr" required />
         <button className="primary" disabled={!name.trim()}>
           הצטרפות
@@ -47,8 +47,8 @@ export default function TripPicker({ onPick }: { onPick: (id: string) => void })
       </form>
 
       <form onSubmit={create} className="card">
-        <h3>או – יצירת טיול חדש</h3>
-        <p className="muted small">ייווצר עם מסלול בסיסי טוקיו ← קיוטו ← אוסקה שאפשר לערוך</p>
+        <h3>יצירת טיול חדש</h3>
+        <p className="muted small">הטיול נוצר עם מסלול בסיסי של טוקיו, קיוטו ואוסקה, וניתן לערוך אותו</p>
         <Field label="שם הטיול">
           <input value={tripName} onChange={(e) => setTripName(e.target.value)} required />
         </Field>

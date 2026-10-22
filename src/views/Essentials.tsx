@@ -5,17 +5,19 @@ import { TOGETHER } from '../types'
 import { couplesOf, mutate, useTripTable } from '../lib'
 import { Empty, Field, LoadNote, Sheet } from '../ui'
 import { PHRASES, type Phrase } from '../phrases'
+import { Icon, type LucideIcon } from '../icons'
+import { Car, Copy, ExternalLink, FileText, Hotel, Languages, Phone, Pin, Plus, ReceiptText, ShieldAlert, ShieldCheck, StickyNote, Users, X, Check } from 'lucide-react'
 import '../styles/info.css'
 
 type Props = { trip: Trip; members: Member[]; userId: string }
 
-const KINDS: Record<Essential['kind'], string> = {
-  hotel: '🏨 מלונות',
-  phone: '📞 טלפונים',
-  insurance: '🛡️ ביטוח',
-  document: '📄 מסמכים',
-  note: '📝 הערות',
-  other: '📌 אחר',
+const KINDS: Record<Essential['kind'], { label: string; icon: LucideIcon }> = {
+  hotel: { label: 'מלונות', icon: Hotel },
+  phone: { label: 'טלפונים', icon: Phone },
+  insurance: { label: 'ביטוח', icon: ShieldCheck },
+  document: { label: 'מסמכים', icon: FileText },
+  note: { label: 'הערות', icon: StickyNote },
+  other: { label: 'אחר', icon: Pin },
 }
 const KIND_ORDER = Object.keys(KINDS) as Essential['kind'][]
 
@@ -34,20 +36,20 @@ export default function Essentials({ trip, members, userId }: Props) {
   const importHotels = async () => {
     setNote('')
     const { data, error } = await supabase.from('bookings').select('*').eq('trip_id', trip.id).eq('kind', 'hotel')
-    if (error) return setNote('לא הצלחתי לקרוא את ההזמנות: ' + error.message)
+    if (error) return setNote('לא ניתן לקרוא את ההזמנות: ' + error.message)
     const have = new Set(rows.filter((r) => r.kind === 'hotel').map((r) => r.title.trim().toLowerCase()))
     let sort = Math.max(0, ...rows.map((r) => r.sort)) + 1
     const fresh = (data as Booking[])
       .filter((b) => !have.has(b.title.trim().toLowerCase()))
       .map((b) => ({ trip_id: trip.id, kind: 'hotel', title: b.title.trim(), value: b.location, who: b.who, sort: sort++ }))
     if (!fresh.length) return setNote('אין מלונות חדשים להוסיף מההזמנות.')
-    if (await mutate(supabase.from('essentials').insert(fresh))) setNote(`נוספו ${fresh.length} מלונות ✅`)
+    if (await mutate(supabase.from('essentials').insert(fresh))) setNote(`נוספו ${fresh.length} מלונות`)
   }
 
   return (
     <div className="stack">
       <section className="info-sec">
-        <h2 className="info-h">🚨 חירום ביפן</h2>
+        <h2 className="info-h"><Icon as={ShieldAlert} /> חירום ביפן</h2>
         <div className="sos-row">
           <a className="sos police" href="tel:110">
             <b>110</b>
@@ -58,14 +60,14 @@ export default function Essentials({ trip, members, userId }: Props) {
             <span>אמבולנס / כבאים</span>
           </a>
         </div>
-        <p className="muted small info-note">השיחה חינם. בחירום אמיתי מתקשרים קודם לכאן; בהרבה ערים 119 מחברים מתורגמן באנגלית, אז לא מנתקים.</p>
+        <p className="muted small info-note">השיחה חינם. בחירום אמיתי מתקשרים קודם לכאן. בהרבה ערים 119 מחברים מתורגמן באנגלית, לכן לא מנתקים.</p>
 
         <div className="card info-card">
           <div className="info-title">Japan Visitor Hotline (JNTO)</div>
           <div className="muted small">24 שעות, כל השנה, באנגלית (גם סינית וקוריאנית). עוזרים בתאונה, מחלה ואסון טבע, ואפשר לשאול איפה לפנות.</div>
           <div className="row">
             <a className="pill" href="tel:+815038162787" dir="ltr">
-              📞 050-3816-2787
+              <Icon as={Phone} /> 050-3816-2787
             </a>
             <a className="pill soft" href="https://www.japan.travel/en/plan/hotline/" target="_blank" rel="noreferrer">
               האתר
@@ -81,7 +83,7 @@ export default function Essentials({ trip, members, userId }: Props) {
           <div className="muted small">מרכזייה. קבלת קהל קונסולרית ימים ב׳–ו׳ 10:00–13:00 (שעון יפן), סגור בחגי ישראל. בלי מספר חירום מאומת אחרי שעות העבודה, אז בלילה פונים קודם ל-110/119.</div>
           <div className="row">
             <a className="pill" href="tel:+81332640911" dir="ltr">
-              📞 03-3264-0911
+              <Icon as={Phone} /> 03-3264-0911
             </a>
             <a className="pill soft" href="https://new.embassies.gov.il/japan/en/contacts" target="_blank" rel="noreferrer">
               האתר
@@ -91,10 +93,10 @@ export default function Essentials({ trip, members, userId }: Props) {
       </section>
 
       <section className="info-sec">
-        <h2 className="info-h">🧾 הפרטים שלנו</h2>
+        <h2 className="info-h"><Icon as={ReceiptText} /> הפרטים שלנו</h2>
         <div className="row">
           <button className="secondary" onClick={importHotels}>
-            🏨 ייבוא מלונות מההזמנות
+            <Icon as={Hotel} /> ייבוא מלונות מההזמנות
           </button>
         </div>
         {note && (
@@ -105,7 +107,7 @@ export default function Essentials({ trip, members, userId }: Props) {
         {error && <LoadNote onRetry={reload} />}
         {!loading && !error && rows.length === 0 && (
           <Empty>
-            כאן שומרים כתובות מלונות ביפנית, מספרי פוליסה, טלפונים ומסמכים. אפשר להוסיף עם ＋ או לייבא את המלונות מההזמנות.
+            כאן שמורים כתובות מלונות ביפנית, מספרי פוליסה, טלפונים ומסמכים. אפשר להוסיף ידנית או לייבא את המלונות מההזמנות.
           </Empty>
         )}
         {KIND_ORDER.map((k) => {
@@ -113,7 +115,9 @@ export default function Essentials({ trip, members, userId }: Props) {
           if (!items.length) return null
           return (
             <div key={k} className="stack">
-              <div className="area-title">{KINDS[k]}</div>
+              <div className="area-title">
+                <Icon as={KINDS[k].icon} /> {KINDS[k].label}
+              </div>
               {items.map((r) => (
                 <EssentialCard key={r.id} item={r} onEdit={() => setEdit(r)} onShow={() => setShow(r)} />
               ))}
@@ -123,14 +127,14 @@ export default function Essentials({ trip, members, userId }: Props) {
       </section>
 
       <section className="info-sec">
-        <h2 className="info-h">🗣️ ביפנית</h2>
+        <h2 className="info-h"><Icon as={Languages} /> ביפנית</h2>
         <p className="muted small info-note">לוחצים על כרטיס כדי להציג אותו במסך מלא למי שמולכם.</p>
         <PhraseList phrases={PHRASES} />
       </section>
 
       <div className="info-end" aria-hidden="true" />
       <button className="fab" aria-label="פרט חדש" onClick={() => setEdit({ kind: 'hotel', who: myCouple })}>
-        ＋
+        <Icon as={Plus} size="1.5em" />
       </button>
       {edit && <EditSheet trip={trip} couples={couples} rows={rows} item={edit} onClose={() => setEdit(null)} />}
       {show && (
@@ -155,34 +159,34 @@ function EssentialCard(props: { item: Essential; onEdit: () => void; onShow: () 
       setTimeout(() => setCopied(false), 1500)
     } catch {
       // clipboard is blocked in some browsers; the value is still on screen to select
-      alert('לא הצלחתי להעתיק. אפשר לסמן את הטקסט ידנית.')
+      alert('ההעתקה נחסמה. אפשר לסמן את הטקסט ידנית.')
     }
   }
   return (
     <div className="card info-card" onClick={props.onEdit}>
       <div className="row spread nowrap">
         <div className="info-title">{item.title}</div>
-        <span className={'who-tag' + (item.who ? ' apart' : '')}>{item.who ? `💑 ${item.who}` : `👥 ${TOGETHER}`}</span>
+        <span className={'who-tag' + (item.who ? ' apart' : '')}><Icon as={Users} /> {item.who ?? TOGETHER}</span>
       </div>
       {item.value && <div className="info-value" dir="auto">{item.value}</div>}
       {item.value && (
         <div className="row" onClick={(e) => e.stopPropagation()}>
           <button className="pill" onClick={copy}>
-            {copied ? 'הועתק ✓' : '📋 העתקה'}
+            {copied ? <><Icon as={Check} /> הועתק</> : <><Icon as={Copy} /> העתקה</>}
           </button>
           {item.kind === 'hotel' && (
             <button className="pill" onClick={props.onShow}>
-              🚕 להראות לנהג
+              <Icon as={Car} /> להראות לנהג
             </button>
           )}
           {item.kind === 'phone' && looksLikePhone(item.value) && (
             <a className="pill" href={telHref(item.value)} dir="ltr">
-              📞 חיוג
+              <Icon as={Phone} /> חיוג
             </a>
           )}
           {/^https?:\/\//.test(item.value.trim()) && (
             <a className="pill" href={item.value.trim()} target="_blank" rel="noreferrer">
-              🔗 פתיחה
+              <Icon as={ExternalLink} /> פתיחה
             </a>
           )}
         </div>
@@ -223,7 +227,7 @@ function EditSheet(props: { trip: Trip; couples: string[]; rows: Essential[]; it
         <select value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value as Essential['kind'] })}>
           {KIND_ORDER.map((k) => (
             <option key={k} value={k}>
-              {KINDS[k]}
+              {KINDS[k].label}
             </option>
           ))}
         </select>
@@ -231,10 +235,10 @@ function EditSheet(props: { trip: Trip; couples: string[]; rows: Essential[]; it
       {props.couples.length > 1 && (
         <Field label="של מי">
           <select value={f.who ?? ''} onChange={(e) => setF({ ...f, who: e.target.value })}>
-            <option value="">👥 של כולם</option>
+            <option value="">{TOGETHER}</option>
             {props.couples.map((c) => (
               <option key={c} value={c}>
-                💑 {c}
+                {c}
               </option>
             ))}
           </select>
@@ -276,7 +280,7 @@ export function ShowFull(props: { small: string; big: string; sub?: string; onCl
   return (
     <div className="show-full" role="dialog" aria-modal="true" onClick={onClose}>
       <button className="show-close" aria-label="סגירה">
-        ✕
+        <Icon as={X} size="1.25em" />
       </button>
       <div className={'show-big ' + size} lang="ja" dir="ltr">
         {props.big}

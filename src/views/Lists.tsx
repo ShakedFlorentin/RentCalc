@@ -3,11 +3,13 @@ import { supabase } from '../supabase'
 import type { ChecklistItem, Member } from '../types'
 import { mutate, useTripTable } from '../lib'
 import { Empty } from '../ui'
+import { Icon, type LucideIcon } from '../icons'
+import { Check, ClipboardList, Luggage, Plus, ShoppingCart, Trash2 } from 'lucide-react'
 
-const LISTS = [
-  { id: 'todo', label: '📝 לפני הטיסה' },
-  { id: 'packing', label: '🧳 ציוד' },
-  { id: 'shopping', label: '🛒 לקנות ביפן' },
+const LISTS: { id: string; label: string; icon: LucideIcon }[] = [
+  { id: 'todo', label: 'לפני הטיסה', icon: ClipboardList },
+  { id: 'packing', label: 'ציוד', icon: Luggage },
+  { id: 'shopping', label: 'לקנות ביפן', icon: ShoppingCart },
 ]
 
 export default function Lists({ tripId, members }: { tripId: string; members: Member[] }) {
@@ -30,10 +32,10 @@ export default function Lists({ tripId, members }: { tripId: string; members: Me
 
   return (
     <div className="stack">
-      <div className="segmented">
+      <div className="segmented list-tabs">
         {LISTS.map((l) => (
           <button key={l.id} className={list === l.id ? 'on' : ''} onClick={() => setList(l.id)}>
-            {l.label}
+            <Icon as={l.icon} /> {l.label}
           </button>
         ))}
       </div>
@@ -56,7 +58,7 @@ export default function Lists({ tripId, members }: { tripId: string; members: Me
             </option>
           ))}
         </select>
-        <button className="primary">＋</button>
+        <button className="primary" aria-label="הוספה"><Icon as={Plus} size="1.25em" /></button>
       </form>
 
       {items.length === 0 && <Empty>הרשימה ריקה</Empty>}
@@ -66,7 +68,7 @@ export default function Lists({ tripId, members }: { tripId: string; members: Me
             className="check"
             onClick={() => mutate(supabase.from('checklist_items').update({ done: !i.done }).eq('id', i.id))}
           >
-            {i.done ? '✓' : ''}
+            {i.done ? <Icon as={Check} size="1em" strokeWidth={3} /> : null}
           </button>
           <div className="item-body">
             {i.text}
@@ -77,7 +79,7 @@ export default function Lists({ tripId, members }: { tripId: string; members: Me
             aria-label="מחיקה"
             onClick={() => confirm(`למחוק את "${i.text}"?`) && mutate(supabase.from('checklist_items').delete().eq('id', i.id))}
           >
-            🗑️
+            <Icon as={Trash2} size="1.25em" />
           </button>
         </div>
       ))}

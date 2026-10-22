@@ -5,8 +5,8 @@
 .exp-big.minus, .exp-num.minus { color: var(--nope); }
 .exp-cur { flex: none; width: 96px; }
 .exp-group { flex: none; width: 150px; }
-.exp-cur button, .exp-group button { min-height: 36px; }
-.exp-link { min-height: 32px; padding: 4px; }
+.exp-cur button, .exp-group button { min-height: 44px; }
+.exp-link { min-height: 44px; padding: 4px 8px; }
 .exp-h { font-size: 1rem; margin: 0 0 4px; }
 
 .exp-transfer, .exp-bal {
@@ -20,7 +20,7 @@
 .exp-transfer:first-of-type, .exp-bal:first-of-type { border-top: 0; }
 .exp-transfer-who { display: flex; flex-direction: column; min-width: 0; }
 .exp-num { font-weight: 700; font-variant-numeric: tabular-nums; }
-.exp-transfer .pill { flex: none; }
+.exp-transfer .pill { flex: none; min-height: 44px; }
 
 .exp-day { gap: 8px; }
 .exp-row {
@@ -32,7 +32,11 @@
   text-align: start;
   color: inherit;
 }
-.exp-emoji { font-size: 1.5rem; flex: none; }
+.exp-icon { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--fill); color: var(--muted); }
+.exp-couple { display: inline-flex; align-items: center; gap: 5px; padding: 1px 9px; border-radius: 999px; background: var(--fill); font-size: 0.875rem; }
+.exp-bal b.exp-num { white-space: nowrap; }
+.exp-main > b .ic, .exp-transfer-who .ic { margin-inline: 2px; color: var(--muted); }
+.chips .chip .ic { margin-inline-end: 2px; }
 .exp-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .exp-main > b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .exp-amt { flex: none; display: flex; flex-direction: column; align-items: flex-end; }
