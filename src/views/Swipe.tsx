@@ -357,13 +357,25 @@ function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked
             <p dir="auto" className="clamp">{c.serves}</p>
           </div>
         )}
-        {c.hype && !c.serves && (
+        {c.todo && (
+          <div className="fact">
+            <b>🎯 מה עושים שם</b>
+            <p dir="auto" className="clamp">{c.todo}</p>
+          </div>
+        )}
+        {c.special && (
+          <div className="fact">
+            <b>✨ מה מיוחד</b>
+            <p dir="auto" className="clamp">{c.special}</p>
+          </div>
+        )}
+        {c.hype && !c.serves && !c.todo && (
           <div className="fact">
             <b>📱 ברשתות</b>
             <p dir="auto" className="clamp">{c.hype}</p>
           </div>
         )}
-        {c.reality && (
+        {c.reality && !c.todo && (
           <div className="fact">
             <b>🔍 בביקורות</b>
             <p dir="auto" className="clamp">{c.reality}</p>
@@ -389,6 +401,28 @@ function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked
                       {c.dishes.map((d) => (
                         <span key={d} className="pill" dir="auto">
                           {d}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              {c.todo && (
+                <div className="fact">
+                  <b>🎯 מה עושים שם</b>
+                  <p dir="auto">{c.todo}</p>
+                  {c.time_needed && <p className="muted small">⏱️ {c.time_needed}</p>}
+                </div>
+              )}
+              {c.special && (
+                <div className="fact">
+                  <b>✨ מה מיוחד</b>
+                  <p dir="auto">{c.special}</p>
+                  {!!c.highlights?.length && (
+                    <div className="dishes">
+                      {c.highlights.map((h) => (
+                        <span key={h} className="pill" dir="auto">
+                          {h}
                         </span>
                       ))}
                     </div>

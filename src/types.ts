@@ -120,6 +120,11 @@ export type Candidate = {
   /** what a restaurant, cafe or bar serves, in Hebrew */
   serves?: string | null
   dishes?: string[] | null
+  /** for an attraction: what you do there, what is special about it, what not to miss, and how long it takes */
+  todo?: string | null
+  special?: string | null
+  highlights?: string[] | null
+  time_needed?: string | null
   name_ja: string | null
   city: string
   area: string | null

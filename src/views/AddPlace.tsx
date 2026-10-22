@@ -69,6 +69,10 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
           baby_notes: d.baby_notes || null,
           serves: d.serves || null,
           dishes: d.dishes?.length ? d.dishes : null,
+          todo: d.todo || null,
+          special: d.special || null,
+          highlights: d.highlights?.length ? d.highlights : null,
+          time_needed: d.time_needed || null,
           sources: d.sources ?? (l ? [l] : []),
         })
         .select('id')
@@ -208,6 +212,16 @@ function DraftForm(props: {
       {props.researched && d.serves && (
         <div className="small">
           <b>🍽️ מה מגישים:</b> <span dir="auto">{d.serves}</span>
+        </div>
+      )}
+      {props.researched && d.todo && (
+        <div className="small">
+          <b>🎯 מה עושים שם:</b> <span dir="auto">{d.todo}</span>
+        </div>
+      )}
+      {props.researched && d.special && (
+        <div className="small">
+          <b>✨ מה מיוחד:</b> <span dir="auto">{d.special}</span>
         </div>
       )}
       {props.researched && d.reality && (

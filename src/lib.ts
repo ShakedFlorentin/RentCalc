@@ -102,6 +102,11 @@ type MediaEntry = {
   // what a restaurant, cafe or bar serves
   serves?: string
   dishes?: string[]
+  // what you do at an attraction and what sets it apart
+  todo?: string
+  special?: string
+  highlights?: string[]
+  time_needed?: string
 }
 let mediaCache: Promise<Record<string, MediaEntry>> | null = null
 
@@ -144,6 +149,10 @@ export function withMedia<T extends { name: string }>(row: T, index: Record<stri
           price: m.price ?? r.price,
           serves: m.serves ?? r.serves,
           dishes: m.dishes ?? r.dishes,
+          todo: m.todo ?? r.todo,
+          special: m.special ?? r.special,
+          highlights: m.highlights ?? r.highlights,
+          time_needed: m.time_needed ?? r.time_needed,
         }
       : {}),
   }

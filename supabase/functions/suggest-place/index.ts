@@ -32,6 +32,10 @@ const PlaceDraft = z.object({
   baby_notes: z.string().nullable(),
   serves: z.string().nullable(),
   dishes: z.array(z.string()),
+  todo: z.string().nullable(),
+  special: z.string().nullable(),
+  highlights: z.array(z.string()),
+  time_needed: z.string().nullable(),
   sources: z.array(z.string()),
 })
 
@@ -41,6 +45,7 @@ A member shared a place (a social-media post, a map link, or just a name). Work 
 - Tabelog score (search in Japanese too) and Google rating; only report numbers you actually see
 - full address, neighbourhood and coordinates
 - for a restaurant, cafe or bar: what it serves (cuisine, signature dishes or drinks, format such as counter course or street stall)
+- for anything else (sight, experience, shopping): what you actually do there, what makes it special, what not to miss, and how long a visit takes
 - price level, booking/queue tips
 - with a milk-only baby: stroller access, a quiet spot or private room to nurse, nursing room nearby, smoking; or why it's better as an adults-only outing
 - honest verdict: hidden gem, worth it, overhyped, or tourist trap
@@ -51,6 +56,7 @@ const EXTRACT = `Turn the research notes into the place card. Rules:
 - city: tokyo, kyoto, osaka, nara, or daytrip for anywhere else.
 - hype, reality, tip, baby_notes, price: one short sentence each in natural, casual Hebrew; keep place names, brand names (Tabelog, Google) and numbers as they are.
 - serves: for a restaurant, cafe or bar, one or two short Hebrew sentences on what it serves, explaining Japanese dish names in plain words (e.g. "אוקונומיאקי (פנקייק כרוב על הפלנצ׳ה)"); null for other places. dishes: 2-4 signature items as short Hebrew labels, or [].
+- todo / special / highlights / time_needed: for sights, experiences and shopping (null / [] for restaurants, cafes and bars). todo: 2-3 Hebrew sentences on what you actually do there, as a visit plays out. special: 1-2 Hebrew sentences on what sets it apart, specific rather than generic praise. highlights: 2-4 short Hebrew labels of what not to miss. time_needed: e.g. "שעה-שעתיים" or "חצי יום".
 - tabelog_score / google_score / lat / lng: only if stated in the notes, else null.
 - audience: "baby" if it works with the baby, otherwise "adults".
 - sources: the URLs the notes relied on.`
