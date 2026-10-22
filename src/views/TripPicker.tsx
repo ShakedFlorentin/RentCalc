@@ -13,6 +13,7 @@ export default function TripPicker({ onPick }: { onPick: (id: string) => void })
     e.preventDefault()
     const { data, error } = await supabase.rpc('join_trip', { code, name })
     if (error) setErr(error.message)
+    else if (!data) setErr('קוד טיול שגוי')
     else onPick(data as string)
   }
 

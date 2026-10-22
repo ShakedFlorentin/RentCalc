@@ -3,7 +3,7 @@
 import Anthropic from 'npm:@anthropic-ai/sdk@1.1.0'
 import { zodOutputFormat } from 'npm:@anthropic-ai/sdk@1.1.0/helpers/zod'
 import { z } from 'npm:zod@4'
-import { createClient } from 'npm:@supabase/supabase-js@2'
+import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -37,14 +37,45 @@ Return one entry per separate booking (e.g. an outbound and a return flight are 
 Only use information that is in the document. If it is not a booking, return an empty list.`
 
 const MAX_BYTES = 15 * 1024 * 1024
+// Claude calls per user per function in 24 hours
+const DAILY_LIMIT = 30
 
 /** The Claude key: a function secret if one is set, otherwise the copy kept in Supabase Vault. */
-async function anthropicKey() {
+async function anthropicKey(admin: SupabaseClient) {
   const env = Deno.env.get('ANTHROPIC_API_KEY')
   if (env) return env
-  const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
   const { data } = await admin.rpc('get_anthropic_key')
   return (data as string | null) ?? undefined
+}
+
+/**
+ * Lets a request spend the Claude key only for a signed-in member of a trip who is under today's cap, and records
+ * the call. Returns the client for the key lookup, or the response to send instead.
+ */
+async function admit(req: Request, fn: string, json: (body: unknown, status?: number) => Response) {
+  // the anon key is also a valid JWT, so check there is a signed-in user behind the request
+  const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
+    global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } },
+  })
+  const { data: auth } = await supabase.auth.getUser()
+  if (!auth.user) return json({ error: 'not signed in' }, 401)
+  const { count: trips } = await supabase
+    .from('members')
+    .select('trip_id', { count: 'exact', head: true })
+    .eq('user_id', auth.user.id)
+  if (!trips) return json({ error: 'not a trip member' }, 403)
+
+  const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+  const { count: used } = await admin
+    .from('ai_usage')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', auth.user.id)
+    .eq('fn', fn)
+    .gte('at', since)
+  if ((used ?? 0) >= DAILY_LIMIT) return json({ error: 'daily limit reached' }, 429)
+  await admin.from('ai_usage').insert({ user_id: auth.user.id, fn })
+  return admin
 }
 
 Deno.serve(async (req) => {
@@ -52,18 +83,15 @@ Deno.serve(async (req) => {
   const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
 
-  // the anon key is also a valid JWT, so check there is a signed-in user behind the request
-  const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
-    global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } },
-  })
-  const { data: auth } = await supabase.auth.getUser()
-  if (!auth.user) return json({ error: 'not signed in' }, 401)
+  const admin = await admit(req, 'parse-booking', json)
+  if (admin instanceof Response) return admin
 
   const { text, file } = (await req.json()) as {
     text?: string
     file?: { data: string; media_type: string }
   }
   if (!text?.trim() && !file) return json({ error: 'nothing to read' }, 400)
+  if ((text?.length ?? 0) > 50_000) return json({ error: 'text too long' }, 413)
   if (file && file.data.length * 0.75 > MAX_BYTES) return json({ error: 'file too large' }, 413)
 
   const content: Anthropic.ContentBlockParam[] = []
@@ -79,11 +107,11 @@ Deno.serve(async (req) => {
   }
   content.push({ type: 'text', text: text?.trim() ? text : 'Extract the bookings from the attached document.' })
 
-  const client = new Anthropic({ apiKey: await anthropicKey() })
+  const client = new Anthropic({ apiKey: await anthropicKey(admin) })
   try {
     const response = await client.messages.parse({
       model: 'claude-haiku-5-5',
-      max_tokens: 16000,
+      max_tokens: 4000,
       output_config: { effort: 'low', format: zodOutputFormat(BookingList) },
       system: SYSTEM,
       messages: [{ role: 'user', content }],

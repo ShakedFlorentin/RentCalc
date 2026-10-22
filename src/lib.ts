@@ -191,3 +191,11 @@ export function matchFor(likers: string[], members: Member[], threshold: number)
   if (!agreed.length) return undefined
   return { who: agreed.length === couples.length ? null : agreed.join(' + ') }
 }
+
+/** Hebrew text for a failed Claude edge-function call, or `fallback` when there is nothing more specific. */
+export function aiError(error: unknown, fallback: string) {
+  const status = (error as { context?: { status?: number } } | null)?.context?.status
+  if (status === 429) return 'הגעתם למגבלה היומית (30 בדיקות ביום לכל אחד). אפשר להוסיף ידנית או לנסות מחר.'
+  if (status === 413) return 'הטקסט או הקובץ ארוכים מדי.'
+  return fallback
+}

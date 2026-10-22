@@ -1,7 +1,7 @@
 import { Fragment, useState } from 'react'
 import { supabase } from '../supabase'
 import { BOOKING_KINDS, BOOKING_TABS, TOGETHER, type Booking, type Member, type Trip } from '../types'
-import { couplesOf, fmtDateTime, fromInputDateTime, mapsUrl, mutate, toInputDateTime, useTripTable } from '../lib'
+import { aiError, couplesOf, fmtDateTime, fromInputDateTime, mapsUrl, mutate, toInputDateTime, useTripTable } from '../lib'
 import { Empty, Field, LoadNote, Sheet, Tabs, useRemembered } from '../ui'
 
 type Props = { trip: Trip; members: Member[]; userId: string }
@@ -270,7 +270,7 @@ function ImportSheet(props: { trip: Trip; couples: string[]; myCouple: string | 
     }
     const { data, error } = await supabase.functions.invoke('parse-booking', { body: payload })
     if (error || !data?.bookings) {
-      setErr('לא הצלחתי לקרוא את האישור. אפשר לנסות שוב או להוסיף ידנית.')
+      setErr(aiError(error, 'לא הצלחתי לקרוא את האישור. אפשר לנסות שוב או להוסיף ידנית.'))
       setBusy(false)
       return
     }

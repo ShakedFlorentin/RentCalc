@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../supabase'
 import { AUDIENCES, CARD_STYLE, CITY_HE, VERDICTS, type Candidate } from '../types'
-import { mutate } from '../lib'
+import { aiError, mutate } from '../lib'
 import { Field, Sheet } from '../ui'
 
 type Draft = Partial<Candidate> & { link?: string }
@@ -24,7 +24,7 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
     const { data, error } = await supabase.functions.invoke('suggest-place', { body: { link: link.trim(), text: note.trim() } })
     setBusy(false)
     if (error || !data) {
-      setErr('החיפוש לא הצליח. אפשר לנסות שוב או למלא ידנית.')
+      setErr(aiError(error, 'החיפוש לא הצליח. אפשר לנסות שוב או למלא ידנית.'))
       return
     }
     if (!data.found) setErr('לא זיהיתי מקום ספציפי – בדקו את הפרטים או השלימו ידנית.')

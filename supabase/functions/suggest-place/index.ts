@@ -3,7 +3,7 @@
 import Anthropic from 'npm:@anthropic-ai/sdk@1.1.0'
 import { zodOutputFormat } from 'npm:@anthropic-ai/sdk@1.1.0/helpers/zod'
 import { z } from 'npm:zod@4'
-import { createClient } from 'npm:@supabase/supabase-js@2'
+import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -11,6 +11,8 @@ const cors = {
 }
 
 const MODEL = 'claude-haiku-5-5'
+// Claude calls per user per function in 24 hours; each place lookup costs a few cents
+const DAILY_LIMIT = 30
 
 const PlaceDraft = z.object({
   found: z.boolean(),
@@ -63,17 +65,26 @@ const EXTRACT = `Turn the research notes into the place card. Rules:
 
 /** Caption of the shared post, so the model knows what it is about (posts themselves need a login). */
 async function postContext(link: string) {
+  // fetch only real Instagram/TikTok pages, never an address the link merely mentions
+  let url: URL
   try {
-    if (/tiktok\.com/i.test(link)) {
+    url = new URL(link)
+  } catch {
+    return ''
+  }
+  const host = url.hostname.toLowerCase().replace(/^www\./, '')
+  if (url.protocol !== 'https:') return ''
+  try {
+    if (host === 'tiktok.com' || host === 'vm.tiktok.com') {
       const r = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(link)}`)
       if (r.ok) {
         const o = await r.json()
         return `TikTok post by @${o.author_unique_id ?? o.author_name}: ${o.title ?? ''}`
       }
     }
-    if (/instagram\.com/i.test(link)) {
+    if (host === 'instagram.com') {
       // Instagram serves Open Graph tags to link-preview crawlers
-      const r = await fetch(link, { headers: { 'User-Agent': 'facebookexternalhit/1.1' } })
+      const r = await fetch(url, { headers: { 'User-Agent': 'facebookexternalhit/1.1' } })
       if (r.ok) {
         const html = await r.text()
         const meta = (p: string) =>
@@ -89,12 +100,41 @@ async function postContext(link: string) {
 }
 
 /** The Claude key: a function secret if one is set, otherwise the copy kept in Supabase Vault. */
-async function anthropicKey() {
+async function anthropicKey(admin: SupabaseClient) {
   const env = Deno.env.get('ANTHROPIC_API_KEY')
   if (env) return env
-  const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
   const { data } = await admin.rpc('get_anthropic_key')
   return (data as string | null) ?? undefined
+}
+
+/**
+ * Lets a request spend the Claude key only for a signed-in member of a trip who is under today's cap, and records
+ * the call. Returns the client for the key lookup, or the response to send instead.
+ */
+async function admit(req: Request, fn: string, json: (body: unknown, status?: number) => Response) {
+  // the anon key is also a valid JWT, so check there is a signed-in user behind the request
+  const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
+    global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } },
+  })
+  const { data: auth } = await supabase.auth.getUser()
+  if (!auth.user) return json({ error: 'not signed in' }, 401)
+  const { count: trips } = await supabase
+    .from('members')
+    .select('trip_id', { count: 'exact', head: true })
+    .eq('user_id', auth.user.id)
+  if (!trips) return json({ error: 'not a trip member' }, 403)
+
+  const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+  const { count: used } = await admin
+    .from('ai_usage')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', auth.user.id)
+    .eq('fn', fn)
+    .gte('at', since)
+  if ((used ?? 0) >= DAILY_LIMIT) return json({ error: 'daily limit reached' }, 429)
+  await admin.from('ai_usage').insert({ user_id: auth.user.id, fn })
+  return admin
 }
 
 Deno.serve(async (req) => {
@@ -102,27 +142,24 @@ Deno.serve(async (req) => {
   const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
 
-  // the anon key is also a valid JWT, so check there is a signed-in user behind the request
-  const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
-    global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } },
-  })
-  const { data: auth } = await supabase.auth.getUser()
-  if (!auth.user) return json({ error: 'not signed in' }, 401)
+  const admin = await admit(req, 'suggest-place', json)
+  if (admin instanceof Response) return admin
 
   const { link, text } = (await req.json()) as { link?: string; text?: string }
   if (!link?.trim() && !text?.trim()) return json({ error: 'nothing to look up' }, 400)
+  if ((link?.length ?? 0) > 500 || (text?.length ?? 0) > 1000) return json({ error: 'too long' }, 413)
 
   const caption = link ? await postContext(link) : ''
   const ask = [link && `Link: ${link}`, caption, text && `Note from the member: ${text}`].filter(Boolean).join('\n')
 
-  const client = new Anthropic({ apiKey: await anthropicKey() })
+  const client = new Anthropic({ apiKey: await anthropicKey(admin) })
   try {
     const messages: Anthropic.MessageParam[] = [{ role: 'user', content: ask }]
     let research: Anthropic.Message | null = null
     for (let i = 0; i < 4; i++) {
       research = await client.messages.create({
         model: MODEL,
-        max_tokens: 16000,
+        max_tokens: 4000,
         output_config: { effort: 'low' },
         system: RESEARCH,
         tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 6 }],
@@ -139,7 +176,7 @@ Deno.serve(async (req) => {
 
     const card = await client.messages.parse({
       model: MODEL,
-      max_tokens: 16000,
+      max_tokens: 4000,
       output_config: { effort: 'low', format: zodOutputFormat(PlaceDraft) },
       system: EXTRACT,
       messages: [{ role: 'user', content: `${ask}\n\nResearch notes:\n${notes}` }],
