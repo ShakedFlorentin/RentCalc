@@ -2,18 +2,21 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { supabase } from '../supabase'
 import { AUDIENCES, CATEGORIES, VERDICTS, type DayInfo, type ItineraryItem, type Member, type Place, type Trip } from '../types'
 import { couplesOf, mapsUrl, mutate, useMediaIndex, useTripTable, withMedia } from '../lib'
-import { Empty, Field, LoadNote, Sheet, Tabs, useRemembered } from '../ui'
+import { CalendarCheck, CalendarPlus, Check, List, Map as MapIcon, MapPin, Plus, Users, Wand2 } from 'lucide-react'
+import { Empty, Field, LoadNote, Sheet, useRemembered } from '../ui'
+import { AUDIENCE_ICON, CATEGORY_ICON, Icon } from '../icons'
+import '../styles/game.css'
 import { MediaActions, Thumb } from '../media'
 import PlacesMap from './PlacesMap'
 import AddPlace from './AddPlace'
 
 const PLACE_TABS: Record<string, string> = {
-  '': '✨ הכל',
-  food: '🍜 אוכל',
-  sight: '⛩️ אטרקציות',
-  shopping: '🛍️ קניות',
-  transport: '🚄 תחבורה',
-  other: '📌 אחר',
+  '': 'הכל',
+  food: 'אוכל',
+  sight: 'אטרקציות',
+  shopping: 'קניות',
+  transport: 'תחבורה',
+  other: 'אחר',
 }
 
 const CITY_ORDER = ['טוקיו', 'קיוטו', 'נארה', 'אוסקה', 'טיולי יום', 'טיול יום']
@@ -91,18 +94,25 @@ export default function Places({ trip, me, userId, members }: Props) {
     }
     if (!confirm(`לשבץ ${plan.rows.length} מקומות בימים לפי עיר ושכונה?`)) return
     const ok = await mutate(supabase.from('itinerary_items').insert(plan.rows.map((r) => ({ ...r, trip_id: trip.id }))))
-    if (ok) alert(`שובצו ${plan.rows.length} מקומות 🗓️` + (plan.skipped ? `\n${plan.skipped} לא שובצו – אין יום בעיר שלהם` : ''))
+    if (ok) alert(`שובצו ${plan.rows.length} מקומות` + (plan.skipped ? `\n${plan.skipped} לא שובצו – אין יום בעיר שלהם` : ''))
   }
 
   return (
     <div className="stack">
-      <Tabs label="סוג מקום" tabs={tabs} current={tabs[cat] ? cat : ''} counts={counts} onPick={setCat} />
+      <div className="tabs-bar" role="tablist" aria-label="סוג מקום">
+        {Object.entries(tabs).map(([k, v]) => (
+          <button key={k} role="tab" aria-selected={(tabs[cat] ? cat : '') === k} className={'chip' + ((tabs[cat] ? cat : '') === k ? ' on' : '')} onClick={() => setCat(k)}>
+            {CATEGORY_ICON[k] && <Icon as={CATEGORY_ICON[k]} />} {v}
+            {!!counts[k] && <span className="count">{counts[k]}</span>}
+          </button>
+        ))}
+      </div>
       <div className="segmented">
         <button className={view === 'list' ? 'on' : ''} onClick={() => setView('list')}>
-          📋 רשימה
+          <Icon as={List} /> רשימה
         </button>
         <button className={view === 'map' ? 'on' : ''} onClick={() => setView('map')}>
-          🗺️ מפה
+          <Icon as={MapIcon} /> מפה
         </button>
       </div>
       {/* whose list, who it suits and which city, in one scrollable row */}
@@ -112,11 +122,11 @@ export default function Places({ trip, me, userId, members }: Props) {
             {/* my couple first */}
             {[...couples].sort((a, b) => Number(b === myCouple) - Number(a === myCouple)).map((c) => (
               <button key={c} className={'chip' + (whose === c ? ' on' : '')} onClick={() => setWhose(c)}>
-                💑 {c === myCouple ? 'שלנו' : c}
+                {c === myCouple ? 'שלנו' : c}
               </button>
             ))}
             <button className={'chip' + (whose === 'together' ? ' on' : '')} onClick={() => setWhose('together')}>
-              👥 רק של כולם
+              רק של כולם
             </button>
             <button className={'chip' + (whose === 'all' ? ' on' : '')} onClick={() => setWhose('all')}>
               כל הזוגות
@@ -126,7 +136,7 @@ export default function Places({ trip, me, userId, members }: Props) {
         )}
         {Object.entries(AUDIENCES).map(([k, v]) => (
           <button key={k} className={'chip' + (aud === k ? ' on' : '')} onClick={() => setAud(aud === k ? '' : k)} aria-pressed={aud === k}>
-            {v}
+            {AUDIENCE_ICON[k] && <Icon as={AUDIENCE_ICON[k]} />} {v}
           </button>
         ))}
         <span className="chip-sep" aria-hidden="true" />
@@ -146,22 +156,22 @@ export default function Places({ trip, me, userId, members }: Props) {
           <p className="small muted">
             {shown.filter((p) => p.lat == null).length > 0 &&
               `${shown.filter((p) => p.lat == null).length} מקומות בלי מיקום לא מופיעים במפה · `}
-            המיקומים מהסקאוטים משוערים – בדקו בגוגל מפות לפני שיוצאים
+            המיקומים משוערים. בדקו בגוגל מפות לפני שיוצאים
           </p>
         </>
       ) : (
         <>
           <button className="secondary" onClick={autoPlan}>
-            🪄 סדרו לי את המקומות בימים
+            <Icon as={Wand2} /> שיבוץ המקומות בימים
           </button>
           {error && <LoadNote onRetry={reload} />}
-          {!loading && !error && shown.length === 0 && <Empty>אין עדיין מקומות – החליקו במשחק 🔥 כדי לקבל מאצ׳ים</Empty>}
+          {!loading && !error && shown.length === 0 && <Empty>אין עדיין מקומות. מקומות שמקבלים מאצ׳ במשחק מופיעים כאן</Empty>}
           {[...groups].map(([c, areas]) => (
             <section key={c} className="stack">
               <h2 className="group-title">{c}</h2>
               {[...areas].map(([a, ps]) => (
                 <div key={a} className="stack">
-                  {a !== '—' && <div className="area-title" dir="auto">📍 {a}</div>}
+                  {a !== '—' && <div className="area-title" dir="auto"><Icon as={MapPin} /> {a}</div>}
                   {ps.map((p) => (
                     <PlaceRow key={p.id} p={p} planned={plannedIds.has(p.id)} onEdit={setEdit} onPlan={setPlanning} />
                   ))}
@@ -173,7 +183,7 @@ export default function Places({ trip, me, userId, members }: Props) {
       )}
 
       <button className="fab" aria-label="הוספת מקום" onClick={() => setAdding(true)}>
-        ＋
+        <Icon as={Plus} size="1.5em" />
       </button>
       {adding && <AddPlace tripId={trip.id} userId={userId} me={me} defaultTo="list" onClose={() => setAdding(false)} />}
       {edit && <PlaceForm tripId={trip.id} me={me} place={edit} onClose={() => setEdit(null)} />}
@@ -193,19 +203,34 @@ function PlaceRow(props: { p: Place; planned: boolean; onEdit: (p: Place) => voi
         aria-pressed={p.visited}
         onClick={() => mutate(supabase.from('places').update({ visited: !p.visited }).eq('id', p.id))}
       >
-        {p.visited ? '✓' : ''}
+        {p.visited ? <Icon as={Check} size="1em" strokeWidth={3} /> : null}
       </button>
-      <Thumb photos={p.photos} emoji={CATEGORIES[p.category]?.split(' ')[0] ?? '📍'} />
+      <Thumb photos={p.photos} icon={CATEGORY_ICON[p.category] ?? MapPin} />
       <div className="item-body" onClick={() => props.onEdit(p)}>
         <div className="item-title" dir="auto">
           {p.name}
         </div>
         <div className="muted small meta">
-          {CATEGORIES[p.category]?.split(' ')[0]} {p.audience && AUDIENCES[p.audience].split(' ')[0]}{' '}
-          {p.verdict && VERDICTS[p.verdict]?.label}
-          {p.added_by && <> · <bdi>{p.added_by}</bdi></>}
-          {p.who && <> · 💑 <bdi>{p.who}</bdi></>}
-          {props.planned && ' · 🗓️ במסלול'}
+          {[
+            CATEGORIES[p.category],
+            p.audience && AUDIENCES[p.audience],
+            p.verdict && VERDICTS[p.verdict]?.label,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+          {p.added_by && <> · <bdi>{p.added_by.replace(/\p{Extended_Pictographic}\uFE0F?/gu, '').trim()}</bdi></>}
+          {p.who && (
+            <>
+              {' · '}
+              <Icon as={Users} /> <bdi>{p.who}</bdi>
+            </>
+          )}
+          {props.planned && (
+            <>
+              {' · '}
+              <Icon as={CalendarCheck} /> במסלול
+            </>
+          )}
         </div>
         {p.notes && (
           <div className="notes" dir="auto">
@@ -215,12 +240,12 @@ function PlaceRow(props: { p: Place; planned: boolean; onEdit: (p: Place) => voi
         <MediaActions name={p.name} maps={p.url || null} m={{ ...p, lat: p.url ? null : p.lat, lng: p.url ? null : p.lng }} compact />
         {!p.url && p.lat == null && (
           <a className="action compact-link" href={mapLink} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
-            📍 <span>חיפוש במפות</span>
+            <Icon as={MapPin} /> <span>חיפוש במפות</span>
           </a>
         )}
       </div>
       <button className="icon" onClick={() => props.onPlan(p)} aria-label="הוספה למסלול">
-        🗓️
+        <Icon as={CalendarPlus} size="1.2em" />
       </button>
     </div>
   )
