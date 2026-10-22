@@ -58,11 +58,14 @@ export function Sheet(props: { title: string; onClose: () => void; children: Rea
       if (!canDrag) return false
       const d = y - y0
       if (!dragging) {
-        if (d < 8) {
-          // pulling up means scrolling the content, so leave it to the browser
-          if (d < -4) canDrag = false
+        // pulling up means scrolling the content, so leave it to the browser
+        if (d < 0) {
+          canDrag = false
           return false
         }
+        // claim a downward pull from its first pixel: once iOS starts its own scroll/bounce, touchmove can no longer
+        // be cancelled and the sheet would never move
+        if (d < 6) return true
         dragging = true
         y0 = y
         t0 = performance.now()
