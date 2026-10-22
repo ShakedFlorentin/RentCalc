@@ -110,6 +110,7 @@ export type Candidate = {
   added_by: string | null
   audience: string | null
   baby_notes: string | null
+  local_pick: boolean
 }
 
 export type Swipe = { trip_id: string; candidate_id: string; user_id: string; liked: boolean; created_at: string }

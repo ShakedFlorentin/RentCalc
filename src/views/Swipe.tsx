@@ -249,6 +249,7 @@ function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked
         <div className="row">
           {verdict && <div className={'verdict ' + verdict.tone}>{verdict.label}</div>}
           {c.audience && <div className={'verdict aud-' + c.audience}>{AUDIENCES[c.audience]}</div>}
+          {c.local_pick && <div className="verdict local">🇯🇵 מקומיים ממליצים</div>}
         </div>
         <div className="scores">
           {c.tabelog_score != null && <span>Tabelog ⭐ {c.tabelog_score}</span>}

@@ -389,3 +389,5 @@ main { padding: 14px 16px calc(96px + env(safe-area-inset-bottom)); }
   .verdict.aud-baby { background: #172554; color: #93c5fd; }
   .verdict.aud-adults { background: #2e1065; color: #d8b4fe; }
 }
+.verdict.local { background: #fff1f2; color: #be123c; }
+@media (prefers-color-scheme: dark) { .verdict.local { background: #4c0519; color: #fda4af; } }
