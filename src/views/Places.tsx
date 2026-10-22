@@ -2,10 +2,19 @@ import { useCallback, useMemo, useState } from 'react'
 import { supabase } from '../supabase'
 import { AUDIENCES, CATEGORIES, TOGETHER, VERDICTS, type DayInfo, type ItineraryItem, type Member, type Place, type Trip } from '../types'
 import { couplesOf, mapsUrl, mutate, useMediaIndex, useTripTable, withMedia } from '../lib'
-import { Empty, Field, Sheet } from '../ui'
+import { Empty, Field, Sheet, Tabs, useRemembered } from '../ui'
 import { MediaActions, Thumb } from '../media'
 import PlacesMap from './PlacesMap'
 import AddPlace from './AddPlace'
+
+const PLACE_TABS: Record<string, string> = {
+  '': '✨ הכל',
+  food: '🍜 אוכל',
+  sight: '⛩️ אטרקציות',
+  shopping: '🛍️ קניות',
+  transport: '🚄 תחבורה',
+  other: '📌 אחר',
+}
 
 const CITY_ORDER = ['טוקיו', 'קיוטו', 'נארה', 'אוסקה', 'טיול יום']
 
@@ -23,7 +32,7 @@ export default function Places({ trip, me, userId, members }: Props) {
   const { rows: items } = useTripTable<ItineraryItem>('itinerary_items', trip.id, 'sort')
   const [view, setView] = useState<'list' | 'map'>('list')
   const [city, setCity] = useState('')
-  const [cat, setCat] = useState('')
+  const [cat, setCat] = useRemembered('placesTab', '')
   const [aud, setAud] = useState('')
   const couples = couplesOf(members)
   const myCouple = members.find((m) => m.user_id === userId)?.couple ?? null
@@ -42,9 +51,13 @@ export default function Places({ trip, me, userId, members }: Props) {
 
   const cities = [...new Set(rows.map((p) => p.city).filter(Boolean))] as string[]
   cities.sort((a, b) => rank(a) - rank(b))
-  const shown = rows.filter(
-    (p) => whoOk(p) && (!city || p.city === city) && (!cat || p.category === cat) && (!aud || p.audience === aud),
+  const filtered = rows.filter((p) => whoOk(p) && (!city || p.city === city) && (!aud || p.audience === aud))
+  // one tab per kind of place; transport only once something is filed under it
+  const tabs = Object.fromEntries(
+    Object.entries(PLACE_TABS).filter(([k]) => k !== 'transport' || rows.some((p) => p.category === k)),
   )
+  const counts = Object.fromEntries(Object.keys(tabs).map((k) => [k, filtered.filter((p) => !k || p.category === k).length]))
+  const shown = filtered.filter((p) => !cat || p.category === cat)
   const plannedIds = new Set(items.map((i) => i.place_id).filter(Boolean))
 
   // city → area → places
@@ -70,6 +83,7 @@ export default function Places({ trip, me, userId, members }: Props) {
 
   return (
     <div className="stack">
+      <Tabs label="סוג מקום" tabs={tabs} current={tabs[cat] ? cat : ''} counts={counts} onPick={setCat} />
       <div className="segmented">
         <button className={view === 'list' ? 'on' : ''} onClick={() => setView('list')}>
           📋 רשימה
@@ -78,53 +92,38 @@ export default function Places({ trip, me, userId, members }: Props) {
           🗺️ מפה
         </button>
       </div>
-      {couples.length > 1 && (
-        <div className="chips scroll">
-          {myCouple && (
-            <button className={'chip' + (whose === 'mine' ? ' on' : '')} onClick={() => setWhose('mine')}>
-              שלנו + של כולם
+      {/* whose list, who it suits and which city, in one scrollable row */}
+      <div className="chips scroll filters-row">
+        {couples.length > 1 && (
+          <>
+            {myCouple && (
+              <button className={'chip' + (whose === 'mine' ? ' on' : '')} onClick={() => setWhose('mine')}>
+                שלנו + של כולם
+              </button>
+            )}
+            <button className={'chip' + (whose === 'together' ? ' on' : '')} onClick={() => setWhose('together')}>
+              👥 {TOGETHER}
             </button>
-          )}
-          <button className={'chip' + (whose === 'together' ? ' on' : '')} onClick={() => setWhose('together')}>
-            👥 {TOGETHER}
-          </button>
-          {couples.map((c) => (
-            <button key={c} className={'chip' + (whose === c ? ' on' : '')} onClick={() => setWhose(c)}>
-              💑 {c}
+            {couples.map((c) => (
+              <button key={c} className={'chip' + (whose === c ? ' on' : '')} onClick={() => setWhose(c)}>
+                💑 {c}
+              </button>
+            ))}
+            <button className={'chip' + (whose === 'all' ? ' on' : '')} onClick={() => setWhose('all')}>
+              כל הזוגות
             </button>
-          ))}
-          <button className={'chip' + (whose === 'all' ? ' on' : '')} onClick={() => setWhose('all')}>
-            הכל
-          </button>
-        </div>
-      )}
-      <div className="segmented">
-        <button className={!aud ? 'on' : ''} onClick={() => setAud('')}>
-          הכל
-        </button>
+            <span className="chip-sep" aria-hidden="true" />
+          </>
+        )}
         {Object.entries(AUDIENCES).map(([k, v]) => (
-          <button key={k} className={aud === k ? 'on' : ''} onClick={() => setAud(k)}>
+          <button key={k} className={'chip' + (aud === k ? ' on' : '')} onClick={() => setAud(aud === k ? '' : k)} aria-pressed={aud === k}>
             {v}
           </button>
         ))}
-      </div>
-      <div className="chips scroll">
-        <button className={'chip' + (!city ? ' on' : '')} onClick={() => setCity('')}>
-          כל הערים
-        </button>
+        <span className="chip-sep" aria-hidden="true" />
         {cities.map((c) => (
-          <button key={c} className={'chip' + (city === c ? ' on' : '')} onClick={() => setCity(c)}>
+          <button key={c} className={'chip' + (city === c ? ' on' : '')} onClick={() => setCity(city === c ? '' : c)} aria-pressed={city === c}>
             {c}
-          </button>
-        ))}
-      </div>
-      <div className="chips scroll">
-        <button className={'chip' + (!cat ? ' on' : '')} onClick={() => setCat('')}>
-          הכל
-        </button>
-        {Object.entries(CATEGORIES).map(([k, v]) => (
-          <button key={k} className={'chip' + (cat === k ? ' on' : '')} onClick={() => setCat(k)}>
-            {v}
           </button>
         ))}
       </div>

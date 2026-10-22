@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useRef } from 'react'
+import { ReactNode, useEffect, useRef, useState } from 'react'
 
 /** Bottom sheet: grabber, drag-down to dismiss, Escape, scroll lock, focus return. */
 export function Sheet(props: { title: string; onClose: () => void; children: ReactNode }) {
@@ -143,4 +143,50 @@ export function Field(props: { label: string; children: ReactNode }) {
 
 export function Empty(props: { children: ReactNode }) {
   return <p className="empty">{props.children}</p>
+}
+
+/** A row of tabs pinned under the top bar; `counts` adds a badge to tabs that have items. */
+export function Tabs(props: {
+  label: string
+  tabs: Record<string, string>
+  current: string
+  counts?: Record<string, number>
+  onPick: (key: string) => void
+}) {
+  return (
+    <div className="tabs-bar" role="tablist" aria-label={props.label}>
+      {Object.entries(props.tabs).map(([k, v]) => (
+        <button
+          key={k}
+          role="tab"
+          aria-selected={props.current === k}
+          className={'chip' + (props.current === k ? ' on' : '')}
+          onClick={() => props.onPick(k)}
+        >
+          {v}
+          {!!props.counts?.[k] && <span className="count">{props.counts[k]}</span>}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/** useState that is also remembered in this browser, for per-viewer choices like the open tab. */
+export function useRemembered(key: string, initial: string) {
+  const [value, setValue] = useState(() => {
+    try {
+      return localStorage.getItem(key) ?? initial
+    } catch {
+      return initial
+    }
+  })
+  const set = (v: string) => {
+    setValue(v)
+    try {
+      localStorage.setItem(key, v)
+    } catch {
+      // it just won't be remembered
+    }
+  }
+  return [value, set] as const
 }

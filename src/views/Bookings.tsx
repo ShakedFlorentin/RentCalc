@@ -2,7 +2,7 @@ import { Fragment, useState } from 'react'
 import { supabase } from '../supabase'
 import { BOOKING_KINDS, BOOKING_TABS, TOGETHER, type Booking, type Member, type Trip } from '../types'
 import { couplesOf, fmtDateTime, fromInputDateTime, mapsUrl, mutate, toInputDateTime, useTripTable } from '../lib'
-import { Empty, Field, Sheet } from '../ui'
+import { Empty, Field, Sheet, Tabs, useRemembered } from '../ui'
 
 type Props = { trip: Trip; members: Member[]; userId: string }
 
@@ -19,35 +19,20 @@ export default function Bookings({ trip, members, userId }: Props) {
   const kindOf = (b: Booking) => (BOOKING_TABS[b.kind] ? b.kind : 'other')
   const count = (k: string) => shown.filter((b) => kindOf(b) === k).length
   const tabs = Object.keys(BOOKING_TABS).filter((k, i) => i < 3 || rows.some((b) => kindOf(b) === k))
-  const [tab, setTab] = useState(() => {
-    try {
-      return localStorage.getItem('bookingsTab') ?? 'flight'
-    } catch {
-      return 'flight'
-    }
-  })
-  const pick = (k: string) => {
-    setTab(k)
-    try {
-      localStorage.setItem('bookingsTab', k)
-    } catch {
-      // the tab just won't be remembered
-    }
-  }
+  const [tab, pick] = useRemembered('bookingsTab', 'flight')
   const current = tabs.includes(tab) ? tab : 'flight'
   // rows come sorted by start time; keep each couple's bookings together (the group's first)
   const items = shown.filter((b) => kindOf(b) === current).sort((a, b) => (a.who ?? '').localeCompare(b.who ?? ''))
 
   return (
     <div className="stack">
-      <div className="tabs-bar" role="tablist" aria-label="סוג הזמנה">
-        {tabs.map((k) => (
-          <button key={k} role="tab" aria-selected={current === k} className={'chip' + (current === k ? ' on' : '')} onClick={() => pick(k)}>
-            {BOOKING_TABS[k]}
-            {count(k) > 0 && <span className="count">{count(k)}</span>}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        label="סוג הזמנה"
+        tabs={Object.fromEntries(tabs.map((k) => [k, BOOKING_TABS[k]]))}
+        current={current}
+        counts={Object.fromEntries(tabs.map((k) => [k, count(k)]))}
+        onPick={pick}
+      />
       <button className="secondary" onClick={() => setImporting(true)}>
         📩 הוספה מאישור הזמנה (מייל / PDF / צילום מסך)
       </button>
