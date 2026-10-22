@@ -13,7 +13,7 @@ const cors = {
 const BookingList = z.object({
   bookings: z.array(
     z.object({
-      kind: z.enum(['flight', 'hotel', 'train', 'activity', 'insurance', 'other']),
+      kind: z.enum(['flight', 'hotel', 'restaurant', 'train', 'activity', 'insurance', 'other']),
       title: z.string(),
       starts_at: z.string().nullable(),
       ends_at: z.string().nullable(),
@@ -27,13 +27,13 @@ const BookingList = z.object({
 
 const SYSTEM = `You extract travel bookings from confirmation emails, PDFs and screenshots for a group trip to Japan.
 Return one entry per separate booking (e.g. an outbound and a return flight are two entries; one hotel stay is one entry).
-- kind: flight, hotel, train, activity, insurance or other.
+- kind: flight, hotel, restaurant (a table reservation), train, activity, insurance or other.
 - title: short and recognisable, e.g. the hotel name, or "El Al LY91 TLV → NRT".
-- starts_at / ends_at: local wall-clock time at the place, formatted YYYY-MM-DDTHH:mm (no timezone). Hotel: check-in and check-out; if only dates are given use 15:00 and 11:00. Flight: departure and arrival in their own local times. null when unknown.
+- starts_at / ends_at: local wall-clock time at the place, formatted YYYY-MM-DDTHH:mm (no timezone). Hotel: check-in and check-out; if only dates are given use 15:00 and 11:00. Restaurant: the reservation time as starts_at, ends_at null. Flight: departure and arrival in their own local times. null when unknown.
 - confirmation: the booking/confirmation/PNR number exactly as written.
-- location: full street address (hotel) or departure airport/station.
+- location: full street address (hotel, restaurant) or departure airport/station.
 - url: a link to manage the booking if present.
-- notes: a short Hebrew summary of what matters on the trip: room type, number of guests, breakfast, cancellation deadline, total price and currency, baggage. Max 3 lines.
+- notes: a short Hebrew summary of what matters on the trip: room type or table/course, number of guests, breakfast, cancellation deadline, total price and currency, baggage. Max 3 lines.
 Only use information that is in the document. If it is not a booking, return an empty list.`
 
 const MAX_BYTES = 15 * 1024 * 1024

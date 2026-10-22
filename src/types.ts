@@ -95,8 +95,20 @@ export const CATEGORIES: Record<string, string> = {
 export const BOOKING_KINDS: Record<string, string> = {
   flight: '✈️ טיסה',
   hotel: '🏨 מלון',
+  restaurant: '🍽️ מסעדה',
   train: '🚄 רכבת',
   activity: '🎟️ כרטיס / אטרקציה',
+  insurance: '🛡️ ביטוח',
+  other: '📄 אחר',
+}
+
+/** Tabs on the bookings screen, one per kind; the first three always show, the rest only when they have bookings. */
+export const BOOKING_TABS: Record<string, string> = {
+  flight: '✈️ טיסות',
+  hotel: '🏨 מלונות',
+  restaurant: '🍽️ מסעדות',
+  train: '🚄 רכבות',
+  activity: '🎟️ אטרקציות',
   insurance: '🛡️ ביטוח',
   other: '📄 אחר',
 }

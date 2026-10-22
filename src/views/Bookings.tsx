@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { supabase } from '../supabase'
-import { BOOKING_KINDS, TOGETHER, type Booking, type Member, type Trip } from '../types'
+import { BOOKING_KINDS, BOOKING_TABS, TOGETHER, type Booking, type Member, type Trip } from '../types'
 import { couplesOf, fmtDateTime, fromInputDateTime, mapsUrl, mutate, toInputDateTime, useTripTable } from '../lib'
 import { Empty, Field, Sheet } from '../ui'
 
@@ -16,20 +16,38 @@ export default function Bookings({ trip, members, userId }: Props) {
   // '' = everything, 'group' = the whole group's bookings, or a couple's name (their own plus the group's)
   const [whose, setWhose] = useState('')
   const shown = rows.filter((b) => !whose || (whose === 'group' ? !b.who : !b.who || b.who === whose))
-  // one section per booking kind, in the order of BOOKING_KINDS; rows are already sorted by start time
-  const sections = Object.keys(BOOKING_KINDS)
-    .map((k) => ({
-      kind: k,
-      // each couple's bookings together (the group's first), by time within each
-      items: shown
-        .filter((b) => (BOOKING_KINDS[b.kind] ? b.kind : 'other') === k)
-        .sort((a, b) => (a.who ?? '').localeCompare(b.who ?? '')),
-    }))
-    .filter((s) => s.items.length)
+  const kindOf = (b: Booking) => (BOOKING_TABS[b.kind] ? b.kind : 'other')
+  const count = (k: string) => shown.filter((b) => kindOf(b) === k).length
+  const tabs = Object.keys(BOOKING_TABS).filter((k, i) => i < 3 || rows.some((b) => kindOf(b) === k))
+  const [tab, setTab] = useState(() => {
+    try {
+      return localStorage.getItem('bookingsTab') ?? 'flight'
+    } catch {
+      return 'flight'
+    }
+  })
+  const pick = (k: string) => {
+    setTab(k)
+    try {
+      localStorage.setItem('bookingsTab', k)
+    } catch {
+      // the tab just won't be remembered
+    }
+  }
+  const current = tabs.includes(tab) ? tab : 'flight'
+  // rows come sorted by start time; keep each couple's bookings together (the group's first)
+  const items = shown.filter((b) => kindOf(b) === current).sort((a, b) => (a.who ?? '').localeCompare(b.who ?? ''))
 
   return (
     <div className="stack">
-      <p className="muted small">טיסות, מלונות, כרטיסים ומסמכים – הכל במקום אחד. השעות הן לפי השעון המקומי במקום.</p>
+      <div className="tabs-bar" role="tablist" aria-label="סוג הזמנה">
+        {tabs.map((k) => (
+          <button key={k} role="tab" aria-selected={current === k} className={'chip' + (current === k ? ' on' : '')} onClick={() => pick(k)}>
+            {BOOKING_TABS[k]}
+            {count(k) > 0 && <span className="count">{count(k)}</span>}
+          </button>
+        ))}
+      </div>
       <button className="secondary" onClick={() => setImporting(true)}>
         📩 הוספה מאישור הזמנה (מייל / PDF / צילום מסך)
       </button>
@@ -48,52 +66,60 @@ export default function Bookings({ trip, members, userId }: Props) {
           </button>
         </div>
       )}
-      {!loading && rows.length === 0 && <Empty>עוד אין הזמנות. לחצו על ＋ כדי להוסיף</Empty>}
-      {sections.map((s) => (
-        <section key={s.kind} className="stack">
-          <h2 className="group-title">
-            {BOOKING_KINDS[s.kind]} <span className="muted small">{s.items.length}</span>
-          </h2>
-          {s.items.map((b) => (
-            <div key={b.id} className="card booking" onClick={() => setEdit(b)}>
-              <div className="row spread">
-                <b>{BOOKING_KINDS[b.kind]?.split(' ')[0]} {b.title}</b>
-                {b.file_path && <span title="קובץ מצורף">📎</span>}
-              </div>
-              {couples.length > 1 && <div className={'who-tag' + (b.who ? ' apart' : '')}>{b.who ? `💑 ${b.who}` : `👥 ${TOGETHER}`}</div>}
-              {b.starts_at && (
-                <div className="muted small">
-                  {fmtDateTime(b.starts_at)}
-                  {b.ends_at && ` ← ${fmtDateTime(b.ends_at)}`}
+      {!loading && items.length === 0 && (
+        <Empty>
+          אין עדיין {BOOKING_TABS[current].split(' ').slice(1).join(' ')}
+          {whose && ' בסינון הזה'}. אפשר להוסיף מאישור הזמנה או עם ＋
+        </Empty>
+      )}
+      <div className="stack">
+        {items.map((b, i) => (
+          <Fragment key={b.id}>
+            {/* with no couple filter, head each couple's run of bookings */}
+            {couples.length > 1 && !whose && (i === 0 || b.who !== items[i - 1].who) && (
+              <div className="area-title">{b.who ? `💑 ${b.who}` : `👥 ${TOGETHER}`}</div>
+            )}
+              <div className="card booking" onClick={() => setEdit(b)}>
+                <div className="row spread">
+                  <b>{BOOKING_KINDS[b.kind]?.split(' ')[0]} {b.title}</b>
+                  {b.file_path && <span title="קובץ מצורף">📎</span>}
                 </div>
-              )}
-              {b.confirmation && (
-                <div className="small">
-                  אישור: <b className="code" dir="ltr">{b.confirmation}</b>
+                {couples.length > 1 && whose && (
+                  <div className={'who-tag' + (b.who ? ' apart' : '')}>{b.who ? `💑 ${b.who}` : `👥 ${TOGETHER}`}</div>
+                )}
+                {b.starts_at && (
+                  <div className="muted small">
+                    {fmtDateTime(b.starts_at)}
+                    {b.ends_at && ` ← ${fmtDateTime(b.ends_at)}`}
+                  </div>
+                )}
+                {b.confirmation && (
+                  <div className="small">
+                    אישור: <b className="code" dir="ltr">{b.confirmation}</b>
+                  </div>
+                )}
+                <div className="row" onClick={(e) => e.stopPropagation()}>
+                  {b.location && (
+                    <a className="pill" href={mapsUrl(b.location)} target="_blank" rel="noreferrer">
+                      🗺️ מפה
+                    </a>
+                  )}
+                  {b.url && (
+                    <a className="pill" href={b.url} target="_blank" rel="noreferrer">
+                      🔗 קישור
+                    </a>
+                  )}
+                  {b.file_path && (
+                    <button className="pill" onClick={() => openFile(b.file_path!)}>
+                      📎 מסמך
+                    </button>
+                  )}
                 </div>
-              )}
-              <div className="row" onClick={(e) => e.stopPropagation()}>
-                {b.location && (
-                  <a className="pill" href={mapsUrl(b.location)} target="_blank" rel="noreferrer">
-                    🗺️ מפה
-                  </a>
-                )}
-                {b.url && (
-                  <a className="pill" href={b.url} target="_blank" rel="noreferrer">
-                    🔗 קישור
-                  </a>
-                )}
-                {b.file_path && (
-                  <button className="pill" onClick={() => openFile(b.file_path!)}>
-                    📎 מסמך
-                  </button>
-                )}
               </div>
-            </div>
-          ))}
-        </section>
-      ))}
-      <button className="fab" aria-label="הזמנה חדשה" onClick={() => setEdit({ kind: 'flight' })}>
+          </Fragment>
+        ))}
+      </div>
+      <button className="fab" aria-label="הזמנה חדשה" onClick={() => setEdit({ kind: current, who: myCouple })}>
         ＋
       </button>
       {edit && <BookingForm tripId={tripId} couples={couples} booking={edit} onClose={() => setEdit(null)} />}

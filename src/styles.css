@@ -578,3 +578,22 @@ html[dir='rtl'] .ja { text-align: right; }
 }
 .chip.add-chip { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
 .dishes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+/* bookings: one tab per kind, pinned under the top bar */
+.tabs-bar {
+  position: sticky;
+  top: calc(var(--top-h) + env(safe-area-inset-top));
+  z-index: 4;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin: 0 -16px;
+  padding: 8px 16px;
+  background: var(--bar-bg);
+  -webkit-backdrop-filter: saturate(1.6) blur(20px);
+  backdrop-filter: saturate(1.6) blur(20px);
+  scrollbar-width: none;
+}
+.tabs-bar::-webkit-scrollbar { display: none; }
+.tabs-bar .chip { flex: none; display: inline-flex; align-items: center; gap: 6px; }
+.tabs-bar .count { min-width: 20px; padding: 0 6px; border-radius: 999px; background: var(--fill); color: var(--text); font-size: 0.75rem; font-weight: 700; text-align: center; }
+.tabs-bar .chip.on .count { background: rgba(255, 255, 255, 0.28); color: inherit; }
