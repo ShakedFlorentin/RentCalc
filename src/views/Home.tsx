@@ -1,7 +1,23 @@
 import { useEffect, useState } from 'react'
+import {
+  BedDouble,
+  Check,
+  ChevronLeft,
+  Clock,
+  Layers,
+  LifeBuoy,
+  ListChecks,
+  LogOut,
+  Navigation,
+  Settings as SettingsIcon,
+  Share2,
+  Ticket,
+  Users,
+  Wallet,
+} from 'lucide-react'
 import { supabase } from '../supabase'
 import {
-  BOOKING_KINDS,
+  BOOKING_TABS,
   TOGETHER,
   type Booking,
   type Candidate,
@@ -14,6 +30,7 @@ import {
 } from '../types'
 import { couplesOf, currentDay, dayDate, fmtDay, mutate, useTripTable } from '../lib'
 import { Field, Sheet } from '../ui'
+import { BOOKING_ICON, Icon } from '../icons'
 import type { MoreTab } from './More'
 import { dayEntries, fmtUntil, hotelFor, minutesOf, navUrl, ymd, type Entry, type PlanItem } from './planUtils'
 import '../styles/plan.css'
@@ -68,19 +85,21 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
         ) : daysLeft !== null && daysLeft > 0 ? (
           <>
             <div className="big">{daysLeft}</div>
-            <div className="muted">ימים להמראה ✈️</div>
+            <div className="muted">ימים להמראה</div>
           </>
         ) : daysLeft !== null ? (
-          <div className="big">הטיול הסתיים 🌸</div>
+          <div className="big">הטיול הסתיים</div>
         ) : (
           <>
-            <div className="big">🗾</div>
+            <div className="muted">עוד אין תאריך יציאה</div>
             <button className="link" onClick={() => setEditing(true)}>
               קבעו תאריך התחלה
             </button>
           </>
         )}
-        <div className="clock">🕐 עכשיו ביפן: {tokyoTime}</div>
+        <div className="clock">
+          <Icon as={Clock} /> עכשיו ביפן: {tokyoTime}
+        </div>
       </section>
 
       {today && (
@@ -89,7 +108,9 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
 
           {tonight.length > 0 && (
             <section className="card">
-              <h3>🏨 הלילה ישנים ב…</h3>
+              <h3>
+                <Icon as={BedDouble} /> הלילה במלון
+              </h3>
               {tonight.map((t) => (
                 <div key={t}>{t}</div>
               ))}
@@ -112,7 +133,7 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
                 <TodayRow key={e.key} e={e} past={!!e.time && e.time < nowHM} />
               ))}
               <button className="link" onClick={() => onOpenDay(today)}>
-                לתוכנית המלאה ←
+                לתוכנית המלאה <Icon as={ChevronLeft} />
               </button>
             </section>
           )}
@@ -135,10 +156,10 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
 
       <div className="shortcuts">
         <button className="secondary" onClick={() => onOpenMore('info')}>
-          🆘 חשוב
+          <Icon as={LifeBuoy} /> מידע חשוב
         </button>
         <button className="secondary" onClick={() => onOpenMore('money')}>
-          💰 הוצאות
+          <Icon as={Wallet} /> הוצאות
         </button>
       </div>
 
@@ -148,7 +169,15 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
           <div className="route">
             {together.map((t) => (
               <button key={t.from} className={'route-stop' + (t.value ? ' apart' : ' together')} onClick={() => onOpenDay(t.from)}>
-                <b>{t.value ? `👤 רק ${t.value}` : `👥 ${TOGETHER}`}</b>
+                <b>
+                  {t.value ? (
+                    `רק ${t.value}`
+                  ) : (
+                    <>
+                      <Icon as={Users} /> {TOGETHER}
+                    </>
+                  )}
+                </b>
                 <span className="muted small">
                   {fmtDay(dayDate(trip.start_date, t.from))}
                   {t.to !== t.from && ` – ${fmtDay(dayDate(trip.start_date, t.to))}`} · {t.to - t.from + 1} ימים
@@ -174,7 +203,7 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
       </section>
 
       <section className="card">
-        <h3>החבר׳ה</h3>
+        <h3>משתתפים</h3>
         <div className="chips">
           {members.map((m) => (
             <span key={m.user_id} className="chip">
@@ -184,27 +213,27 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
           ))}
         </div>
         <p className="muted small">
-          להזמנת חברים: שלחו להם את הקישור לאפליקציה ואת קוד הטיול{' '}
+          להזמנה: שלחו את הקישור לאפליקציה ואת קוד הטיול{' '}
           <b className="code" dir="ltr">{trip.join_code}</b>
         </p>
         <button
           className="secondary"
           onClick={() => {
-            const text = `הצטרפו לתכנון הטיול ליפן 🇯🇵\n${location.href}\nקוד טיול: ${trip.join_code}`
+            const text = `הצטרפו לתכנון הטיול ליפן\n${location.href}\nקוד טיול: ${trip.join_code}`
             if (navigator.share) navigator.share({ text }).catch(() => {})
-            else navigator.clipboard.writeText(text).then(() => alert('הועתק!'))
+            else navigator.clipboard.writeText(text).then(() => alert('הועתק'))
           }}
         >
-          שיתוף הזמנה
+          <Icon as={Share2} /> שיתוף הזמנה
         </button>
       </section>
 
       <div className="row">
         <button className="secondary" onClick={() => setEditing(true)}>
-          ⚙️ הגדרות טיול
+          <Icon as={SettingsIcon} /> הגדרות טיול
         </button>
         <button className="secondary" onClick={() => supabase.auth.signOut()}>
-          התנתקות
+          <Icon as={LogOut} /> התנתקות
         </button>
       </div>
 
@@ -221,12 +250,12 @@ function NextCard(props: { next?: Entry; nowHM: string; hasPlan: boolean; onOpen
   if (!next)
     return (
       <section className="card">
-        <h3>{props.hasPlan ? 'סיימתם להיום 🎉' : 'אין עדיין תוכנית להיום'}</h3>
+        <h3>{props.hasPlan ? 'סיימתם להיום' : 'אין עדיין תוכנית להיום'}</h3>
         <p className="muted">
-          {props.hasPlan ? 'אין עוד כלום ביומן להיום.' : 'אפשר לבחור מקום בלשונית מקומות ולהוסיף אותו למסלול, או לכתוב פעילות בתוכנית.'}
+          {props.hasPlan ? 'אין עוד פעילויות להיום.' : 'אפשר לבחור מקום בלשונית מקומות ולהוסיף אותו למסלול, או לכתוב פעילות בתוכנית.'}
         </p>
         <button className="link" onClick={props.onOpenDay}>
-          לתוכנית של היום ←
+          לתוכנית של היום <Icon as={ChevronLeft} />
         </button>
       </section>
     )
@@ -236,17 +265,17 @@ function NextCard(props: { next?: Entry; nowHM: string; hasPlan: boolean; onOpen
       <div className="next-label">הבא{next.time && ` · ${fmtUntil(minutesOf(next.time) - minutesOf(nowHM))}`}</div>
       {next.time && <div className="next-time">{next.time}</div>}
       <div className="next-title">
-        {next.icon} {next.title}
+        <Icon as={next.icon} /> {next.title}
       </div>
       {next.sub && <div className="muted">{next.sub}</div>}
       {next.location && (
         <a className="primary" href={navUrl(next.location)} target="_blank" rel="noreferrer">
-          🧭 ניווט
+          <Icon as={Navigation} /> ניווט
         </a>
       )}
       {i && (
         <button className="secondary" onClick={() => mutate(supabase.from('itinerary_items').update({ done: true }).eq('id', i.id))}>
-          ✓ בוצע
+          <Icon as={Check} /> בוצע
         </button>
       )}
     </section>
@@ -258,7 +287,7 @@ function TodayRow({ e, past }: { e: Entry; past: boolean }) {
     <div className={'today-row' + (past ? ' past' : '')}>
       <span className="time">{e.time ?? '—'}</span>
       <span>
-        {e.icon} {e.title}
+        <Icon as={e.icon} /> {e.title}
       </span>
     </div>
   )
@@ -279,9 +308,7 @@ function BeforeTrip(props: {
   const { bookings, couples, days } = props
   const todo = props.todos.filter((t) => t.list === 'todo')
   const left = todo.filter((t) => !t.done).length
-  const counts = ['flight', 'hotel', 'restaurant', 'activity'].map(
-    (k) => `${BOOKING_KINDS[k].split(' ')[0]} ${bookings.filter((b) => b.kind === k).length}`,
-  )
+  const counts = ['flight', 'hotel', 'restaurant', 'activity'].map((k) => ({ k, n: bookings.filter((b) => b.kind === k).length }))
   const mine = props.myCouple
 
   // a night needs a roof for every couple in Japan that day, except the last day of the trip
@@ -314,10 +341,10 @@ function BeforeTrip(props: {
   if (!todo.length && !bookings.length && !gaps.length && !props.swipesLeft) return null
   return (
     <section className="card">
-      <h3>כדאי לעשות עכשיו</h3>
+      <h3>לפני הטיול</h3>
       {todo.length > 0 && (
         <button className="todo-row" onClick={props.open}>
-          <span>📝</span>
+          <Icon as={ListChecks} size="1.4rem" />
           <span>
             <b>{left ? `${left} משימות לפני הטיסה` : 'כל המשימות הושלמו'}</b>
             <span className="muted small">
@@ -327,11 +354,13 @@ function BeforeTrip(props: {
         </button>
       )}
       <div className="todo-row">
-        <span>🎫</span>
+        <Icon as={Ticket} size="1.4rem" />
         <span>
           <b className="count-chips">
-            {counts.map((c) => (
-              <span key={c}>{c}</span>
+            {counts.map(({ k, n }) => (
+              <span key={k}>
+                <Icon as={BOOKING_ICON[k]} /> {BOOKING_TABS[k]} {n}
+              </span>
             ))}
           </b>
           <span className="muted small">{gaps.length ? gaps.join(' · ') : 'טיסות ולינה סגורות'}</span>
@@ -339,10 +368,10 @@ function BeforeTrip(props: {
       </div>
       {props.swipesLeft > 0 && (
         <div className="todo-row">
-          <span>🔥</span>
+          <Icon as={Layers} size="1.4rem" />
           <span>
-            <b>{props.swipesLeft} מקומות מחכים לך במשחק</b>
-            <span className="muted small">כל החלקה עוזרת למצוא מאצ׳ים</span>
+            <b>{props.swipesLeft} מקומות עוד לא דורגו</b>
+            <span className="muted small">כל דירוג משפיע על ההתאמות בין הזוגות</span>
           </span>
         </div>
       )}
@@ -388,7 +417,7 @@ function Settings(props: { trip: Trip; me: string; userId: string; onClose: () =
         <input type="number" min={1} max={60} value={numDays} onChange={(e) => setNumDays(+e.target.value)} />
       </Field>
       <p className="muted small">
-        💘 מאצ׳: מקום נכנס לרשימה של זוג כששניהם אוהבים אותו, ולרשימה של כולם כששני הזוגות אוהבים.
+        התאמה: מקום נכנס לרשימה של זוג כששניהם אוהבים אותו, ולרשימה של כולם כששני הזוגות אוהבים.
       </p>
       <Field label="השם שלי">
         <input value={myName} onChange={(e) => setMyName(e.target.value)} />

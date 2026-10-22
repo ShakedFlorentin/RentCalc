@@ -1,4 +1,15 @@
-import { CATEGORIES, WHO_OPTIONS, type Booking, type ItineraryItem } from '../types'
+import {
+  BadgeCheck,
+  BedDouble,
+  Banknote,
+  CreditCard,
+  PlaneLanding,
+  PlaneTakeoff,
+  Train,
+  TrainFront,
+} from 'lucide-react'
+import { CATEGORY_ICON, BOOKING_ICON, type LucideIcon } from '../icons'
+import { WHO_OPTIONS, type Booking, type ItineraryItem } from '../types'
 
 /** itinerary_items.who is a new column (couple, or null for everyone); types.ts doesn't have it yet. */
 // ItineraryItem carries `who` now; the alias keeps the plan code's name for it
@@ -8,7 +19,7 @@ export type PlanItem = ItineraryItem
 export type Entry = {
   key: string
   time: string | null
-  icon: string
+  icon: LucideIcon
   title: string
   sub: string | null
   location: string | null
@@ -57,12 +68,10 @@ export function arrivalAirport(b: Booking): Airport | null {
   return null
 }
 
-const KIND_ICON: Record<string, string> = { hotel: '🏨', restaurant: '🍽️', activity: '🎟️', train: '🚄', other: '📄' }
-
 /** Bookings that happen on this date (YYYY-MM-DD), as timeline rows. Insurance has no moment, so it is left out. */
 export function bookingEntries(bookings: Booking[], date: string): Entry[] {
   const out: Entry[] = []
-  const add = (b: Booking, at: string | null, tag: string, icon: string, location: string | null) => {
+  const add = (b: Booking, at: string | null, tag: string, icon: LucideIcon, location: string | null) => {
     if (!at || at.slice(0, 10) !== date) return
     out.push({
       key: `${b.id}:${tag}`,
@@ -81,13 +90,13 @@ export function bookingEntries(bookings: Booking[], date: string): Entry[] {
     if (b.kind === 'flight') {
       // a flight shows its Japan end only: taking off from Zurich on the way in is not part of a Japan day
       const side = flightSide(b.title)
-      if (side !== 'to') add(b, b.starts_at, 'dep', '✈️', b.location)
-      if (side !== 'from') add(b, b.ends_at, 'arr', '🛬', null)
+      if (side !== 'to') add(b, b.starts_at, 'dep', PlaneTakeoff, b.location)
+      if (side !== 'from') add(b, b.ends_at, 'arr', PlaneLanding, null)
     } else if (b.kind === 'hotel') {
-      add(b, b.starts_at, 'in', '🏨', b.location || b.title)
-      add(b, b.ends_at, 'out', '🏨', null)
+      add(b, b.starts_at, 'in', BedDouble, b.location || b.title)
+      add(b, b.ends_at, 'out', BedDouble, null)
     } else {
-      add(b, b.starts_at, 'at', KIND_ICON[b.kind] ?? '📄', b.location || b.title)
+      add(b, b.starts_at, 'at', BOOKING_ICON[b.kind] ?? BOOKING_ICON.other, b.location || b.title)
     }
   }
   return out
@@ -98,7 +107,7 @@ export function itemEntry(i: PlanItem): Entry {
   return {
     key: i.id,
     time: i.time ? i.time.slice(0, 5) : null,
-    icon: CATEGORIES[i.category]?.split(' ')[0] ?? '📌',
+    icon: CATEGORY_ICON[i.category] ?? CATEGORY_ICON.other,
     title: i.title,
     sub: i.notes,
     location: i.location,
@@ -116,15 +125,18 @@ export function dayEntries(items: PlanItem[], bookings: Booking[], day: number, 
   return [...own, ...bookingEntries(bookings, date)].filter((e) => visible(e.who, mode, mine)).sort(byEntryTime)
 }
 
-/** A day_info.hotel line like "שקד ומאור: Hotel X" (older ones start with 💑) belongs to that couple; any other line is for everyone. */
+/** Hotel lines saved before the icon pass began with a pictograph; drop it. */
+export const stripMarker = (line: string) => line.replace(/^\p{Extended_Pictographic}\uFE0F?\s*/u, '')
+
+/** A day_info.hotel line like "שקד ומאור: Hotel X" (older ones carry a leading marker) belongs to that couple; any other line is for everyone. */
 export function hotelLines(hotel: string | null, couples: string[]) {
   const names = couples.length ? couples : WHO_OPTIONS
   return (hotel ?? '')
     .split('\n')
-    .map((l) => l.trim())
+    .map((l) => stripMarker(l.trim()))
     .filter(Boolean)
     .map((raw) => {
-      const m = raw.match(/^(?:💑\s*)?([^:：]+?)\s*[:：]\s*(.+)$/)
+      const m = raw.match(/^([^:：]+?)\s*[:：]\s*(.+)$/)
       return m && names.includes(m[1].trim()) ? { who: m[1].trim(), text: m[2].trim() } : { who: null, text: raw }
     })
 }
@@ -148,26 +160,33 @@ export function fmtUntil(min: number) {
 
 export const minutesOf = (hhmm: string) => +hhmm.slice(0, 2) * 60 + +hhmm.slice(3, 5)
 
+export type ArrivalStep = { icon: LucideIcon; text: string }
+
+const BORDER: ArrivalStep = { icon: BadgeCheck, text: 'ביקורת גבולות: Visit Japan Web (קודי QR) פתוח בטלפון.' }
+const CARD: ArrivalStep = { icon: CreditCard, text: 'Suica או PASMO בארנק הטלפון (iPhone), או כרטיס Welcome Suica מהמכונות בטרמינל.' }
+const CASH: ArrivalStep = { icon: Banknote, text: 'מזומן: למשוך ין בכספומט בשדה או בחנות נוחות (7-Eleven, Lawson).' }
+const CHECKIN: ArrivalStep = { icon: BedDouble, text: 'צ׳ק-אין בדרך כלל מ-15:00. אפשר להשאיר מזוודות במלון.' }
+
 /** First steps after landing, written per airport: Narita is far from Tokyo, Haneda is close. */
-export const ARRIVAL: Record<Airport, { name: string; steps: string[] }> = {
+export const ARRIVAL: Record<Airport, { name: string; steps: ArrivalStep[] }> = {
   HND: {
     name: 'הנדה (HND)',
     steps: [
-      '🛂 ביקורת גבולות: Visit Japan Web (קודי QR) פתוח בטלפון.',
-      '💳 Suica או PASMO בארנק הטלפון (iPhone), או כרטיס Welcome Suica מהמכונות בטרמינל.',
-      '💴 מזומן: למשוך ין בכספומט בשדה או בחנות נוחות (7-Eleven / Lawson).',
-      '🚆 הנדה קרוב לעיר, בערך חצי שעה למרכז: רכבת קייקיו או המונורייל, ומשם לקו שמגיע למלון.',
-      '🏨 צ׳ק-אין בדרך כלל מ-15:00. אפשר להשאיר מזוודות במלון ולצאת לטייל.',
+      BORDER,
+      CARD,
+      CASH,
+      { icon: TrainFront, text: 'הנדה קרוב לעיר, כחצי שעה למרכז. רכבת קייקיו או המונורייל, ומשם לקו שמגיע למלון.' },
+      CHECKIN,
     ],
   },
   NRT: {
     name: 'נריטה (NRT)',
     steps: [
-      '🛂 ביקורת גבולות: Visit Japan Web (קודי QR) פתוח בטלפון.',
-      '💳 Suica או PASMO בארנק הטלפון (iPhone), או כרטיס Welcome Suica מהמכונות בטרמינל.',
-      '💴 מזומן: למשוך ין בכספומט בשדה או בחנות נוחות (7-Eleven / Lawson).',
-      '🚆 נריטה רחוק: שעה ויותר עד טוקיו. הכי נוח ב-Narita Express או ב-Keisei Skyliner, ומשם ברכבת למלון.',
-      '🏨 צ׳ק-אין בדרך כלל מ-15:00. אפשר להשאיר מזוודות במלון ולצאת לטייל.',
+      BORDER,
+      CARD,
+      CASH,
+      { icon: Train, text: 'נריטה רחוקה, שעה ויותר עד טוקיו. הכי נוח ב-Narita Express או ב-Keisei Skyliner, ומשם ברכבת למלון.' },
+      CHECKIN,
     ],
   },
 }
