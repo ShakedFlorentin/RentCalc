@@ -18,7 +18,7 @@ export default function Bookings({ trip, members, userId }: Props) {
   const shown = rows.filter((b) => !whose || (whose === 'group' ? !b.who : !b.who || b.who === whose))
   const kindOf = (b: Booking) => (BOOKING_TABS[b.kind] ? b.kind : 'other')
   const count = (k: string) => shown.filter((b) => kindOf(b) === k).length
-  const tabs = Object.keys(BOOKING_TABS).filter((k, i) => i < 3 || rows.some((b) => kindOf(b) === k))
+  const tabs = Object.keys(BOOKING_TABS).filter((k, i) => i < 4 || rows.some((b) => kindOf(b) === k))
   const [tab, pick] = useRemembered('bookingsTab', 'flight')
   const current = tabs.includes(tab) ? tab : 'flight'
   // rows come sorted by start time; keep each couple's bookings together (the group's first)

@@ -102,13 +102,13 @@ export const BOOKING_KINDS: Record<string, string> = {
   other: '📄 אחר',
 }
 
-/** Tabs on the bookings screen, one per kind; the first three always show, the rest only when they have bookings. */
+/** Tabs on the bookings screen, one per kind; the first four always show, the rest only when they have bookings. */
 export const BOOKING_TABS: Record<string, string> = {
   flight: '✈️ טיסות',
   hotel: '🏨 מלונות',
   restaurant: '🍽️ מסעדות',
-  train: '🚄 רכבות',
   activity: '🎟️ אטרקציות',
+  train: '🚄 רכבות',
   insurance: '🛡️ ביטוח',
   other: '📄 אחר',
 }
