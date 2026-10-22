@@ -29,8 +29,11 @@ Places:
 19. Bar Libre — Ikebukuro (near Tokyo Metropolitan Theatre), Tokyo
 20. Bar Tiaré — Akasaka, Tokyo
 
-When you're done, reply with ONLY one JSON code block, an array with one object per place in this exact shape, nothing else:
-```json
-[{"name": "<exactly as in my list>", "maps_url": "...", "lat": 0.0, "lng": 0.0, "website_url": "... or null", "photos": ["https://...", "https://..."], "instagram_url": "... or null", "tiktok_url": "... or null"}]
-```
-Use null for anything you couldn't find. Never guess a URL; only give links you actually opened.
+When you're done, put the results in a CSV file and download it to my computer as `japan-media-2-tokyo-b.csv`:
+- One row per place, in the order of my list, with this exact header row:
+  `name,maps_url,lat,lng,website_url,photo1,photo2,photo3,instagram_url,tiktok_url`
+- `name` exactly as in my list. Leave a cell empty for anything you couldn't find. Quote every cell with double quotes (escape inner quotes by doubling them). UTF-8.
+- To download it, run JavaScript in the current tab that builds the CSV text, wraps it in a Blob (type "text/csv;charset=utf-8", prefixed with "\uFEFF" so Excel keeps the Japanese), and clicks a temporary `<a download="japan-media-2-tokyo-b.csv">` link.
+- If you can't trigger a download, show the full CSV in a single code block instead so I can save it myself.
+
+Never guess a URL; only give links you actually opened.
