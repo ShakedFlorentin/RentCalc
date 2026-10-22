@@ -371,9 +371,12 @@ function PlaceForm(props: { tripId: string; me: string; place: Partial<Place>; o
 function AddToDay(props: { trip: Trip; place: Place; onClose: () => void }) {
   const [day, setDay] = useState(1)
   const [time, setTime] = useState('')
+  const { rows: days } = useTripTable<DayInfo>('day_info', props.trip.id, 'day')
 
   const add = async () => {
     const p = props.place
+    // a place on one couple's list is theirs; otherwise a day only one couple is in Japan is theirs, else everyone's
+    const who = p.who ?? days.find((d) => d.day === day)?.who ?? null
     const ok = await mutate(
       supabase.from('itinerary_items').insert({
         trip_id: props.trip.id,
@@ -384,6 +387,7 @@ function AddToDay(props: { trip: Trip; place: Place; onClose: () => void }) {
         notes: p.notes,
         category: p.category,
         place_id: p.id,
+        who,
       }),
     )
     if (ok) props.onClose()

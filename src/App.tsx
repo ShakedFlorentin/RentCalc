@@ -155,7 +155,7 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
           />
         )}
         {tab === 'swipe' && <SwipeGame trip={trip} userId={props.userId} members={members} />}
-        {tab === 'plan' && <Itinerary trip={trip} day={day} setDay={setDay} />}
+        {tab === 'plan' && <Itinerary trip={trip} day={day} setDay={setDay} members={members} userId={props.userId} />}
         {tab === 'bookings' && <Bookings trip={trip} members={members} userId={props.userId} />}
         {tab === 'places' && <Places trip={trip} me={me} userId={props.userId} members={members} />}
         {tab === 'more' && <More trip={trip} members={members} userId={props.userId} sub={moreSub} setSub={setMoreSub} />}

@@ -1,9 +1,22 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
-import { TOGETHER, type DayInfo, type ItineraryItem, type Member, type Trip } from '../types'
-import { currentDay, dayDate, fmtDay, mutate, useTripTable } from '../lib'
+import {
+  BOOKING_KINDS,
+  TOGETHER,
+  type Booking,
+  type Candidate,
+  type ChecklistItem,
+  type DayInfo,
+  type ItineraryItem,
+  type Member,
+  type Swipe,
+  type Trip,
+} from '../types'
+import { couplesOf, currentDay, dayDate, fmtDay, mutate, useTripTable } from '../lib'
 import { Field, Sheet } from '../ui'
 import type { MoreTab } from './More'
+import { dayEntries, fmtUntil, hotelFor, minutesOf, navUrl, ymd, type Entry, type PlanItem } from './planUtils'
+import '../styles/plan.css'
 
 type Props = {
   trip: Trip
@@ -18,7 +31,11 @@ type Props = {
 
 export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore, onLeave }: Props) {
   const { rows: days } = useTripTable<DayInfo>('day_info', trip.id, 'day')
-  const { rows: items } = useTripTable<ItineraryItem>('itinerary_items', trip.id, 'sort')
+  const { rows: items } = useTripTable<PlanItem>('itinerary_items', trip.id, 'sort')
+  const { rows: bookings } = useTripTable<Booking>('bookings', trip.id, 'starts_at')
+  const { rows: todos } = useTripTable<ChecklistItem>('checklist_items', trip.id)
+  const { rows: candidates } = useTripTable<Candidate>('candidates', trip.id)
+  const { rows: swipes } = useTripTable<Swipe>('swipes', trip.id)
   const [editing, setEditing] = useState(false)
   const now = useNow()
 
@@ -27,17 +44,26 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
     ? Math.ceil((new Date(trip.start_date + 'T00:00:00').getTime() - now.getTime()) / 86400000)
     : null
   const tokyoTime = now.toLocaleTimeString('he-IL', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit' })
-  const todayItems = today ? items.filter((i) => i.day === today).sort(byTime) : []
+  const couples = couplesOf(members)
+  const myCouple = members.find((m) => m.user_id === userId)?.couple ?? null
+  const todayInfo = days.find((d) => d.day === today)
+  const entries = today ? dayEntries(items, bookings, today, ymd(dayDate(trip.start_date, today)!), 'mine', myCouple) : []
+  const nowHM = now.toLocaleTimeString('en-GB', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+  // the next thing still ahead today; untimed items wait their turn after the timed ones
+  const next = entries.find((e) => !e.done && e.time && e.time >= nowHM) ?? entries.find((e) => !e.done && !e.time)
+  const rest = entries.filter((e) => e !== next && e.item && !e.done)
+  const todayBookings = entries.filter((e) => e.booking)
+  const tonight = hotelFor(todayInfo?.hotel ?? null, couples, myCouple)
   const cities = runs(days, 'city')
   const together = runs(days, 'who')
 
   return (
     <div className="stack">
-      <section className="hero card">
+      <section className={'hero card' + (today ? ' trip-line' : '')}>
         {today ? (
           <>
             <div className="big">יום {today}</div>
-            <div className="muted">{days.find((d) => d.day === today)?.city ?? ''} · {fmtDay(dayDate(trip.start_date, today))}</div>
+            <div className="muted">{todayInfo?.city ?? ''} · {fmtDay(dayDate(trip.start_date, today))}</div>
           </>
         ) : daysLeft !== null && daysLeft > 0 ? (
           <>
@@ -58,19 +84,63 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
       </section>
 
       {today && (
-        <section className="card">
-          <h3>היום בתוכנית</h3>
-          {todayItems.length === 0 && <p className="muted">אין עדיין פריטים להיום</p>}
-          {todayItems.map((i) => (
-            <div key={i.id} className={'mini-item' + (i.done ? ' done' : '')}>
-              <span className="time">{i.time}</span> {i.title}
-            </div>
-          ))}
-          <button className="link" onClick={() => onOpenDay(today)}>
-            לתוכנית המלאה ←
-          </button>
-        </section>
+        <>
+          <NextCard next={next} nowHM={nowHM} hasPlan={entries.length > 0} onOpenDay={() => onOpenDay(today)} />
+
+          {tonight.length > 0 && (
+            <section className="card">
+              <h3>🏨 הלילה ישנים ב…</h3>
+              {tonight.map((t) => (
+                <div key={t}>{t}</div>
+              ))}
+            </section>
+          )}
+
+          {todayBookings.length > 0 && (
+            <section className="card">
+              <h3>ההזמנות להיום</h3>
+              {todayBookings.map((e) => (
+                <TodayRow key={e.key} e={e} past={!!e.time && e.time < nowHM} />
+              ))}
+            </section>
+          )}
+
+          {rest.length > 0 && (
+            <section className="card">
+              <h3>שאר היום</h3>
+              {rest.map((e) => (
+                <TodayRow key={e.key} e={e} past={!!e.time && e.time < nowHM} />
+              ))}
+              <button className="link" onClick={() => onOpenDay(today)}>
+                לתוכנית המלאה ←
+              </button>
+            </section>
+          )}
+        </>
       )}
+
+      {!today && daysLeft !== null && daysLeft > 0 && (
+        <BeforeTrip
+          days={days}
+          numDays={trip.num_days}
+          start={trip.start_date}
+          couples={couples}
+          myCouple={myCouple}
+          bookings={bookings}
+          todos={todos}
+          open={() => onOpenMore('lists')}
+          swipesLeft={candidates.filter((c) => !swipes.some((s) => s.user_id === userId && s.candidate_id === c.id)).length}
+        />
+      )}
+
+      <div className="shortcuts">
+        <button className="secondary" onClick={() => onOpenMore('info')}>
+          🆘 חשוב
+        </button>
+        <button className="secondary" onClick={() => onOpenMore('money')}>
+          💰 הוצאות
+        </button>
+      </div>
 
       {together.some((t) => t.value) && (
         <section className="card">
@@ -88,15 +158,6 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
           </div>
         </section>
       )}
-
-      <div className="row">
-        <button className="secondary" onClick={() => onOpenMore('info')}>
-          🆘 חשוב
-        </button>
-        <button className="secondary" onClick={() => onOpenMore('money')}>
-          💰 הוצאות
-        </button>
-      </div>
 
       <section className="card">
         <h3>המסלול</h3>
@@ -151,6 +212,141 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
         <Settings trip={trip} me={me} userId={userId} onClose={() => setEditing(false)} onLeave={onLeave} />
       )}
     </div>
+  )
+}
+
+/** Hero for trip days: what is next, how long until it, and a one-tap route there. */
+function NextCard(props: { next?: Entry; nowHM: string; hasPlan: boolean; onOpenDay: () => void }) {
+  const { next, nowHM } = props
+  if (!next)
+    return (
+      <section className="card">
+        <h3>{props.hasPlan ? 'סיימתם להיום 🎉' : 'אין עדיין תוכנית להיום'}</h3>
+        <p className="muted">
+          {props.hasPlan ? 'אין עוד כלום ביומן להיום.' : 'אפשר לבחור מקום בלשונית מקומות ולהוסיף אותו למסלול, או לכתוב פעילות בתוכנית.'}
+        </p>
+        <button className="link" onClick={props.onOpenDay}>
+          לתוכנית של היום ←
+        </button>
+      </section>
+    )
+  const i = next.item
+  return (
+    <section className="card next-card">
+      <div className="next-label">הבא{next.time && ` · ${fmtUntil(minutesOf(next.time) - minutesOf(nowHM))}`}</div>
+      {next.time && <div className="next-time">{next.time}</div>}
+      <div className="next-title">
+        {next.icon} {next.title}
+      </div>
+      {next.sub && <div className="muted">{next.sub}</div>}
+      {next.location && (
+        <a className="primary" href={navUrl(next.location)} target="_blank" rel="noreferrer">
+          🧭 ניווט
+        </a>
+      )}
+      {i && (
+        <button className="secondary" onClick={() => mutate(supabase.from('itinerary_items').update({ done: true }).eq('id', i.id))}>
+          ✓ בוצע
+        </button>
+      )}
+    </section>
+  )
+}
+
+function TodayRow({ e, past }: { e: Entry; past: boolean }) {
+  return (
+    <div className={'today-row' + (past ? ' past' : '')}>
+      <span className="time">{e.time ?? '—'}</span>
+      <span>
+        {e.icon} {e.title}
+      </span>
+    </div>
+  )
+}
+
+/** A few things worth doing before the flight: lists, what's still unbooked, cards left to swipe. */
+function BeforeTrip(props: {
+  days: DayInfo[]
+  numDays: number
+  start: string | null
+  couples: string[]
+  myCouple: string | null
+  bookings: Booking[]
+  todos: ChecklistItem[]
+  swipesLeft: number
+  open: () => void
+}) {
+  const { bookings, couples, days } = props
+  const todo = props.todos.filter((t) => t.list === 'todo')
+  const left = todo.filter((t) => !t.done).length
+  const counts = ['flight', 'hotel', 'restaurant', 'activity'].map(
+    (k) => `${BOOKING_KINDS[k].split(' ')[0]} ${bookings.filter((b) => b.kind === k).length}`,
+  )
+  const mine = props.myCouple
+
+  // a night needs a roof for every couple in Japan that day, except the last day of the trip
+  const missing = [...couples]
+    .sort((a, b) => Number(b === mine) - Number(a === mine))
+    .map((c) => {
+      const nights = days.filter((d) => d.day < props.numDays && (!d.who || d.who === c))
+      const uncovered = nights.filter((d) => {
+        if (hotelFor(d.hotel, couples, c).length) return false
+        const date = props.start ? ymd(dayDate(props.start, d.day)!) : ''
+        return !bookings.some(
+          (b) =>
+            b.kind === 'hotel' &&
+            (!b.who || b.who === c) &&
+            b.starts_at &&
+            b.ends_at &&
+            b.starts_at.slice(0, 10) <= date &&
+            date < b.ends_at.slice(0, 10),
+        )
+      })
+      return { c, n: uncovered.length }
+    })
+    .filter((m) => m.n > 0)
+  const noFlight = couples.filter((c) => !bookings.some((b) => b.kind === 'flight' && (!b.who || b.who === c)))
+  const gaps = [
+    ...noFlight.map((c) => `אין טיסה ל${c}`),
+    ...(missing.length ? [`חסרה לינה: ${missing.map((m) => `${m.c} ${m.n} לילות`).join(' · ')}`] : []),
+  ]
+
+  if (!todo.length && !bookings.length && !gaps.length && !props.swipesLeft) return null
+  return (
+    <section className="card">
+      <h3>כדאי לעשות עכשיו</h3>
+      {todo.length > 0 && (
+        <button className="todo-row" onClick={props.open}>
+          <span>📝</span>
+          <span>
+            <b>{left ? `${left} משימות לפני הטיסה` : 'כל המשימות הושלמו'}</b>
+            <span className="muted small">
+              {todo.length - left}/{todo.length} הושלמו
+            </span>
+          </span>
+        </button>
+      )}
+      <div className="todo-row">
+        <span>🎫</span>
+        <span>
+          <b className="count-chips">
+            {counts.map((c) => (
+              <span key={c}>{c}</span>
+            ))}
+          </b>
+          <span className="muted small">{gaps.length ? gaps.join(' · ') : 'טיסות ולינה סגורות'}</span>
+        </span>
+      </div>
+      {props.swipesLeft > 0 && (
+        <div className="todo-row">
+          <span>🔥</span>
+          <span>
+            <b>{props.swipesLeft} מקומות מחכים לך במשחק</b>
+            <span className="muted small">כל החלקה עוזרת למצוא מאצ׳ים</span>
+          </span>
+        </div>
+      )}
+    </section>
   )
 }
 
