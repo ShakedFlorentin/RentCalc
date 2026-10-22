@@ -46,7 +46,7 @@ Be concise. If you can't identify one specific place, say so.`
 const EXTRACT = `Turn the research notes into the place card. Rules:
 - found=false if the notes did not identify one specific real place.
 - city: tokyo, kyoto, osaka, nara, or daytrip for anywhere else.
-- hype, reality, tip, baby_notes: one short English sentence each.
+- hype, reality, tip, baby_notes, price: one short sentence each in natural, casual Hebrew; keep place names, brand names (Tabelog, Google) and numbers as they are.
 - tabelog_score / google_score / lat / lng: only if stated in the notes, else null.
 - audience: "baby" if it works with the baby, otherwise "adults".
 - sources: the URLs the notes relied on.`

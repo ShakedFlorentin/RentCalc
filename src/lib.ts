@@ -92,6 +92,12 @@ type MediaEntry = {
   tiktok_url?: string
   lat?: number
   lng?: number
+  // Hebrew card texts
+  hype?: string
+  reality?: string
+  tip?: string
+  baby_notes?: string
+  price?: string
 }
 let mediaCache: Promise<Record<string, MediaEntry>> | null = null
 
@@ -124,5 +130,15 @@ export function withMedia<T extends { name: string }>(row: T, index: Record<stri
     lat: m.lat ?? r.lat,
     lng: m.lng ?? r.lng,
     ...('url' in r ? { url: r.url ?? m.maps_url ?? null } : {}),
+    // the Hebrew translation replaces the scouts' English card text
+    ...('hype' in r
+      ? {
+          hype: m.hype ?? r.hype,
+          reality: m.reality ?? r.reality,
+          tip: m.tip ?? r.tip,
+          baby_notes: m.baby_notes ?? r.baby_notes,
+          price: m.price ?? r.price,
+        }
+      : {}),
   }
 }
