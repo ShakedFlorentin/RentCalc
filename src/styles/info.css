@@ -1,0 +1,69 @@
+/* Essentials and baby corner */
+.info-sec { display: flex; flex-direction: column; gap: 10px; }
+.info-h { font-size: 1.125rem; font-weight: 700; margin: 6px 0 0; }
+.info-note { margin: 0; }
+.info-card { display: flex; flex-direction: column; gap: 8px; cursor: pointer; }
+.info-title { font-weight: 600; }
+.info-value { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.9375rem; }
+.pill.soft { background: var(--fill); color: var(--text); }
+button.pill { min-height: 36px; }
+
+/* tap-to-call emergency numbers: big enough to hit in a panic */
+.sos-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sos {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 92px;
+  border-radius: 18px;
+  color: #fff;
+  text-decoration: none;
+  box-shadow: var(--shadow);
+}
+.sos b { font-size: 2.25rem; line-height: 1; font-weight: 800; }
+.sos span { font-size: 0.9375rem; font-weight: 600; }
+.sos.police { background: #1f4e9c; }
+.sos.ambulance { background: #c4162f; }
+.sos:active { transform: scale(0.97); opacity: 0.9; }
+
+/* phrase cards */
+.phrase { display: flex; flex-direction: column; gap: 4px; width: 100%; text-align: start; padding: 14px 16px; }
+.phrase-he { color: var(--muted); font-size: 0.875rem; }
+.phrase-ja { text-align: right; font-size: 1.375rem; font-weight: 700; line-height: 1.35; }
+.phrase-ro { color: var(--muted); font-size: 0.8125rem; font-style: italic; text-align: start; }
+.phrase:active { transform: scale(0.98); }
+
+/* collapsible tips */
+.tip { padding: 0; }
+.tip summary { list-style: none; cursor: pointer; padding: 14px 16px; min-height: 52px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tip summary::-webkit-details-marker { display: none; }
+.tip summary::after { content: '▾'; color: var(--muted); transition: transform 0.15s; }
+.tip[open] summary::after { transform: rotate(180deg); }
+.tip ul { margin: 0; padding: 0 34px 14px 16px; display: flex; flex-direction: column; gap: 8px; font-size: 0.9375rem; line-height: 1.5; }
+
+/* full-screen card to hold up to someone; always light with dark text so it reads in sunlight */
+.show-full {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: #fff;
+  color: #111;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 64px 20px calc(32px + env(safe-area-inset-bottom));
+  text-align: center;
+  animation: fade 0.15s;
+  cursor: pointer;
+}
+.show-close { position: absolute; top: calc(10px + env(safe-area-inset-top)); inset-inline-start: 10px; width: 48px; height: 48px; font-size: 1.5rem; color: #555; }
+.info-end { height: 56px; }
+.show-big { text-wrap: balance;font-size: clamp(2rem, 11vw, 3.5rem); font-weight: 800; line-height: 1.3; overflow-wrap: anywhere; white-space: pre-wrap; }
+.show-big.s { font-size: clamp(1.5rem, 8vw, 2.5rem); }
+.show-big.xs { font-size: clamp(1.125rem, 5.5vw, 1.75rem); }
+.show-sub { font-size: 1rem; color: #555; font-style: italic; overflow-wrap: anywhere; }
+.show-small { font-size: 1rem; color: #777; margin-top: 12px; }
