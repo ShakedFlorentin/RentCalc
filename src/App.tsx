@@ -216,9 +216,9 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
 function LoadError({ onRetry }: { onRetry: () => void }) {
   return (
     <div className="center stack" role="alert">
-      <p>לא הצלחתי להתחבר. בדקו את החיבור לאינטרנט.</p>
+      <p>אין חיבור לשרת. בדקו את האינטרנט ונסו שוב.</p>
       <button className="primary" onClick={onRetry}>
-        לנסות שוב
+        נסו שוב
       </button>
     </div>
   )

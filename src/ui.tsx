@@ -1,4 +1,5 @@
 import { ReactNode, useEffect, useRef, useState } from 'react'
+import { Icon, type LucideIcon } from './icons'
 
 const stop = (e: { stopPropagation: () => void }) => e.stopPropagation()
 
@@ -160,7 +161,8 @@ export function Empty(props: { children: ReactNode }) {
 /** A row of tabs pinned under the top bar; `counts` adds a badge to tabs that have items. */
 export function Tabs(props: {
   label: string
-  tabs: Record<string, string>
+  /** a plain label, or a label with a line icon */
+  tabs: Record<string, string | { label: string; icon: LucideIcon }>
   current: string
   counts?: Record<string, number>
   onPick: (key: string) => void
@@ -175,7 +177,14 @@ export function Tabs(props: {
           className={'chip' + (props.current === k ? ' on' : '')}
           onClick={() => props.onPick(k)}
         >
-          {v}
+          {typeof v === 'string' ? (
+            v
+          ) : (
+            <>
+              <Icon as={v.icon} />
+              {v.label}
+            </>
+          )}
           {!!props.counts?.[k] && <span className="count">{props.counts[k]}</span>}
         </button>
       ))}

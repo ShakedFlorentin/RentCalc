@@ -1,8 +1,10 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
+import { BedDouble, Check, Navigation, Pencil, PlaneLanding, Plus, Users } from 'lucide-react'
 import { supabase } from '../supabase'
 import { CATEGORIES, TOGETHER, WHO_OPTIONS, type Booking, type DayInfo, type Member, type Trip } from '../types'
 import { couplesOf, dayDate, fmtDay, mutate, useTripTable } from '../lib'
 import { Empty, Field, Sheet, useRemembered } from '../ui'
+import { Icon } from '../icons'
 import {
   ARRIVAL,
   COUPLE_AIRPORT,
@@ -70,15 +72,22 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
           <h2>
             יום {day} {info?.city ? `· ${info.city}` : ''}
           </h2>
-          <span className="muted small">✏️</span>
+          <Icon className="muted" as={Pencil} />
         </div>
         {trip.start_date && <div className="muted">{fmtDay(dayDate(trip.start_date, day))}</div>}
-        <div className={'who-tag' + (info?.who ? ' apart' : '')}>{info?.who ? `👤 רק ${info.who}` : `👥 ${TOGETHER}`}</div>
+        <div className={'who-tag' + (info?.who ? ' apart' : '')}>{info?.who ? (
+            `רק ${info.who}`
+          ) : (
+            <>
+              <Icon as={Users} /> {TOGETHER}
+            </>
+          )}
+        </div>
         {hotelLines(info?.hotel ?? null, couples)
           .filter((l) => visible(l.who, mode, myCouple))
           .map((l, n) => (
             <div key={n}>
-              🏨 {l.who && mode === 'all' && <span className="muted small">{l.who}: </span>}
+              <Icon as={BedDouble} /> {l.who && mode === 'all' && <span className="muted small">{l.who}: </span>}
               {l.text}
             </div>
           ))}
@@ -99,10 +108,20 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
         <ArrivalCard key={e.key} entry={e} />
       ))}
 
-      {entries.length === 0 && <Empty>אין עדיין תוכניות ליום הזה</Empty>}
+      {entries.length === 0 && <Empty>אין תוכניות ליום הזה</Empty>}
       {sections.map((owner) => (
         <Fragment key={owner ?? 'all'}>
-          {owner !== undefined && <h3 className="plan-owner">{owner ? `💑 ${owner}` : `👥 ${TOGETHER}`}</h3>}
+          {owner !== undefined && (
+            <h3 className="plan-owner">
+              {owner ? (
+                owner
+              ) : (
+                <>
+                  <Icon as={Users} /> {TOGETHER}
+                </>
+              )}
+            </h3>
+          )}
           {entries
             .filter((e) => owner === undefined || e.who === owner)
             .map((e) => (
@@ -112,7 +131,7 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
       ))}
 
       <button className="fab" aria-label="פעילות חדשה" onClick={() => setEditItem({ day, category: 'sight', who: defaultWho })}>
-        ＋
+        <Plus size={28} strokeWidth={2} aria-hidden="true" />
       </button>
 
       {editItem && (
@@ -135,11 +154,11 @@ function EntryRow({ e, onEdit }: { e: Entry; onEdit: (i: PlanItem) => void }) {
           aria-pressed={i.done}
           onClick={() => mutate(supabase.from('itinerary_items').update({ done: !i.done }).eq('id', i.id))}
         >
-          {i.done ? '✓' : ''}
+          {i.done && <Check size="1em" strokeWidth={3} aria-hidden="true" />}
         </button>
       ) : (
         <span className="plan-icon" aria-hidden="true">
-          {e.icon}
+          <Icon as={e.icon} size="1.375rem" />
         </span>
       )}
       <div className="item-body" onClick={i ? () => onEdit(i) : undefined} style={i ? undefined : { cursor: 'default' }}>
@@ -148,13 +167,13 @@ function EntryRow({ e, onEdit }: { e: Entry; onEdit: (i: PlanItem) => void }) {
           {e.title}
         </div>
         <div className="muted small">
-          {i ? CATEGORIES[i.category] ?? i.category : 'מההזמנות'}
-          {e.who && <span className="who-pill">💑 {e.who}</span>}
+          {i ? CATEGORIES[i.category] ?? i.category : 'הזמנה'}
+          {e.who && <span className="who-pill">{e.who}</span>}
         </div>
         {e.sub && <div className="notes">{e.sub}</div>}
         {e.location && (
           <a className="action nav-btn" href={navUrl(e.location)} target="_blank" rel="noreferrer">
-            🧭 ניווט
+            <Icon as={Navigation} /> ניווט
           </a>
         )}
       </div>
@@ -170,12 +189,15 @@ function ArrivalCard({ entry }: { entry: Entry }) {
   return (
     <details className="card arrival" open>
       <summary>
-        🛬 נחיתה ב{a.name} · <span className="time">{entry.time}</span>
-        {b.who && <span className="who-pill">💑 {b.who}</span>}
+        <Icon as={PlaneLanding} /> נחיתה ב{a.name} · <span className="time">{entry.time}</span>
+        {b.who && <span className="who-pill">{b.who}</span>}
       </summary>
       <ul>
         {a.steps.map((t) => (
-          <li key={t}>{t}</li>
+          <li key={t.text}>
+            <Icon as={t.icon} />
+            <span>{t.text}</span>
+          </li>
         ))}
       </ul>
     </details>

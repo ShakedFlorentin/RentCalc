@@ -13,10 +13,12 @@
 /* bookings are read-only: a tinted card with the kind's icon where the checkbox would be */
 .plan-booking { background: color-mix(in srgb, var(--ok) 9%, var(--card)); }
 .plan-booking .item-body { cursor: default; }
-.plan-icon { flex: none; width: 28px; text-align: center; font-size: 1.25rem; line-height: 1.4; }
-.action.nav-btn { margin-top: 8px; background: var(--accent); color: var(--on-accent); font-weight: 600; }
+.plan-icon { flex: none; display: grid; place-items: center; width: 28px; height: 28px; margin: 1px 0; color: var(--ok); }
+.action.nav-btn { margin-top: 8px; gap: 6px; background: var(--accent); color: var(--on-accent); font-weight: 600; }
 .arrival summary { cursor: pointer; font-weight: 700; min-height: 32px; }
-.arrival ul { margin: 8px 0 0; padding-inline-start: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 0.9375rem; }
+.arrival ul { margin: 8px 0 0; padding-inline-start: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 0.9375rem; }
+.arrival li { display: flex; align-items: flex-start; gap: 10px; }
+.arrival li .ic { margin-top: 0.2em; color: var(--muted); }
 
 .trip-line { text-align: center; padding: 12px 16px; }
 .trip-line .big { font-size: 1.75rem; }
@@ -25,6 +27,7 @@
 .next-time { font-size: 2.25rem; font-weight: 800; line-height: 1.15; direction: ltr; text-align: start; font-variant-numeric: tabular-nums; }
 .next-title { font-size: 1.125rem; font-weight: 600; margin-bottom: 4px; }
 .next-card .primary, .next-card .secondary { margin-top: 10px; text-decoration: none; }
+.item-title .ic, .next-title .ic { color: var(--muted); }
 .next-card .primary { min-height: 56px; font-size: 1.125rem; }
 .today-row { display: flex; gap: 10px; align-items: baseline; padding: 10px 0; border-bottom: 0.5px solid var(--line); }
 .today-row:last-of-type { border-bottom: 0; }
@@ -32,7 +35,7 @@
 .today-row .time { flex: none; }
 .todo-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 8px 0; text-align: start; border-bottom: 0.5px solid var(--line); }
 .todo-row:last-child { border-bottom: 0; }
-.todo-row > span:first-child { font-size: 1.4rem; flex: none; }
+.todo-row > .ic { flex: none; color: var(--muted); }
 .todo-row b { display: block; font-weight: 600; }
 .shortcuts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 /* .time is its own ltr box inside RTL text, so its end margin lands on the wrong side */

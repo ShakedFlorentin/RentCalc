@@ -1,8 +1,11 @@
 import { Fragment, useEffect, useState } from 'react'
+import { Check, Download, Link as LinkIcon, Mail, Map as MapIcon, Paperclip, Plus, Users } from 'lucide-react'
 import { supabase } from '../supabase'
 import { BOOKING_KINDS, BOOKING_TABS, TOGETHER, type Booking, type Member, type Trip } from '../types'
 import { aiError, couplesOf, fmtDateTime, fromInputDateTime, mapsUrl, mutate, toInputDateTime, useTripTable } from '../lib'
 import { Empty, Field, LoadNote, Sheet, Tabs, useRemembered } from '../ui'
+import { BOOKING_ICON, Icon } from '../icons'
+import { stripMarker } from './planUtils'
 
 type Props = { trip: Trip; members: Member[]; userId: string }
 
@@ -28,13 +31,13 @@ export default function Bookings({ trip, members, userId }: Props) {
     <div className="stack">
       <Tabs
         label="סוג הזמנה"
-        tabs={Object.fromEntries(tabs.map((k) => [k, BOOKING_TABS[k]]))}
+        tabs={Object.fromEntries(tabs.map((k) => [k, { label: BOOKING_TABS[k], icon: BOOKING_ICON[k] }]))}
         current={current}
         counts={Object.fromEntries(tabs.map((k) => [k, count(k)]))}
         onPick={pick}
       />
       <button className="secondary" onClick={() => setImporting(true)}>
-        📩 הוספה מאישור הזמנה (מייל / PDF / צילום מסך)
+        <Icon as={Mail} /> הוספה מאישור הזמנה
       </button>
       {couples.length > 1 && (
         <div className="chips scroll">
@@ -43,19 +46,19 @@ export default function Bookings({ trip, members, userId }: Props) {
           </button>
           {couples.map((c) => (
             <button key={c} className={'chip' + (whose === c ? ' on' : '')} onClick={() => setWhose(c)}>
-              💑 {c}
+              {c}
             </button>
           ))}
           <button className={'chip' + (whose === 'group' ? ' on' : '')} onClick={() => setWhose('group')}>
-            👥 של כולם
+            <Icon as={Users} /> של כולם
           </button>
         </div>
       )}
       {error && <LoadNote onRetry={reload} />}
       {!loading && !error && items.length === 0 && (
         <Empty>
-          אין עדיין {BOOKING_TABS[current].split(' ').slice(1).join(' ')}
-          {whose && ' בסינון הזה'}. אפשר להוסיף מאישור הזמנה או עם ＋
+          אין {BOOKING_TABS[current]}
+          {whose && ' בסינון הזה'}. אפשר להוסיף מאישור הזמנה או עם כפתור ההוספה.
         </Empty>
       )}
       <div className="stack">
@@ -63,15 +66,17 @@ export default function Bookings({ trip, members, userId }: Props) {
           <Fragment key={b.id}>
             {/* with no couple filter, head each couple's run of bookings */}
             {couples.length > 1 && !whose && (i === 0 || b.who !== items[i - 1].who) && (
-              <div className="area-title">{b.who ? `💑 ${b.who}` : `👥 ${TOGETHER}`}</div>
+              <div className="area-title">{b.who ?? <WhoAll />}</div>
             )}
               <div className="card booking" onClick={() => setEdit(b)}>
                 <div className="row spread">
-                  <b>{BOOKING_KINDS[b.kind]?.split(' ')[0]} {b.title}</b>
-                  {b.file_path && <span title="קובץ מצורף">📎</span>}
+                  <b>
+                    <Icon as={BOOKING_ICON[b.kind] ?? BOOKING_ICON.other} /> {b.title}
+                  </b>
+                  {b.file_path && <Icon as={Paperclip} className="muted" label="קובץ מצורף" />}
                 </div>
                 {couples.length > 1 && whose && (
-                  <div className={'who-tag' + (b.who ? ' apart' : '')}>{b.who ? `💑 ${b.who}` : `👥 ${TOGETHER}`}</div>
+                  <div className={'who-tag' + (b.who ? ' apart' : '')}>{b.who ?? <WhoAll />}</div>
                 )}
                 {b.starts_at && (
                   <div className="muted small">
@@ -87,12 +92,12 @@ export default function Bookings({ trip, members, userId }: Props) {
                 <div className="row" onClick={(e) => e.stopPropagation()}>
                   {b.location && (
                     <a className="pill" href={mapsUrl(b.location)} target="_blank" rel="noreferrer">
-                      🗺️ מפה
+                      <Icon as={MapIcon} /> מפה
                     </a>
                   )}
                   {b.url && (
                     <a className="pill" href={b.url} target="_blank" rel="noreferrer">
-                      🔗 קישור
+                      <Icon as={LinkIcon} /> קישור
                     </a>
                   )}
                   {b.file_path && <DocButtons path={b.file_path} />}
@@ -102,7 +107,7 @@ export default function Bookings({ trip, members, userId }: Props) {
         ))}
       </div>
       <button className="fab" aria-label="הזמנה חדשה" onClick={() => setEdit({ kind: current, who: myCouple })}>
-        ＋
+        <Plus size={28} strokeWidth={2} aria-hidden="true" />
       </button>
       {edit && <BookingForm trip={trip} couples={couples} booking={edit} onClose={() => setEdit(null)} />}
       {importing && <ImportSheet trip={trip} couples={couples} myCouple={myCouple} onClose={() => setImporting(false)} />}
@@ -182,14 +187,22 @@ function DocButtons({ path }: { path: string }) {
   return (
     <>
       <button className="pill" onClick={() => openFile(path)}>
-        📎 מסמך
+        <Icon as={Paperclip} /> מסמך
       </button>
       {saved ? (
-        <span className="small muted">✓ נשמר לאופליין</span>
+        <span className="small muted">
+          <Icon as={Check} /> נשמר לאופליין
+        </span>
       ) : (
         saved === false && (
           <button className="pill" disabled={busy} onClick={save}>
-            {busy ? 'שומר…' : '📥 שמירה לאופליין'}
+            {busy ? (
+              'שומר…'
+            ) : (
+              <>
+                <Icon as={Download} /> שמירה לאופליין
+              </>
+            )}
           </button>
         )
       )}
@@ -325,7 +338,7 @@ function ImportSheet(props: { trip: Trip; couples: string[]; myCouple: string | 
   const [text, setText] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [busy, setBusy] = useState(false)
-  const [done, setDone] = useState<string[] | null>(null)
+  const [done, setDone] = useState<{ kind: string; title: string }[] | null>(null)
   const [err, setErr] = useState('')
 
   const run = async () => {
@@ -374,17 +387,17 @@ function ImportSheet(props: { trip: Trip; couples: string[]; myCouple: string | 
     )
     if (ok) {
       await fillHotelNights(trip, bookings)
-      setDone(bookings.map((b) => `${BOOKING_KINDS[b.kind]?.split(' ')[0] ?? ''} ${b.title}`))
+      setDone(bookings.map((b) => ({ kind: b.kind, title: b.title })))
     }
     setBusy(false)
   }
 
   if (done) {
     return (
-      <Sheet title="נוסף! ✅" onClose={onClose}>
-        {done.map((d) => (
-          <div key={d} dir="auto">
-            {d}
+      <Sheet title={done.length > 1 ? `נוספו ${done.length} הזמנות` : 'ההזמנה נוספה'} onClose={onClose}>
+        {done.map((d, n) => (
+          <div key={n} dir="auto">
+            <Icon as={BOOKING_ICON[d.kind] ?? BOOKING_ICON.other} /> {d.title}
           </div>
         ))}
         <p className="muted small">אפשר ללחוץ על הזמנה כדי לתקן פרטים. מלונות נכתבו גם בלילות שלהם במסלול.</p>
@@ -416,14 +429,22 @@ function ImportSheet(props: { trip: Trip; couples: string[]; myCouple: string | 
   )
 }
 
+function WhoAll() {
+  return (
+    <>
+      <Icon as={Users} /> {TOGETHER}
+    </>
+  )
+}
+
 function WhoField(props: { value: string; couples: string[]; onChange: (who: string) => void }) {
   return (
     <Field label="של מי">
       <select value={props.value} onChange={(e) => props.onChange(e.target.value)}>
-        <option value="">👥 של כולם</option>
+        <option value="">של כולם</option>
         {props.couples.map((c) => (
           <option key={c} value={c}>
-            💑 {c}
+            {c}
           </option>
         ))}
       </select>
@@ -462,7 +483,7 @@ async function fillHotelNights(trip: Trip, bookings: Pick<Booking, 'kind' | 'tit
     for (const s of stays) {
       // the group's hotel replaces the night; a couple's replaces only that couple's line
       if (!s.who) lines = [s.title]
-      else lines = [...lines.filter((l) => !l.replace(/^💑\s*/, '').startsWith(`${s.who}:`)), `${s.who}: ${s.title}`]
+      else lines = [...lines.filter((l) => !stripMarker(l).startsWith(`${s.who}:`)), `${s.who}: ${s.title}`]
     }
     return { trip_id: trip.id, day, hotel: lines.join('\n') }
   })
