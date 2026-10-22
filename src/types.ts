@@ -15,7 +15,12 @@ export type DayInfo = {
   city: string | null
   hotel: string | null
   notes: string | null
+  /** who is in Japan that day; null means the whole group */
+  who: string | null
 }
+
+export const TOGETHER = 'כולם ביחד'
+export const WHO_OPTIONS = ['שקד ומאור', 'אלמוג וסניר']
 
 export type ItineraryItem = {
   id: string

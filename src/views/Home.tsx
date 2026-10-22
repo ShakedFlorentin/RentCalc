@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
-import type { DayInfo, ItineraryItem, Member, Trip } from '../types'
+import { TOGETHER, type DayInfo, type ItineraryItem, type Member, type Trip } from '../types'
 import { currentDay, dayDate, fmtDay, mutate, useTripTable } from '../lib'
 import { Field, Sheet } from '../ui'
 
@@ -25,7 +25,8 @@ export default function Home({ trip, members, me, userId, onOpenDay, onLeave }: 
     : null
   const tokyoTime = now.toLocaleTimeString('he-IL', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit' })
   const todayItems = today ? items.filter((i) => i.day === today).sort(byTime) : []
-  const cities = summarizeCities(days)
+  const cities = runs(days, 'city')
+  const together = runs(days, 'who')
 
   return (
     <div className="stack">
@@ -68,12 +69,29 @@ export default function Home({ trip, members, me, userId, onOpenDay, onLeave }: 
         </section>
       )}
 
+      {together.some((t) => t.value) && (
+        <section className="card">
+          <h3>ביחד ולחוד</h3>
+          <div className="route">
+            {together.map((t) => (
+              <button key={t.from} className={'route-stop' + (t.value ? ' apart' : ' together')} onClick={() => onOpenDay(t.from)}>
+                <b>{t.value ? `👤 רק ${t.value}` : `👥 ${TOGETHER}`}</b>
+                <span className="muted small">
+                  {fmtDay(dayDate(trip.start_date, t.from))}
+                  {t.to !== t.from && ` – ${fmtDay(dayDate(trip.start_date, t.to))}`} · {t.to - t.from + 1} ימים
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section className="card">
         <h3>המסלול</h3>
         <div className="route">
           {cities.map((c) => (
             <button key={c.from} className="route-stop" onClick={() => onOpenDay(c.from)}>
-              <b>{c.city || '—'}</b>
+              <b>{c.value || '—'}</b>
               <span className="muted small">
                 {c.from === c.to ? `יום ${c.from}` : `ימים ${c.from}–${c.to}`}
               </span>
@@ -187,13 +205,14 @@ export function byTime(a: ItineraryItem, b: ItineraryItem) {
   return (a.time || '99').localeCompare(b.time || '99') || a.sort - b.sort
 }
 
-function summarizeCities(days: DayInfo[]) {
-  const out: { city: string; from: number; to: number }[] = []
+/** Consecutive days sharing the same value, e.g. the city or who is there. */
+function runs(days: DayInfo[], key: 'city' | 'who') {
+  const out: { value: string; from: number; to: number }[] = []
   for (const d of [...days].sort((a, b) => a.day - b.day)) {
     const last = out[out.length - 1]
-    const city = d.city ?? ''
-    if (last && last.city === city && last.to === d.day - 1) last.to = d.day
-    else out.push({ city, from: d.day, to: d.day })
+    const value = d[key] ?? ''
+    if (last && last.value === value && last.to === d.day - 1) last.to = d.day
+    else out.push({ value, from: d.day, to: d.day })
   }
   return out
 }

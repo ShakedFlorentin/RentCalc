@@ -238,6 +238,12 @@ main.tab-swipe { padding-bottom: 0; }
   background: var(--fill);
   text-align: start;
 }
+.route-stop.together { background: color-mix(in srgb, var(--ok) 14%, var(--card)); }
+.route-stop.apart { background: var(--card); border: 1px dashed var(--muted); }
+.who-tag { margin-top: 4px; font-size: 0.875rem; font-weight: 600; color: var(--ok); }
+.who-tag.apart { color: var(--muted); }
+/* a day only one couple is in Japan */
+.day-chip.apart:not(.active) { border-style: dashed; border-color: var(--muted); background: transparent; }
 .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
 .chips.scroll {
   flex-wrap: nowrap;

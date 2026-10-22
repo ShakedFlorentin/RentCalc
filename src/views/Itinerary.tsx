@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabase'
-import { CATEGORIES, type DayInfo, type ItineraryItem, type Trip } from '../types'
+import { CATEGORIES, TOGETHER, WHO_OPTIONS, type DayInfo, type ItineraryItem, type Trip } from '../types'
 import { dayDate, fmtDay, mapsUrl, mutate, useTripTable } from '../lib'
 import { Empty, Field, Sheet } from '../ui'
 import { byTime } from './Home'
@@ -25,7 +25,11 @@ export default function Itinerary({ trip, day, setDay }: Props) {
     <div className="stack">
       <div className="day-strip" ref={stripRef}>
         {Array.from({ length: trip.num_days }, (_, i) => i + 1).map((d) => (
-          <button key={d} className={'day-chip' + (d === day ? ' active' : '')} onClick={() => setDay(d)}>
+          <button
+            key={d}
+            className={'day-chip' + (d === day ? ' active' : '') + (days.find((x) => x.day === d)?.who ? ' apart' : '')}
+            onClick={() => setDay(d)}
+          >
             <b>{d}</b>
             <span>{days.find((x) => x.day === d)?.city ?? ''}</span>
             <span className="small">{fmtDay(dayDate(trip.start_date, d))}</span>
@@ -41,6 +45,7 @@ export default function Itinerary({ trip, day, setDay }: Props) {
           <span className="muted small">✏️</span>
         </div>
         {trip.start_date && <div className="muted">{fmtDay(dayDate(trip.start_date, day))}</div>}
+        <div className={'who-tag' + (info?.who ? ' apart' : '')}>{info?.who ? `👤 רק ${info.who}` : `👥 ${TOGETHER}`}</div>
         {info?.hotel && <div>🏨 {info.hotel}</div>}
         {info?.notes && <div className="notes">{info.notes}</div>}
       </section>
@@ -159,6 +164,7 @@ function DayForm(props: { tripId: string; day: number; info?: DayInfo; onClose: 
   const [city, setCity] = useState(props.info?.city ?? '')
   const [hotel, setHotel] = useState(props.info?.hotel ?? '')
   const [notes, setNotes] = useState(props.info?.notes ?? '')
+  const [who, setWho] = useState(props.info?.who ?? '')
 
   const save = async () => {
     const ok = await mutate(
@@ -168,6 +174,7 @@ function DayForm(props: { tripId: string; day: number; info?: DayInfo; onClose: 
         city: city || null,
         hotel: hotel || null,
         notes: notes || null,
+        who: who || null,
       }),
     )
     if (ok) props.onClose()
@@ -177,6 +184,16 @@ function DayForm(props: { tripId: string; day: number; info?: DayInfo; onClose: 
     <Sheet title={`יום ${props.day}`} onClose={props.onClose}>
       <Field label="עיר">
         <input value={city} onChange={(e) => setCity(e.target.value)} />
+      </Field>
+      <Field label="מי ביפן">
+        <select value={who} onChange={(e) => setWho(e.target.value)}>
+          <option value="">{TOGETHER}</option>
+          {[...new Set([...WHO_OPTIONS, ...(who ? [who] : [])])].map((w) => (
+            <option key={w} value={w}>
+              רק {w}
+            </option>
+          ))}
+        </select>
       </Field>
       <Field label="לינה">
         <input value={hotel} onChange={(e) => setHotel(e.target.value)} />
