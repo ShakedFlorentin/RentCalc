@@ -6,14 +6,16 @@ import { matchFor, mutate, useMediaIndex, useTripTable, withMedia } from '../lib
 import AddPlace from './AddPlace'
 import { Empty, Sheet } from '../ui'
 import { MediaActions } from '../media'
-import { CARD_ICON, Icon } from '../icons'
+import { ChevronLeft, ChevronUp, Heart, Lightbulb, MapPin, MessageSquare, Plus, ReceiptText, Search, Sparkles, Star, Target, Timer, Users, Utensils, Wine, Baby } from 'lucide-react'
+import { AUDIENCE_ICON, CARD_ICON, Icon, type LucideIcon } from '../icons'
+import '../styles/game.css'
 
 const LEVELS = [
-  { xp: 0, name: 'גאיג׳ין 🐣' },
-  { xp: 200, name: 'תייר 🎒' },
-  { xp: 500, name: 'נוסע 🚅' },
-  { xp: 1000, name: 'מקומי 🏮' },
-  { xp: 2000, name: 'שוגון 🏯' },
+  { xp: 0, name: 'גאיג׳ין' },
+  { xp: 200, name: 'תייר' },
+  { xp: 500, name: 'נוסע' },
+  { xp: 1000, name: 'מקומי' },
+  { xp: 2000, name: 'שוגון' },
 ]
 
 type Props = { trip: Trip; userId: string; members: Member[] }
@@ -49,7 +51,7 @@ export default function SwipeGame({ trip, userId, members }: Props) {
   }, [likes, members, trip.match_threshold])
   const matchedIds = useMemo(() => new Set(matches.keys()), [matches])
 
-  // celebrate every new match, whoever made it
+  // announce every new match, whoever made it
   useEffect(() => {
     // wait for everything a match is made of, or the matches that already exist look new
     if (loading || swipesLoading || !members.length) return
@@ -119,21 +121,23 @@ export default function SwipeGame({ trip, userId, members }: Props) {
           <b>{meRow?.xp ?? 0}</b> XP
         </span>
         <span className="hud-stat">
-          💘 <b>{matchedIds.size}</b>
+          <Icon as={Heart} /> <b>{matchedIds.size}</b>
         </span>
-        <span className="hud-chevron" aria-hidden="true">🏆</span>
+        <span className="hud-chevron" aria-hidden="true">
+          <Icon as={ChevronLeft} size="1.3em" />
+        </span>
       </button>
 
       <div className="chips scroll filters" role="group" aria-label="סינון">
         <button className="chip add-chip" onClick={() => setAdding(true)}>
-          ＋ הצעת מקום
+          <Icon as={Plus} /> הצעת מקום
         </button>
         <button className={'chip' + (!city && !aud ? ' on' : '')} aria-pressed={!city && !aud} onClick={() => (setCity(''), setAud(''))}>
           הכל
         </button>
         {Object.entries(AUDIENCES).map(([k, v]) => (
           <button key={k} className={'chip' + (aud === k ? ' on' : '')} aria-pressed={aud === k} onClick={() => setAud(aud === k ? '' : k)}>
-            {v}
+            {AUDIENCE_ICON[k] && <Icon as={AUDIENCE_ICON[k]} />} {v}
           </button>
         ))}
         <span className="chip-sep" aria-hidden="true" />
@@ -147,11 +151,11 @@ export default function SwipeGame({ trip, userId, members }: Props) {
       {adding && <AddPlace tripId={trip.id} userId={userId} me={me} defaultTo="deck" onClose={() => setAdding(false)} />}
 
       {boardOpen && (
-        <Sheet title="🏆 טבלת השחקנים" onClose={() => setBoardOpen(false)}>
+        <Sheet title="דירוג" onClose={() => setBoardOpen(false)}>
           <div className="board">
             {board.map((b, i) => (
               <div key={b.m.user_id} className="player">
-                <span className="rank">{['🥇', '🥈', '🥉'][i] ?? '🎖️'}</span>
+                <span className="rank">{i + 1}</span>
                 <div className="player-body">
                   <div className="row spread nowrap">
                     <b>
@@ -182,7 +186,7 @@ export default function SwipeGame({ trip, userId, members }: Props) {
       <div className="deck">
         {!loading && deck.length === 0 && (
           <Empty>
-            {candidates.length ? 'סיימת את החפיסה! 🎉 חכו לחברים או בדקו את המאצ׳ים במקומות' : 'הסקאוטים עוד לא הביאו מקומות…'}
+            {candidates.length ? 'עברתם על כל המקומות. אפשר לחכות לחברים או לבדוק את המאצ׳ים בלשונית מקומות' : 'עדיין אין מקומות במשחק'}
           </Empty>
         )}
         {deck
@@ -210,14 +214,13 @@ export default function SwipeGame({ trip, userId, members }: Props) {
       {match && (
         <div className="backdrop center-modal" onClick={() => setMatch(null)}>
           <div className="match-pop" role="dialog" aria-modal="true" aria-label="מאצ׳" onClick={(e) => e.stopPropagation()}>
-            <div className="confetti">🎉🍣🏯🎌🍜🎉</div>
-            <h2>זה מאצ׳!</h2>
+            <h2>מאצ׳</h2>
             <p>
               <b dir="auto">{match.c.name}</b> נכנס {match.who ? `לרשימה של ${match.who}` : 'לרשימה של כולם'}
             </p>
-            <p className="muted">{match.names.join(' · ')} אהבו</p>
+            <p className="muted">{match.names.join(' · ')} אהבו את המקום</p>
             <button className="primary" onClick={() => setMatch(null)}>
-              יאללה, ממשיכים 💪
+              המשך
             </button>
           </div>
         </div>
@@ -313,7 +316,7 @@ function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked
             onError={() => setBroken((b) => new Set(b).add(cur))}
           />
         ) : (
-          <Icon as={CARD_ICON[c.category] ?? CARD_ICON.sight} className="card-emoji" size={64} />
+          <Icon as={CARD_ICON[c.category] ?? CARD_ICON.sight} className="card-emoji" size={92} />
         )}
         {top && photos.length > 1 && (
           <>
@@ -327,10 +330,10 @@ function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked
           </>
         )}
         <span className="stamp like-stamp" style={{ opacity: dx > 0 ? p : 0 }} aria-hidden="true">
-          בא לי!
+          אהבתי
         </span>
         <span className="stamp nope-stamp" style={{ opacity: dx < 0 ? p : 0 }} aria-hidden="true">
-          פאס
+          דלג
         </span>
         <div className="card-title">
           <h2 dir="auto">{c.name}</h2>
@@ -340,7 +343,7 @@ function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked
             </div>
           )}
           <div className="card-meta">
-            📍 {CITY_HE[c.city] ?? c.city}
+            <Icon as={MapPin} /> {CITY_HE[c.city] ?? c.city}
             {c.area && (
               <>
                 {' · '}
@@ -363,38 +366,38 @@ function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked
         <Tags c={c} />
         {c.serves && (
           <div className="fact">
-            <b>🍽️ מה מגישים</b>
+            <Label icon={Utensils}>מה מגישים</Label>
             <p dir="auto" className="clamp">{c.serves}</p>
           </div>
         )}
         {c.todo && !c.serves && (
           <div className="fact">
-            <b>🎯 מה עושים שם</b>
+            <Label icon={Target}>מה עושים שם</Label>
             <p dir="auto" className="clamp">{c.todo}</p>
           </div>
         )}
         {c.special && (
           <div className="fact">
-            <b>✨ מה מיוחד</b>
+            <Label icon={Sparkles}>מה מיוחד</Label>
             <p dir="auto" className="clamp">{c.special}</p>
           </div>
         )}
         {c.hype && !c.serves && !c.todo && !c.special && (
           <div className="fact">
-            <b>📱 ברשתות</b>
+            <Label icon={MessageSquare}>ברשתות</Label>
             <p dir="auto" className="clamp">{c.hype}</p>
           </div>
         )}
         {c.reality && !c.todo && !c.special && (
           <div className="fact">
-            <b>🔍 בביקורות</b>
+            <Label icon={Search}>בביקורות</Label>
             <p dir="auto" className="clamp">{c.reality}</p>
           </div>
         )}
       </div>
       {top && (
         <button className="link more-btn" onClick={() => setMore(true)}>
-          לקרוא הכול: טיפ, תינוק, קישורים וסרטון <span aria-hidden="true">⌃</span>
+          <Icon as={ChevronUp} /> פרטים נוספים
         </button>
       )}
       {more &&
@@ -404,7 +407,7 @@ function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked
               <Tags c={c} />
               {c.serves && (
                 <div className="fact">
-                  <b>🍽️ מה מגישים</b>
+                  <Label icon={Utensils}>מה מגישים</Label>
                   <p dir="auto">{c.serves}</p>
                   {!!c.dishes?.length && (
                     <div className="dishes">
@@ -419,14 +422,14 @@ function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked
               )}
               {c.todo && (
                 <div className="fact">
-                  <b>{c.serves ? '🧾 איך זה עובד' : '🎯 מה עושים שם'}</b>
+                  {c.serves ? <Label icon={ReceiptText}>איך זה עובד</Label> : <Label icon={Target}>מה עושים שם</Label>}
                   <p dir="auto">{c.todo}</p>
-                  {c.time_needed && <p className="muted small">⏱️ {c.time_needed}</p>}
+                  {c.time_needed && <p className="muted small"><Icon as={Timer} /> {c.time_needed}</p>}
                 </div>
               )}
               {c.special && (
                 <div className="fact">
-                  <b>✨ מה מיוחד</b>
+                  <Label icon={Sparkles}>מה מיוחד</Label>
                   <p dir="auto">{c.special}</p>
                   {!!c.highlights?.length && (
                     <div className="dishes">
@@ -441,25 +444,25 @@ function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked
               )}
               {c.hype && (
                 <div className="fact">
-                  <b>📱 ברשתות</b>
+                  <Label icon={MessageSquare}>ברשתות</Label>
                   <p dir="auto">{c.hype}</p>
                 </div>
               )}
               {c.reality && (
                 <div className="fact">
-                  <b>🔍 בביקורות</b>
+                  <Label icon={Search}>בביקורות</Label>
                   <p dir="auto">{c.reality}</p>
                 </div>
               )}
               {c.baby_notes && (
                 <div className="fact">
-                  <b>{c.audience === 'adults' ? '🍸 למה בלי התינוק' : '👶 עם תינוק'}</b>
+                  {c.audience === 'adults' ? <Label icon={Wine}>למה בלי התינוק</Label> : <Label icon={Baby}>עם תינוק</Label>}
                   <p dir="auto">{c.baby_notes}</p>
                 </div>
               )}
               {c.tip && (
                 <div className="fact">
-                  <b>💡 טיפ</b>
+                  <Label icon={Lightbulb}>טיפ</Label>
                   <p dir="auto">{c.tip}</p>
                 </div>
               )}
@@ -497,16 +500,32 @@ function Tags({ c }: { c: Candidate }) {
     <>
       <div className="row tags">
         {verdict && <div className={'verdict ' + verdict.tone}>{verdict.label}</div>}
-        {c.audience && <div className={'verdict aud-' + c.audience}>{AUDIENCES[c.audience]}</div>}
-        {c.local_pick && <div className="verdict local">🇯🇵 מקומיים ממליצים</div>}
+        {c.audience && (
+          <div className={'verdict aud-' + c.audience}>
+            {AUDIENCE_ICON[c.audience] && <Icon as={AUDIENCE_ICON[c.audience]} />} {AUDIENCES[c.audience]}
+          </div>
+        )}
+        {c.local_pick && (
+          <div className="verdict local">
+            <Icon as={Users} /> מקומיים ממליצים
+          </div>
+        )}
       </div>
       {(c.tabelog_score != null || c.google_score != null) && (
         <div className="scores">
-          {c.tabelog_score != null && <span>Tabelog ⭐ <bdi>{c.tabelog_score}</bdi></span>}
-          {c.google_score != null && <span>Google ⭐ <bdi>{c.google_score}</bdi></span>}
+          {c.tabelog_score != null && <span>Tabelog <Icon as={Star} /> <bdi>{c.tabelog_score}</bdi></span>}
+          {c.google_score != null && <span>Google <Icon as={Star} /> <bdi>{c.google_score}</bdi></span>}
         </div>
       )}
     </>
+  )
+}
+
+function Label({ icon, children }: { icon: LucideIcon; children: React.ReactNode }) {
+  return (
+    <b className="fact-label">
+      <Icon as={icon} /> {children}
+    </b>
   )
 }
 

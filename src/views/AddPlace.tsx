@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { supabase } from '../supabase'
 import { AUDIENCES, CARD_STYLE, CITY_HE, VERDICTS, type Candidate } from '../types'
 import { aiError, mutate } from '../lib'
+import { ArrowRight, Heart, List, PencilLine, Search, Star } from 'lucide-react'
 import { Field, Sheet } from '../ui'
+import { Icon } from '../icons'
 
 type Draft = Partial<Candidate> & { link?: string }
 type Props = { tripId: string; userId: string; me: string; defaultTo: 'deck' | 'list'; onClose: () => void }
@@ -27,7 +29,7 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
       setErr(aiError(error, 'החיפוש לא הצליח. אפשר לנסות שוב או למלא ידנית.'))
       return
     }
-    if (!data.found) setErr('לא זיהיתי מקום ספציפי – בדקו את הפרטים או השלימו ידנית.')
+    if (!data.found) setErr('לא זוהה מקום מסוים. בדקו את הפרטים או השלימו ידנית.')
     setDraft({ ...data, link: link.trim() })
   }
 
@@ -102,10 +104,10 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
   const destination = (
     <div className="segmented" role="group" aria-label="לאן להוסיף">
       <button className={to === 'deck' ? 'on' : ''} onClick={() => setTo('deck')}>
-        🔥 למשחק (הצבעה)
+        <Icon as={Heart} /> למשחק, להצבעה
       </button>
       <button className={to === 'list' ? 'on' : ''} onClick={() => setTo('list')}>
-        📍 ישר לרשימה
+        <Icon as={List} /> ישר לרשימה
       </button>
     </div>
   )
@@ -129,10 +131,10 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
   return (
     <Sheet title="הצעת מקום" onClose={onClose}>
       <p className="muted small">
-        מדביקים לינק מאינסטגרם / טיקטוק / גוגל מפות, או כותבים שם של מקום. Claude מזהה את המקום ובודק דירוגים, כתובת, ואם
-        זה מתאים לתינוק.
+        הדביקו קישור מאינסטגרם, טיקטוק או גוגל מפות, או כתבו שם של מקום. המערכת מזהה את המקום ובודקת דירוג, כתובת והתאמה
+        לתינוק.
       </p>
-      <Field label="לינק">
+      <Field label="קישור">
         <input type="url" value={link} onChange={(e) => setLink(e.target.value)} dir="ltr" placeholder="https://www.instagram.com/reel/…" />
       </Field>
       <Field label="או שם / הערה (לא חובה)">
@@ -140,10 +142,10 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
       </Field>
       {err && <p className="msg">{err}</p>}
       <button className="primary" onClick={research} disabled={busy || (!link.trim() && !note.trim())}>
-        {busy ? 'מחפש פרטים… (עד דקה)' : '🔎 זיהוי ובדיקה'}
+        {busy ? 'מחפש פרטים, עד דקה' : (<><Icon as={Search} /> זיהוי ובדיקה</>)}
       </button>
       <button className="link" onClick={() => setMode('manual')}>
-        ✍️ להוסיף ידנית בלי חיפוש
+        <Icon as={PencilLine} /> הוספה ידנית
       </button>
     </Sheet>
   )
@@ -168,8 +170,8 @@ function DraftForm(props: {
       {props.researched && (verdict || d.tabelog_score != null || d.google_score != null) && (
         <div className="row">
           {verdict && <span className={'verdict ' + verdict.tone}>{verdict.label}</span>}
-          {d.tabelog_score != null && <span className="small muted">Tabelog ⭐ {d.tabelog_score}</span>}
-          {d.google_score != null && <span className="small muted">Google ⭐ {d.google_score}</span>}
+          {d.tabelog_score != null && <span className="small muted">Tabelog <Icon as={Star} /> <bdi>{d.tabelog_score}</bdi></span>}
+          {d.google_score != null && <span className="small muted">Google <Icon as={Star} /> <bdi>{d.google_score}</bdi></span>}
         </div>
       )}
       <Field label="שם">
@@ -211,34 +213,34 @@ function DraftForm(props: {
       </div>
       {props.researched && d.serves && (
         <div className="small">
-          <b>🍽️ מה מגישים:</b> <span dir="auto">{d.serves}</span>
+          <b>מה מגישים:</b> <span dir="auto">{d.serves}</span>
         </div>
       )}
       {props.researched && d.todo && (
         <div className="small">
-          <b>🎯 מה עושים שם:</b> <span dir="auto">{d.todo}</span>
+          <b>מה עושים שם:</b> <span dir="auto">{d.todo}</span>
         </div>
       )}
       {props.researched && d.special && (
         <div className="small">
-          <b>✨ מה מיוחד:</b> <span dir="auto">{d.special}</span>
+          <b>מה מיוחד:</b> <span dir="auto">{d.special}</span>
         </div>
       )}
       {props.researched && d.reality && (
         <div className="small">
-          <b>🔍 בביקורות:</b> <span dir="auto">{d.reality}</span>
+          <b>בביקורות:</b> <span dir="auto">{d.reality}</span>
         </div>
       )}
       {props.researched && d.baby_notes && (
         <div className="small">
-          <b>👶</b> <span dir="auto">{d.baby_notes}</span>
+          <b>עם תינוק:</b> <span dir="auto">{d.baby_notes}</span>
         </div>
       )}
       <Field label="טיפ / הערה">
         <textarea value={d.tip ?? ''} onChange={set('tip')} rows={2} dir="auto" />
       </Field>
       {!props.researched && (
-        <Field label="לינק (אינסטגרם / טיקטוק / מפות – לא חובה)">
+        <Field label="קישור (אינסטגרם, טיקטוק או מפות, לא חובה)">
           <input type="url" value={d.link ?? ''} onChange={set('link')} dir="ltr" />
         </Field>
       )}
@@ -247,7 +249,7 @@ function DraftForm(props: {
         {props.busy ? 'שומר…' : 'הוספה'}
       </button>
       <button className="link" onClick={props.onBack}>
-        ← חזרה
+        <Icon as={ArrowRight} /> חזרה
       </button>
     </>
   )

@@ -1,0 +1,31 @@
+/* Swipe game, places and add-place: icon-driven details that sit on top of styles.css */
+.card-emoji { top: 50%; transform: translate(-50%, -62%); opacity: 0.4; filter: none; stroke-width: 1.25; width: 92px; height: 92px; }
+.hud-chevron { display: inline-grid; place-items: center; color: var(--muted); }
+.hud-stat .ic { color: var(--accent); }
+.rank {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--fill);
+  display: grid;
+  place-items: center;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.fact-label { display: inline-flex; align-items: center; gap: 5px; }
+.match-pop h2 { font-size: 1.75rem; }
+.match-pop .primary { margin-top: 6px; }
+.stamp { text-transform: none; }
+.more-btn { display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
+.scores span, .tags .verdict { display: inline-flex; align-items: center; gap: 4px; }
+.meta .ic { vertical-align: -0.15em; }
+.segmented button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.chip { gap: 6px; }
+.fab { display: grid; place-items: center; }
+.check .ic { display: block; margin: auto; color: #fff; }
+.thumb .ic { color: var(--muted); }
+.primary, .secondary { gap: 6px; }
+.link { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.item-title + .meta { margin-top: 2px; }

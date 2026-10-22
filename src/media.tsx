@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { ExternalLink, Globe, MapPin, Play } from 'lucide-react'
 import { Sheet } from './ui'
+import { Icon, type LucideIcon } from './icons'
 
 type Media = {
   instagram_url?: string | null
@@ -36,7 +38,8 @@ export function VideoSheet({ media, title, onClose }: { media: NonNullable<Retur
         />
       ) : null}
       <a className="secondary btn-link" href={media.href} target="_blank" rel="noreferrer">
-        {media.kind === 'instagram' ? 'פתיחה באינסטגרם ↗' : 'פתיחה בטיקטוק ↗'}
+        <Icon as={ExternalLink} />
+        {media.kind === 'instagram' ? 'פתיחה באינסטגרם' : 'פתיחה בטיקטוק'}
       </a>
     </Sheet>
   )
@@ -53,17 +56,17 @@ export function MediaActions(props: { name: string; maps?: string | null; websit
     <div className={'actions' + (props.compact ? ' compact' : '')}>
       {maps && (
         <a className="action" href={maps} target="_blank" rel="noreferrer">
-          📍 <span>Google Maps</span>
+          <Icon as={MapPin} /> <span>Google Maps</span>
         </a>
       )}
       {props.website && (
         <a className="action" href={props.website} target="_blank" rel="noreferrer">
-          🌐 <span>אתר</span>
+          <Icon as={Globe} /> <span>אתר</span>
         </a>
       )}
       {video && (
         <button className="action" onClick={() => setOpen(true)}>
-          ▶︎ <span>סרטון</span>
+          <Icon as={Play} /> <span>סרטון</span>
         </button>
       )}
       {open && video && <VideoSheet media={video} title={props.name} onClose={() => setOpen(false)} />}
@@ -71,8 +74,8 @@ export function MediaActions(props: { name: string; maps?: string | null; websit
   )
 }
 
-/** Square thumbnail: first photo, else a quiet category emoji tile. */
-export function Thumb({ photos, emoji }: { photos?: string[] | null; emoji: string }) {
+/** Square thumbnail: first photo, else a quiet category icon tile. */
+export function Thumb({ photos, icon }: { photos?: string[] | null; icon: LucideIcon }) {
   const [bad, setBad] = useState(false)
   const src = photos?.[0]
   return (
@@ -80,7 +83,7 @@ export function Thumb({ photos, emoji }: { photos?: string[] | null; emoji: stri
       {src && !bad ? (
         <img src={src} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setBad(true)} />
       ) : (
-        <span>{emoji}</span>
+        <Icon as={icon} size={24} />
       )}
     </span>
   )
