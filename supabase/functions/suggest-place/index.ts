@@ -1,8 +1,8 @@
 // Turns an Instagram / TikTok / Google Maps link or a place name into a researched place card.
 // The Claude key comes from the ANTHROPIC_API_KEY secret or Supabase Vault (anthropic_api_key).
-import Anthropic from 'npm:@anthropic-ai/sdk'
-import { zodOutputFormat } from 'npm:@anthropic-ai/sdk/helpers/zod'
-import { z } from 'npm:zod@3'
+import Anthropic from 'npm:@anthropic-ai/sdk@1.1.0'
+import { zodOutputFormat } from 'npm:@anthropic-ai/sdk@1.1.0/helpers/zod'
+import { z } from 'npm:zod@4'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const cors = {
@@ -135,7 +135,15 @@ Deno.serve(async (req) => {
       messages: [{ role: 'user', content: `${ask}\n\nResearch notes:\n${notes}` }],
     })
     if (!card.parsed_output) return json({ error: 'could not read the research' }, 422)
-    return json(card.parsed_output)
+    // the notes are prose, so take the sources from the search itself: cited pages first, then results
+    const cited = research.content.flatMap((b) =>
+      b.type === 'text' ? (b.citations ?? []).flatMap((c) => ('url' in c && c.url ? [c.url] : [])) : [],
+    )
+    const found = research.content.flatMap((b) =>
+      b.type === 'web_search_tool_result' && Array.isArray(b.content) ? b.content.map((r) => r.url) : [],
+    )
+    const sources = card.parsed_output.sources.length ? card.parsed_output.sources : [...new Set([...cited, ...found])].slice(0, 5)
+    return json({ ...card.parsed_output, sources })
   } catch (error) {
     if (error instanceof Anthropic.AuthenticationError) return json({ error: 'ANTHROPIC_API_KEY is missing or invalid' }, 500)
     if (error instanceof Anthropic.RateLimitError) return json({ error: 'busy, try again in a minute' }, 429)

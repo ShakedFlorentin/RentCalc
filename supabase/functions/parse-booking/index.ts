@@ -1,8 +1,8 @@
 // Reads a booking confirmation (pasted text, PDF or screenshot) and returns structured bookings.
 // The Claude key comes from the ANTHROPIC_API_KEY secret or Supabase Vault (anthropic_api_key).
-import Anthropic from 'npm:@anthropic-ai/sdk'
-import { zodOutputFormat } from 'npm:@anthropic-ai/sdk/helpers/zod'
-import { z } from 'npm:zod@3'
+import Anthropic from 'npm:@anthropic-ai/sdk@1.1.0'
+import { zodOutputFormat } from 'npm:@anthropic-ai/sdk@1.1.0/helpers/zod'
+import { z } from 'npm:zod@4'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const cors = {
