@@ -1,16 +1,37 @@
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabase'
-import { CATEGORIES, TOGETHER, WHO_OPTIONS, type DayInfo, type ItineraryItem, type Trip } from '../types'
-import { dayDate, fmtDay, mapsUrl, mutate, useTripTable } from '../lib'
-import { Empty, Field, Sheet } from '../ui'
-import { byTime } from './Home'
+import { CATEGORIES, TOGETHER, WHO_OPTIONS, type Booking, type DayInfo, type Member, type Trip } from '../types'
+import { couplesOf, dayDate, fmtDay, mutate, useTripTable } from '../lib'
+import { Empty, Field, Sheet, useRemembered } from '../ui'
+import {
+  ARRIVAL,
+  COUPLE_AIRPORT,
+  arrivalAirport,
+  dayEntries,
+  hotelLines,
+  navUrl,
+  visible,
+  ymd,
+  type Entry,
+  type PlanItem,
+  type WhoMode,
+} from './planUtils'
+import '../styles/plan.css'
 
-type Props = { trip: Trip; day: number; setDay: (d: number) => void }
+type Props = { trip: Trip; day: number; setDay: (d: number) => void; members?: Member[]; userId?: string }
 
-export default function Itinerary({ trip, day, setDay }: Props) {
+const MODES: Record<WhoMode, string> = { mine: 'שלנו', group: 'של כולם', all: 'הכל' }
+
+export default function Itinerary({ trip, day, setDay, members = [], userId }: Props) {
   const { rows: days } = useTripTable<DayInfo>('day_info', trip.id, 'day')
-  const { rows: items } = useTripTable<ItineraryItem>('itinerary_items', trip.id, 'sort')
-  const [editItem, setEditItem] = useState<Partial<ItineraryItem> | null>(null)
+  const { rows: items } = useTripTable<PlanItem>('itinerary_items', trip.id, 'sort')
+  const { rows: bookings } = useTripTable<Booking>('bookings', trip.id, 'starts_at')
+  const couples = couplesOf(members)
+  const myCouple = members.find((m) => m.user_id === userId)?.couple ?? null
+  // "שלנו" always includes the group's items, so nothing everyone does is ever hidden
+  const [saved, setMode] = useRemembered('planWho', 'mine')
+  const mode: WhoMode = saved === 'group' || saved === 'all' ? saved : 'mine'
+  const [editItem, setEditItem] = useState<Partial<PlanItem> | null>(null)
   const [editDay, setEditDay] = useState(false)
   const stripRef = useRef<HTMLDivElement>(null)
 
@@ -19,7 +40,14 @@ export default function Itinerary({ trip, day, setDay }: Props) {
   }, [day])
 
   const info = days.find((d) => d.day === day)
-  const dayItems = items.filter((i) => i.day === day).sort(byTime)
+  const date = trip.start_date ? ymd(dayDate(trip.start_date, day)!) : ''
+  const entries = dayEntries(items, bookings, day, date, mode, myCouple)
+  // on a day with several owners, "הכל" reads as one section per owner (the group first)
+  const owners = [...new Set(entries.map((e) => e.who))].sort((a, b) => (a ?? '').localeCompare(b ?? ''))
+  const sections = mode === 'all' && owners.length > 1 ? owners : [undefined]
+  const arrivals = entries.filter((e) => e.key.endsWith(':arr'))
+  // a day only one couple is in Japan is that couple's plan by default
+  const defaultWho = info?.who ?? null
 
   return (
     <div className="stack">
@@ -46,51 +74,117 @@ export default function Itinerary({ trip, day, setDay }: Props) {
         </div>
         {trip.start_date && <div className="muted">{fmtDay(dayDate(trip.start_date, day))}</div>}
         <div className={'who-tag' + (info?.who ? ' apart' : '')}>{info?.who ? `👤 רק ${info.who}` : `👥 ${TOGETHER}`}</div>
-        {info?.hotel && <div style={{ whiteSpace: 'pre-line' }}>🏨 {info.hotel}</div>}
+        {hotelLines(info?.hotel ?? null, couples)
+          .filter((l) => visible(l.who, mode, myCouple))
+          .map((l, n) => (
+            <div key={n}>
+              🏨 {l.who && mode === 'all' && <span className="muted small">{l.who}: </span>}
+              {l.text}
+            </div>
+          ))}
         {info?.notes && <div className="notes">{info.notes}</div>}
       </section>
 
-      {dayItems.length === 0 && <Empty>אין עדיין תוכניות ליום הזה</Empty>}
-      {dayItems.map((i) => (
-        <div key={i.id} className={'item card' + (i.done ? ' done' : '')}>
-          <button
-            className="check"
-            aria-label="בוצע"
-            onClick={() => mutate(supabase.from('itinerary_items').update({ done: !i.done }).eq('id', i.id))}
-          >
-            {i.done ? '✓' : ''}
-          </button>
-          <div className="item-body" onClick={() => setEditItem(i)}>
-            <div className="item-title">
-              {i.time && <span className="time">{i.time}</span>}
-              {i.title}
-            </div>
-            <div className="muted small">{CATEGORIES[i.category] ?? i.category}</div>
-            {i.notes && <div className="notes">{i.notes}</div>}
-          </div>
-          {i.location && (
-            <a className="icon" href={mapsUrl(i.location)} target="_blank" rel="noreferrer" aria-label="מפה">
-              🗺️
-            </a>
-          )}
+      {couples.length > 1 && (
+        <div className="segmented" role="group" aria-label="של מי התוכנית">
+          {(Object.keys(MODES) as WhoMode[]).map((m) => (
+            <button key={m} className={mode === m ? 'on' : ''} aria-pressed={mode === m} onClick={() => setMode(m)}>
+              {MODES[m]}
+            </button>
+          ))}
         </div>
+      )}
+
+      {arrivals.map((e) => (
+        <ArrivalCard key={e.key} entry={e} />
       ))}
 
-      <button className="fab" aria-label="פעילות חדשה" onClick={() => setEditItem({ day, category: 'sight' })}>
+      {entries.length === 0 && <Empty>אין עדיין תוכניות ליום הזה</Empty>}
+      {sections.map((owner) => (
+        <Fragment key={owner ?? 'all'}>
+          {owner !== undefined && <h3 className="plan-owner">{owner ? `💑 ${owner}` : `👥 ${TOGETHER}`}</h3>}
+          {entries
+            .filter((e) => owner === undefined || e.who === owner)
+            .map((e) => (
+              <EntryRow key={e.key} e={e} onEdit={setEditItem} />
+            ))}
+        </Fragment>
+      ))}
+
+      <button className="fab" aria-label="פעילות חדשה" onClick={() => setEditItem({ day, category: 'sight', who: defaultWho })}>
         ＋
       </button>
 
       {editItem && (
-        <ItemForm tripId={trip.id} numDays={trip.num_days} item={editItem} onClose={() => setEditItem(null)} />
+        <ItemForm tripId={trip.id} numDays={trip.num_days} couples={couples} item={editItem} onClose={() => setEditItem(null)} />
       )}
       {editDay && <DayForm tripId={trip.id} day={day} info={info} onClose={() => setEditDay(false)} />}
     </div>
   )
 }
 
-function ItemForm(props: { tripId: string; numDays: number; item: Partial<ItineraryItem>; onClose: () => void }) {
-  const [f, setF] = useState<Partial<ItineraryItem>>(props.item)
-  const set = (k: keyof ItineraryItem) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value })
+/** One line of the day: a plan item you can tick and edit, or a booking moment that is read-only here. */
+function EntryRow({ e, onEdit }: { e: Entry; onEdit: (i: PlanItem) => void }) {
+  const i = e.item
+  return (
+    <div className={'item card' + (i ? '' : ' plan-booking') + (e.done ? ' done' : '')}>
+      {i ? (
+        <button
+          className="check"
+          aria-label="בוצע"
+          aria-pressed={i.done}
+          onClick={() => mutate(supabase.from('itinerary_items').update({ done: !i.done }).eq('id', i.id))}
+        >
+          {i.done ? '✓' : ''}
+        </button>
+      ) : (
+        <span className="plan-icon" aria-hidden="true">
+          {e.icon}
+        </span>
+      )}
+      <div className="item-body" onClick={i ? () => onEdit(i) : undefined} style={i ? undefined : { cursor: 'default' }}>
+        <div className="item-title">
+          {e.time && <span className="time">{e.time}</span>}
+          {e.title}
+        </div>
+        <div className="muted small">
+          {i ? CATEGORIES[i.category] ?? i.category : 'מההזמנות'}
+          {e.who && <span className="who-pill">💑 {e.who}</span>}
+        </div>
+        {e.sub && <div className="notes">{e.sub}</div>}
+        {e.location && (
+          <a className="action nav-btn" href={navUrl(e.location)} target="_blank" rel="noreferrer">
+            🧭 ניווט
+          </a>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ArrivalCard({ entry }: { entry: Entry }) {
+  const b = entry.booking!
+  const airport = arrivalAirport(b) ?? COUPLE_AIRPORT[b.who ?? '']
+  if (!airport) return null
+  const a = ARRIVAL[airport]
+  return (
+    <details className="card arrival" open>
+      <summary>
+        🛬 נחיתה ב{a.name} · <span className="time">{entry.time}</span>
+        {b.who && <span className="who-pill">💑 {b.who}</span>}
+      </summary>
+      <ul>
+        {a.steps.map((t) => (
+          <li key={t}>{t}</li>
+        ))}
+      </ul>
+    </details>
+  )
+}
+
+function ItemForm(props: { tripId: string; numDays: number; couples: string[]; item: Partial<PlanItem>; onClose: () => void }) {
+  const [f, setF] = useState<Partial<PlanItem>>(props.item)
+  const set = (k: keyof PlanItem) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value })
 
   const save = async () => {
     if (!f.title?.trim()) return
@@ -102,6 +196,7 @@ function ItemForm(props: { tripId: string; numDays: number; item: Partial<Itiner
       location: f.location || null,
       notes: f.notes || null,
       category: f.category ?? 'sight',
+      who: f.who || null,
     }
     const ok = await mutate(
       f.id ? supabase.from('itinerary_items').update(row).eq('id', f.id) : supabase.from('itinerary_items').insert(row),
@@ -133,6 +228,18 @@ function ItemForm(props: { tripId: string; numDays: number; item: Partial<Itiner
           </select>
         </Field>
       </div>
+      {props.couples.length > 0 && (
+        <Field label="של מי">
+          <select value={f.who ?? ''} onChange={set('who')}>
+            <option value="">{TOGETHER}</option>
+            {[...new Set([...props.couples, ...(f.who ? [f.who] : [])])].map((c) => (
+              <option key={c} value={c}>
+                רק {c}
+              </option>
+            ))}
+          </select>
+        </Field>
+      )}
       <Field label="סוג">
         <select value={f.category} onChange={set('category')}>
           {Object.entries(CATEGORIES).map(([k, v]) => (
