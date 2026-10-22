@@ -370,8 +370,8 @@ function BeforeTrip(props: {
         <div className="todo-row">
           <Icon as={Layers} size="1.4rem" />
           <span>
-            <b>{props.swipesLeft} מקומות עוד לא דורגו</b>
-            <span className="muted small">כל דירוג משפיע על ההתאמות בין הזוגות</span>
+            <b>עוד {props.swipesLeft} מקומות במשחק</b>
+            <span className="muted small">כל לייק או פאס משפיע על המאצ׳ים של הזוגות</span>
           </span>
         </div>
       )}
@@ -417,7 +417,7 @@ function Settings(props: { trip: Trip; me: string; userId: string; onClose: () =
         <input type="number" min={1} max={60} value={numDays} onChange={(e) => setNumDays(+e.target.value)} />
       </Field>
       <p className="muted small">
-        התאמה: מקום נכנס לרשימה של זוג כששניהם אוהבים אותו, ולרשימה של כולם כששני הזוגות אוהבים.
+        מאצ׳: מקום נכנס לרשימה של זוג כששניהם אוהבים אותו, ולרשימה של כולם כששני הזוגות אוהבים.
       </p>
       <Field label="השם שלי">
         <input value={myName} onChange={(e) => setMyName(e.target.value)} />
