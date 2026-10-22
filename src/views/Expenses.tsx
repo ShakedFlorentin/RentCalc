@@ -34,7 +34,8 @@ export default function Expenses({ trip, members, userId }: Props) {
   const [editingRate, setEditingRate] = useState(false)
   // the trip row only refreshes through realtime, so show a saved rate right away
   const [savedRate, setSavedRate] = useState<number | null>(null)
-  const rate = savedRate ?? trip.ils_per_jpy
+  // the column defaults to 0.025; fall back to it for a trip row loaded before the column existed (e.g. a cached copy)
+  const rate = savedRate ?? (Number(trip.ils_per_jpy) || 0.025)
   const show: Cur = cur === 'JPY' ? 'JPY' : 'ILS'
 
   const nameOf = (id: string) => members.find((m) => m.user_id === id)?.display_name ?? 'מישהו'
