@@ -1,0 +1,44 @@
+/* Shared expenses */
+.exp-hero { display: flex; flex-direction: column; gap: 6px; }
+.exp-big { font-size: 1.875rem; font-weight: 800; line-height: 1.2; }
+.exp-big.plus, .exp-num.plus { color: var(--ok); }
+.exp-big.minus, .exp-num.minus { color: var(--nope); }
+.exp-cur { flex: none; width: 96px; }
+.exp-group { flex: none; width: 150px; }
+.exp-cur button, .exp-group button { min-height: 36px; }
+.exp-link { min-height: 32px; padding: 4px; }
+.exp-h { font-size: 1rem; margin: 0 0 4px; }
+
+.exp-transfer, .exp-bal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+.exp-transfer:first-of-type, .exp-bal:first-of-type { border-top: 0; }
+.exp-transfer-who { display: flex; flex-direction: column; min-width: 0; }
+.exp-num { font-weight: 700; font-variant-numeric: tabular-nums; }
+.exp-transfer .pill { flex: none; }
+
+.exp-day { gap: 8px; }
+.exp-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  text-align: start;
+  color: inherit;
+}
+.exp-emoji { font-size: 1.5rem; flex: none; }
+.exp-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.exp-main > b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.exp-amt { flex: none; display: flex; flex-direction: column; align-items: flex-end; }
+
+/* amount field next to its currency toggle in the form */
+.exp-amount { display: flex; gap: 10px; align-items: flex-end; }
+.exp-amount .field { flex: 1; }
+.exp-amount .exp-cur { margin-bottom: 1px; }
+.exp-amount .exp-cur button { min-height: 44px; }
