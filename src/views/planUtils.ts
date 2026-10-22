@@ -116,7 +116,7 @@ export function dayEntries(items: PlanItem[], bookings: Booking[], day: number, 
   return [...own, ...bookingEntries(bookings, date)].filter((e) => visible(e.who, mode, mine)).sort(byEntryTime)
 }
 
-/** A day_info.hotel line like "💑 שקד ומאור: Hotel X" belongs to that couple; any other line is for everyone. */
+/** A day_info.hotel line like "שקד ומאור: Hotel X" (older ones start with 💑) belongs to that couple; any other line is for everyone. */
 export function hotelLines(hotel: string | null, couples: string[]) {
   const names = couples.length ? couples : WHO_OPTIONS
   return (hotel ?? '')

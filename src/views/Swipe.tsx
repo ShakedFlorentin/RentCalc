@@ -6,6 +6,7 @@ import { matchFor, mutate, useMediaIndex, useTripTable, withMedia } from '../lib
 import AddPlace from './AddPlace'
 import { Empty, Sheet } from '../ui'
 import { MediaActions } from '../media'
+import { CARD_ICON, Icon } from '../icons'
 
 const LEVELS = [
   { xp: 0, name: 'גאיג׳ין 🐣' },
@@ -312,7 +313,7 @@ function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked
             onError={() => setBroken((b) => new Set(b).add(cur))}
           />
         ) : (
-          <span className="card-emoji" aria-hidden="true">{style.emoji}</span>
+          <Icon as={CARD_ICON[c.category] ?? CARD_ICON.sight} className="card-emoji" size={64} />
         )}
         {top && photos.length > 1 && (
           <>

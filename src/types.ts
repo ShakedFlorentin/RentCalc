@@ -120,32 +120,32 @@ export type ChecklistItem = {
 }
 
 export const CATEGORIES: Record<string, string> = {
-  sight: '⛩️ אטרקציה',
-  food: '🍜 אוכל',
-  shopping: '🛍️ קניות',
-  transport: '🚄 תחבורה',
-  other: '📌 אחר',
+  sight: 'אטרקציה',
+  food: 'אוכל',
+  shopping: 'קניות',
+  transport: 'תחבורה',
+  other: 'אחר',
 }
 
 export const BOOKING_KINDS: Record<string, string> = {
-  flight: '✈️ טיסה',
-  hotel: '🏨 מלון',
-  restaurant: '🍽️ מסעדה',
-  train: '🚄 רכבת',
-  activity: '🎟️ כרטיס / אטרקציה',
-  insurance: '🛡️ ביטוח',
-  other: '📄 אחר',
+  flight: 'טיסה',
+  hotel: 'מלון',
+  restaurant: 'מסעדה',
+  train: 'רכבת',
+  activity: 'כרטיס / אטרקציה',
+  insurance: 'ביטוח',
+  other: 'אחר',
 }
 
 /** Tabs on the bookings screen, one per kind; the first four always show, the rest only when they have bookings. */
 export const BOOKING_TABS: Record<string, string> = {
-  flight: '✈️ טיסות',
-  hotel: '🏨 מלונות',
-  restaurant: '🍽️ מסעדות',
-  activity: '🎟️ אטרקציות',
-  train: '🚄 רכבות',
-  insurance: '🛡️ ביטוח',
-  other: '📄 אחר',
+  flight: 'טיסות',
+  hotel: 'מלונות',
+  restaurant: 'מסעדות',
+  activity: 'אטרקציות',
+  train: 'רכבות',
+  insurance: 'ביטוח',
+  other: 'אחר',
 }
 
 export type Candidate = {
@@ -195,23 +195,24 @@ export const CITY_HE: Record<string, string> = {
   daytrip: 'טיולי יום',
 }
 
-export const CARD_STYLE: Record<string, { emoji: string; label: string; bg: string }> = {
-  food: { emoji: '🍜', label: 'אוכל', bg: 'linear-gradient(135deg,#ff8a5b,#d7263d)' },
-  cafe: { emoji: '🍵', label: 'קפה וקינוחים', bg: 'linear-gradient(135deg,#9bc27a,#3f7d5a)' },
-  sight: { emoji: '⛩️', label: 'אטרקציה', bg: 'linear-gradient(135deg,#ff5f6d,#8e2de2)' },
-  shopping: { emoji: '🛍️', label: 'קניות', bg: 'linear-gradient(135deg,#f7b733,#fc4a1a)' },
-  nightlife: { emoji: '🍶', label: 'חיי לילה', bg: 'linear-gradient(135deg,#4b3f9e,#151032)' },
-  experience: { emoji: '🎌', label: 'חוויה', bg: 'linear-gradient(135deg,#36d1dc,#5b86e5)' },
+/** Card label and the flat colour behind a card that has no photo (icons are in icons.tsx). */
+export const CARD_STYLE: Record<string, { label: string; bg: string }> = {
+  food: { label: 'אוכל', bg: '#8c3b2e' },
+  cafe: { label: 'קפה וקינוחים', bg: '#4d6b4f' },
+  sight: { label: 'אטרקציה', bg: '#5a4a72' },
+  shopping: { label: 'קניות', bg: '#8a6a2f' },
+  nightlife: { label: 'חיי לילה', bg: '#2f3349' },
+  experience: { label: 'חוויה', bg: '#3e6577' },
 }
 
 export const VERDICTS: Record<string, { label: string; tone: string }> = {
-  gem: { label: '💎 פנינה נסתרת', tone: 'good' },
-  worth_it: { label: '👍 שווה את ההייפ', tone: 'good' },
-  overhyped: { label: '😐 מוגזם ברשתות', tone: 'meh' },
-  trap: { label: '🚨 מלכודת תיירים', tone: 'bad' },
+  gem: { label: 'פנינה נסתרת', tone: 'good' },
+  worth_it: { label: 'שווה את ההייפ', tone: 'good' },
+  overhyped: { label: 'מוגזם ברשתות', tone: 'meh' },
+  trap: { label: 'מלכודת תיירים', tone: 'bad' },
 }
 
 export const AUDIENCES: Record<string, string> = {
-  baby: '👶 עם התינוק',
-  adults: '🍸 ערב מבוגרים',
+  baby: 'עם התינוק',
+  adults: 'ערב מבוגרים',
 }

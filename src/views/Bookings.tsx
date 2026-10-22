@@ -442,7 +442,7 @@ function toBase64(file: File): Promise<string> {
 
 /**
  * Write each hotel on the trip nights it covers (needs the trip start date). A couple's hotel becomes its own line,
- * "💑 couple: hotel", so the two couples' hotels sit side by side on nights they stay apart.
+ * "couple: hotel", so the two couples' hotels sit side by side on nights they stay apart.
  */
 async function fillHotelNights(trip: Trip, bookings: Pick<Booking, 'kind' | 'title' | 'starts_at' | 'ends_at' | 'who'>[]) {
   if (!trip.start_date) return
@@ -462,7 +462,7 @@ async function fillHotelNights(trip: Trip, bookings: Pick<Booking, 'kind' | 'tit
     for (const s of stays) {
       // the group's hotel replaces the night; a couple's replaces only that couple's line
       if (!s.who) lines = [s.title]
-      else lines = [...lines.filter((l) => !l.startsWith(`💑 ${s.who}:`)), `💑 ${s.who}: ${s.title}`]
+      else lines = [...lines.filter((l) => !l.replace(/^💑\s*/, '').startsWith(`${s.who}:`)), `${s.who}: ${s.title}`]
     }
     return { trip_id: trip.id, day, hotel: lines.join('\n') }
   })

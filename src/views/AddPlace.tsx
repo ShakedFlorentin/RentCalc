@@ -91,7 +91,7 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
           city: CITY_HE[d.city] ?? d.city,
           category: cat,
           url: social.maps_url,
-          notes: [d.tip, d.baby_notes && '👶 ' + d.baby_notes].filter(Boolean).join('\n') || null,
+          notes: [d.tip, d.baby_notes && 'עם התינוק: ' + d.baby_notes].filter(Boolean).join('\n') || null,
         }),
       )
     }
@@ -194,7 +194,7 @@ function DraftForm(props: {
           <select value={d.category} onChange={set('category')}>
             {Object.entries(CARD_STYLE).map(([k, v]) => (
               <option key={k} value={k}>
-                {v.emoji} {v.label}
+                {v.label}
               </option>
             ))}
           </select>

@@ -598,3 +598,6 @@ html[dir='rtl'] .ja { text-align: right; }
 .tabs-bar .count { min-width: 20px; padding: 0 6px; border-radius: 999px; background: var(--fill); color: var(--text); font-size: 0.75rem; font-weight: 700; text-align: center; }
 .tabs-bar .chip.on .count { background: rgba(255, 255, 255, 0.28); color: inherit; }
 .chip-sep { flex: none; width: 1px; align-self: stretch; margin: 6px 2px; background: var(--line); }
+
+/* line icons from src/icons.tsx: sit on the text baseline and take the text colour */
+.ic { flex: none; vertical-align: -0.17em; }
