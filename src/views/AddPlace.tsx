@@ -43,9 +43,11 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
   const loadTrip = async (): Promise<TripPlaces> => {
     const [deck, list] = await Promise.all([
       supabase.from('candidates').select('id, name, lat, lng').eq('trip_id', tripId),
-      supabase.from('places').select('id, name, lat, lng').eq('trip_id', tripId),
+      supabase.from('places').select('id, name, lat, lng, candidate_id, added_by').eq('trip_id', tripId),
     ])
-    return { deck: deck.data ?? [], list: list.data ?? [] }
+    // hidden demo rows (no candidate, no author) aren't on anyone's list, same rule as the Places view
+    const visible = (list.data ?? []).filter((p) => p.candidate_id || p.added_by)
+    return { deck: deck.data ?? [], list: visible }
   }
   /** The trip's own copy of this place, in the game or on the list, if someone already added it. */
   const findExisting = async (d: Draft, trip?: TripPlaces) => existingIn(trip ?? (await loadTrip()), d)
