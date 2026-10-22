@@ -10,7 +10,7 @@ const cors = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const MODEL = 'claude-opus-5-5'
+const MODEL = 'claude-haiku-5-5'
 
 const PlaceDraft = z.object({
   found: z.boolean(),
@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
         max_tokens: 16000,
         output_config: { effort: 'low' },
         system: RESEARCH,
-        tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 6 }],
+        tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 6 }],
         messages,
       })
       if (research.stop_reason !== 'pause_turn') break
