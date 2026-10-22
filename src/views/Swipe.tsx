@@ -357,7 +357,7 @@ function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked
             <p dir="auto" className="clamp">{c.serves}</p>
           </div>
         )}
-        {c.todo && (
+        {c.todo && !c.serves && (
           <div className="fact">
             <b>🎯 מה עושים שם</b>
             <p dir="auto" className="clamp">{c.todo}</p>
@@ -369,13 +369,13 @@ function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked
             <p dir="auto" className="clamp">{c.special}</p>
           </div>
         )}
-        {c.hype && !c.serves && !c.todo && (
+        {c.hype && !c.serves && !c.todo && !c.special && (
           <div className="fact">
             <b>📱 ברשתות</b>
             <p dir="auto" className="clamp">{c.hype}</p>
           </div>
         )}
-        {c.reality && !c.todo && (
+        {c.reality && !c.todo && !c.special && (
           <div className="fact">
             <b>🔍 בביקורות</b>
             <p dir="auto" className="clamp">{c.reality}</p>
@@ -409,7 +409,7 @@ function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked
               )}
               {c.todo && (
                 <div className="fact">
-                  <b>🎯 מה עושים שם</b>
+                  <b>{c.serves ? '🧾 איך זה עובד' : '🎯 מה עושים שם'}</b>
                   <p dir="auto">{c.todo}</p>
                   {c.time_needed && <p className="muted small">⏱️ {c.time_needed}</p>}
                 </div>
