@@ -3,6 +3,7 @@ import { supabase } from '../supabase'
 import { TOGETHER, type DayInfo, type ItineraryItem, type Member, type Trip } from '../types'
 import { currentDay, dayDate, fmtDay, mutate, useTripTable } from '../lib'
 import { Field, Sheet } from '../ui'
+import type { MoreTab } from './More'
 
 type Props = {
   trip: Trip
@@ -10,10 +11,12 @@ type Props = {
   me: string
   userId: string
   onOpenDay: (d: number) => void
+  /** jump to a section of the "עוד" tab: money, lists, info or baby */
+  onOpenMore: (sub: MoreTab) => void
   onLeave: () => void
 }
 
-export default function Home({ trip, members, me, userId, onOpenDay, onLeave }: Props) {
+export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore, onLeave }: Props) {
   const { rows: days } = useTripTable<DayInfo>('day_info', trip.id, 'day')
   const { rows: items } = useTripTable<ItineraryItem>('itinerary_items', trip.id, 'sort')
   const [editing, setEditing] = useState(false)
@@ -85,6 +88,15 @@ export default function Home({ trip, members, me, userId, onOpenDay, onLeave }: 
           </div>
         </section>
       )}
+
+      <div className="row">
+        <button className="secondary" onClick={() => onOpenMore('info')}>
+          🆘 חשוב
+        </button>
+        <button className="secondary" onClick={() => onOpenMore('money')}>
+          💰 הוצאות
+        </button>
+      </div>
 
       <section className="card">
         <h3>המסלול</h3>

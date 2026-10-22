@@ -9,7 +9,8 @@ import Home from './views/Home'
 import Itinerary from './views/Itinerary'
 import Bookings from './views/Bookings'
 import Places from './views/Places'
-import Lists from './views/Lists'
+import More, { type MoreTab } from './views/More'
+import { useRemembered } from './ui'
 import SwipeGame from './views/Swipe'
 
 const TABS = [
@@ -18,7 +19,7 @@ const TABS = [
   { id: 'plan', label: 'מסלול', d: 'M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1ZM4 10h16M8 3v4M16 3v4' },
   { id: 'bookings', label: 'הזמנות', d: 'M3 8a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v2.5a2 2 0 0 0 0 3.8V16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-2.2a2 2 0 0 0 0-3.8ZM14 7v10' },
   { id: 'places', label: 'מקומות', d: 'M12 21s-6.5-5.8-6.5-11a6.5 6.5 0 0 1 13 0c0 5.2-6.5 11-6.5 11ZM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z' },
-  { id: 'lists', label: 'רשימות', d: 'M9 6h11M9 12h11M9 18h11M3.5 6l1 1 2-2M3.5 12l1 1 2-2M3.5 18l1 1 2-2' },
+  { id: 'more', label: 'עוד', d: 'M4 6h16M4 12h16M4 18h16' },
 ] as const
 type Tab = (typeof TABS)[number]['id']
 
@@ -90,6 +91,7 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
   const [members, setMembers] = useState<Member[]>([])
   const [tab, setTab] = useState<Tab>('home')
   const [day, setDay] = useState(1)
+  const [moreSub, setMoreSub] = useRemembered('moreTab', 'money') as [MoreTab, (s: MoreTab) => void]
   const [failed, setFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
 
@@ -124,6 +126,10 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
     setDay(d)
     setTab('plan')
   }
+  const openMore = (s: MoreTab) => {
+    setMoreSub(s)
+    setTab('more')
+  }
 
   return (
     <div className="app">
@@ -138,13 +144,21 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
       </header>
       <main className={'tab-' + tab}>
         {tab === 'home' && (
-          <Home trip={trip} members={members} me={me} userId={props.userId} onOpenDay={openDay} onLeave={props.onLeave} />
+          <Home
+            trip={trip}
+            members={members}
+            me={me}
+            userId={props.userId}
+            onOpenDay={openDay}
+            onOpenMore={openMore}
+            onLeave={props.onLeave}
+          />
         )}
         {tab === 'swipe' && <SwipeGame trip={trip} userId={props.userId} members={members} />}
         {tab === 'plan' && <Itinerary trip={trip} day={day} setDay={setDay} />}
         {tab === 'bookings' && <Bookings trip={trip} members={members} userId={props.userId} />}
         {tab === 'places' && <Places trip={trip} me={me} userId={props.userId} members={members} />}
-        {tab === 'lists' && <Lists tripId={tripId} members={members} />}
+        {tab === 'more' && <More trip={trip} members={members} userId={props.userId} sub={moreSub} setSub={setMoreSub} />}
       </main>
       <nav className="tabbar" aria-label="ניווט ראשי">
         {TABS.map((t) => (

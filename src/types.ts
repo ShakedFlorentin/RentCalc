@@ -5,6 +5,8 @@ export type Trip = {
   num_days: number
   join_code: string
   match_threshold: number
+  /** shekels per yen, for showing yen expenses in shekels */
+  ils_per_jpy: number
 }
 
 export type Member = { trip_id: string; user_id: string; display_name: string; couple: string | null }
@@ -34,6 +36,39 @@ export type ItineraryItem = {
   done: boolean
   sort: number
   place_id?: string | null
+  /** whose plan it is: a couple, or null for everyone */
+  who?: string | null
+}
+
+/** Must-have info: hotel addresses in Japanese, phone numbers, insurance, documents. */
+export type Essential = {
+  id: string
+  trip_id: string
+  kind: 'hotel' | 'phone' | 'insurance' | 'document' | 'note' | 'other'
+  title: string
+  value: string | null
+  /** a couple's, or null for everyone */
+  who: string | null
+  sort: number
+}
+
+/**
+ * A shared expense split equally among `split_among` (user ids), or a settlement: `paid_by` paid the one person in
+ * `split_among` back.
+ */
+export type Expense = {
+  id: string
+  trip_id: string
+  kind: 'expense' | 'settlement'
+  title: string
+  amount: number
+  currency: 'JPY' | 'ILS'
+  paid_by: string
+  split_among: string[]
+  category: string | null
+  spent_on: string
+  created_by: string | null
+  created_at: string
 }
 
 export type Booking = {
