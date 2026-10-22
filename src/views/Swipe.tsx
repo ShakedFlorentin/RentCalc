@@ -1,6 +1,6 @@
 import { PointerEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../supabase'
-import { CARD_STYLE, CITY_HE, VERDICTS, type Candidate, type Member, type Swipe, type Trip } from '../types'
+import { AUDIENCES, CARD_STYLE, CITY_HE, VERDICTS, type Candidate, type Member, type Swipe, type Trip } from '../types'
 import { mutate, useTripTable } from '../lib'
 import { Empty } from '../ui'
 
@@ -18,6 +18,7 @@ export default function SwipeGame({ trip, userId, members }: Props) {
   const { rows: candidates, loading } = useTripTable<Candidate>('candidates', trip.id)
   const { rows: swipes, reload: reloadSwipes } = useTripTable<Swipe>('swipes', trip.id)
   const [city, setCity] = useState('')
+  const [aud, setAud] = useState('')
   const [match, setMatch] = useState<{ c: Candidate; names: string[] } | null>(null)
   const [history, setHistory] = useState<string[]>([])
   const knownMatches = useRef<Set<string> | null>(null)
@@ -54,7 +55,7 @@ export default function SwipeGame({ trip, userId, members }: Props) {
   const mine = new Set(swipes.filter((s) => s.user_id === userId).map((s) => s.candidate_id))
   const cities = Object.keys(CITY_HE).filter((c) => candidates.some((x) => x.city === c))
   const deck = candidates
-    .filter((c) => !mine.has(c.id) && (!city || c.city === city))
+    .filter((c) => !mine.has(c.id) && (!city || c.city === city) && (!aud || c.audience === aud))
     .sort((a, b) => hash(a.id + userId) - hash(b.id + userId))
 
   const swipe = async (c: Candidate, liked: boolean) => {
@@ -124,6 +125,17 @@ export default function SwipeGame({ trip, userId, members }: Props) {
         {cities.map((c) => (
           <button key={c} className={'chip' + (city === c ? ' on' : '')} onClick={() => setCity(c)}>
             {CITY_HE[c]}
+          </button>
+        ))}
+      </div>
+
+      <div className="segmented">
+        <button className={!aud ? 'on' : ''} onClick={() => setAud('')}>
+          הכל
+        </button>
+        {Object.entries(AUDIENCES).map(([k, v]) => (
+          <button key={k} className={aud === k ? 'on' : ''} onClick={() => setAud(k)}>
+            {v}
           </button>
         ))}
       </div>
@@ -234,7 +246,10 @@ function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked
         </div>
       </div>
       <div className="card-info">
-        {verdict && <div className={'verdict ' + verdict.tone}>{verdict.label}</div>}
+        <div className="row">
+          {verdict && <div className={'verdict ' + verdict.tone}>{verdict.label}</div>}
+          {c.audience && <div className={'verdict aud-' + c.audience}>{AUDIENCES[c.audience]}</div>}
+        </div>
         <div className="scores">
           {c.tabelog_score != null && <span>Tabelog ⭐ {c.tabelog_score}</span>}
           {c.google_score != null && <span>Google ⭐ {c.google_score}</span>}
@@ -249,6 +264,12 @@ function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked
           <div>
             <b>🔍 בביקורות:</b>
             <div dir="auto">{c.reality}</div>
+          </div>
+        )}
+        {c.baby_notes && (
+          <div>
+            <b>{c.audience === 'adults' ? '🍸 למה בלי התינוק:' : '👶 עם תינוק:'}</b>
+            <div dir="auto">{c.baby_notes}</div>
           </div>
         )}
         {more && c.tip && (

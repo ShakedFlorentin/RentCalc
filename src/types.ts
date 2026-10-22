@@ -60,6 +60,7 @@ export type Place = {
   lat: number | null
   lng: number | null
   verdict: string | null
+  audience: string | null
 }
 
 export type ChecklistItem = {
@@ -107,6 +108,8 @@ export type Candidate = {
   tip: string | null
   sources: string[]
   added_by: string | null
+  audience: string | null
+  baby_notes: string | null
 }
 
 export type Swipe = { trip_id: string; candidate_id: string; user_id: string; liked: boolean; created_at: string }
@@ -133,4 +136,9 @@ export const VERDICTS: Record<string, { label: string; tone: string }> = {
   worth_it: { label: '👍 שווה את ההייפ', tone: 'good' },
   overhyped: { label: '😐 מוגזם ברשתות', tone: 'meh' },
   trap: { label: '🚨 מלכודת תיירים', tone: 'bad' },
+}
+
+export const AUDIENCES: Record<string, string> = {
+  baby: '👶 עם התינוק',
+  adults: '🍸 ערב מבוגרים',
 }

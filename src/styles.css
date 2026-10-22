@@ -379,3 +379,13 @@ main { padding: 14px 16px calc(96px + env(safe-area-inset-bottom)); }
 .pin { width: 22px; height: 22px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4); }
 .pin.visited { opacity: 0.45; }
 .tabbar button { max-width: 110px; }
+
+.verdict.aud-baby { background: #e6f0ff; color: #1d4ed8; }
+.verdict.aud-adults { background: #f3e8ff; color: #7e22ce; }
+@media (prefers-color-scheme: dark) {
+  .verdict.good { background: #16351f; color: #7dd3a0; }
+  .verdict.meh { background: #3a2f12; color: #f5c96b; }
+  .verdict.bad { background: #3d1418; color: #ff8a95; }
+  .verdict.aud-baby { background: #172554; color: #93c5fd; }
+  .verdict.aud-adults { background: #2e1065; color: #d8b4fe; }
+}

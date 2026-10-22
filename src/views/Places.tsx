@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { supabase } from '../supabase'
-import { CATEGORIES, VERDICTS, type DayInfo, type ItineraryItem, type Place, type Trip } from '../types'
+import { AUDIENCES, CATEGORIES, VERDICTS, type DayInfo, type ItineraryItem, type Place, type Trip } from '../types'
 import { mapsUrl, mutate, useTripTable } from '../lib'
 import { Empty, Field, Sheet } from '../ui'
 import PlacesMap from './PlacesMap'
@@ -14,6 +14,7 @@ export default function Places({ trip, me }: { trip: Trip; me: string }) {
   const [view, setView] = useState<'list' | 'map'>('list')
   const [city, setCity] = useState('')
   const [cat, setCat] = useState('')
+  const [aud, setAud] = useState('')
   const [edit, setEdit] = useState<Partial<Place> | null>(null)
   const [planning, setPlanning] = useState<Place | null>(null)
   const [picked, setPicked] = useState<Place | null>(null)
@@ -21,7 +22,9 @@ export default function Places({ trip, me }: { trip: Trip; me: string }) {
 
   const cities = [...new Set(rows.map((p) => p.city).filter(Boolean))] as string[]
   cities.sort((a, b) => rank(a) - rank(b))
-  const shown = rows.filter((p) => (!city || p.city === city) && (!cat || p.category === cat))
+  const shown = rows.filter(
+    (p) => (!city || p.city === city) && (!cat || p.category === cat) && (!aud || p.audience === aud),
+  )
   const plannedIds = new Set(items.map((i) => i.place_id).filter(Boolean))
 
   // city → area → places
@@ -54,6 +57,16 @@ export default function Places({ trip, me }: { trip: Trip; me: string }) {
         <button className={view === 'map' ? 'on' : ''} onClick={() => setView('map')}>
           🗺️ מפה
         </button>
+      </div>
+      <div className="segmented">
+        <button className={!aud ? 'on' : ''} onClick={() => setAud('')}>
+          הכל
+        </button>
+        {Object.entries(AUDIENCES).map(([k, v]) => (
+          <button key={k} className={aud === k ? 'on' : ''} onClick={() => setAud(k)}>
+            {v}
+          </button>
+        ))}
       </div>
       <div className="chips scroll">
         <button className={'chip' + (!city ? ' on' : '')} onClick={() => setCity('')}>
@@ -136,7 +149,8 @@ function PlaceRow(props: { p: Place; planned: boolean; onEdit: (p: Place) => voi
           {p.name}
         </div>
         <div className="muted small">
-          {CATEGORIES[p.category]?.split(' ')[0]} {p.verdict && VERDICTS[p.verdict]?.label}
+          {CATEGORIES[p.category]?.split(' ')[0]} {p.audience && AUDIENCES[p.audience].split(' ')[0]}{' '}
+          {p.verdict && VERDICTS[p.verdict]?.label}
           {p.added_by && ` · ${p.added_by}`}
           {props.planned && ' · 🗓️ במסלול'}
         </div>
@@ -217,6 +231,7 @@ function PlaceForm(props: { tripId: string; me: string; place: Partial<Place>; o
       city: f.city || null,
       area: f.area || null,
       category: f.category ?? 'other',
+      audience: f.audience || null,
       url: f.url || null,
       notes: f.notes || null,
     }
@@ -259,6 +274,16 @@ function PlaceForm(props: { tripId: string; me: string; place: Partial<Place>; o
           <option key={c} value={c} />
         ))}
       </datalist>
+      <Field label="למי זה מתאים?">
+        <select value={f.audience ?? ''} onChange={set('audience')}>
+          <option value="">—</option>
+          {Object.entries(AUDIENCES).map(([k, v]) => (
+            <option key={k} value={k}>
+              {v}
+            </option>
+          ))}
+        </select>
+      </Field>
       <Field label="קישור (Google Maps / אתר / טיקטוק)">
         <input type="url" value={f.url ?? ''} onChange={set('url')} dir="ltr" />
       </Field>
