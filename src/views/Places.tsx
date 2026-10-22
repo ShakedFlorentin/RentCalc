@@ -5,10 +5,11 @@ import { mapsUrl, mutate, useMediaIndex, useTripTable, withMedia } from '../lib'
 import { Empty, Field, Sheet } from '../ui'
 import { MediaActions, Thumb } from '../media'
 import PlacesMap from './PlacesMap'
+import AddPlace from './AddPlace'
 
 const CITY_ORDER = ['טוקיו', 'קיוטו', 'נארה', 'אוסקה', 'טיול יום']
 
-export default function Places({ trip, me }: { trip: Trip; me: string }) {
+export default function Places({ trip, me, userId }: { trip: Trip; me: string; userId: string }) {
   const { rows: rawRows, loading } = useTripTable<Place>('places', trip.id)
   const media = useMediaIndex()
   // places with neither a match nor an author were pre-seeded with the trip, before anyone chose anything
@@ -23,6 +24,7 @@ export default function Places({ trip, me }: { trip: Trip; me: string }) {
   const [cat, setCat] = useState('')
   const [aud, setAud] = useState('')
   const [edit, setEdit] = useState<Partial<Place> | null>(null)
+  const [adding, setAdding] = useState(false)
   const [planning, setPlanning] = useState<Place | null>(null)
   const [picked, setPicked] = useState<Place | null>(null)
   const onPick = useCallback((p: Place) => setPicked(p), [])
@@ -130,9 +132,10 @@ export default function Places({ trip, me }: { trip: Trip; me: string }) {
         </>
       )}
 
-      <button className="fab" aria-label="הוספת מקום" onClick={() => setEdit({ category: 'food', city: city || null })}>
+      <button className="fab" aria-label="הוספת מקום" onClick={() => setAdding(true)}>
         ＋
       </button>
+      {adding && <AddPlace tripId={trip.id} userId={userId} me={me} defaultTo="list" onClose={() => setAdding(false)} />}
       {edit && <PlaceForm tripId={trip.id} me={me} place={edit} onClose={() => setEdit(null)} />}
       {planning && <AddToDay trip={trip} place={planning} onClose={() => setPlanning(null)} />}
     </div>

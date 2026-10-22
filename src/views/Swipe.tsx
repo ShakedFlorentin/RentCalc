@@ -2,6 +2,7 @@ import { PointerEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../supabase'
 import { AUDIENCES, CARD_STYLE, CITY_HE, VERDICTS, type Candidate, type Member, type Swipe, type Trip } from '../types'
 import { mutate, useMediaIndex, useTripTable, withMedia } from '../lib'
+import AddPlace from './AddPlace'
 import { Empty, Sheet } from '../ui'
 import { MediaActions } from '../media'
 
@@ -91,6 +92,8 @@ export default function SwipeGame({ trip, userId, members }: Props) {
   const nextLevel = meRow ? LEVELS.find((l) => l.xp > meRow.xp) : undefined
   const levelPct = meRow ? (nextLevel ? ((meRow.xp - meRow.level.xp) / (nextLevel.xp - meRow.level.xp)) * 100 : 100) : 0
   const [boardOpen, setBoardOpen] = useState(false)
+  const [adding, setAdding] = useState(false)
+  const me = members.find((m) => m.user_id === userId)?.display_name ?? ''
 
   return (
     <div className="swipe-screen">
@@ -111,6 +114,9 @@ export default function SwipeGame({ trip, userId, members }: Props) {
       </button>
 
       <div className="chips scroll filters" role="group" aria-label="סינון">
+        <button className="chip add-chip" onClick={() => setAdding(true)}>
+          ＋ הצעת מקום
+        </button>
         <button className={'chip' + (!city && !aud ? ' on' : '')} aria-pressed={!city && !aud} onClick={() => (setCity(''), setAud(''))}>
           הכל
         </button>
@@ -126,6 +132,8 @@ export default function SwipeGame({ trip, userId, members }: Props) {
           </button>
         ))}
       </div>
+
+      {adding && <AddPlace tripId={trip.id} userId={userId} me={me} defaultTo="deck" onClose={() => setAdding(false)} />}
 
       {boardOpen && (
         <Sheet title="🏆 טבלת השחקנים" onClose={() => setBoardOpen(false)}>

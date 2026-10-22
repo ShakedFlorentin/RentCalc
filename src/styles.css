@@ -564,3 +564,4 @@ html[dir='rtl'] .ja { text-align: right; }
   .backdrop { background: rgba(0, 0, 0, 0.6); }
   @media (prefers-contrast: more) { :root { --line: #8a8378; --muted: #d2cbbf; } }
 }
+.chip.add-chip { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
