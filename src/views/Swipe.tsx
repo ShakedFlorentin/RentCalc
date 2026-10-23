@@ -1,12 +1,12 @@
 import { PointerEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../supabase'
-import { AUDIENCES, CARD_STYLE, CITY_HE, VERDICTS, type Candidate, type Member, type Swipe, type Trip } from '../types'
+import { AUDIENCES, CARD_STYLE, CITY_HE, KOSHER, VERDICTS, type Candidate, type Member, type Swipe, type Trip } from '../types'
 import { matchFor, mutate, useMediaIndex, useTripTable, withMedia } from '../lib'
 import AddPlace from './AddPlace'
 import { Empty, Sheet } from '../ui'
 import { MediaActions } from '../media'
-import { ChevronLeft, ChevronUp, Heart, Lightbulb, MapPin, MessageSquare, Plus, ReceiptText, Search, Sparkles, Star, Target, Timer, Users, Utensils, Wine, Baby } from 'lucide-react'
+import { ChevronLeft, ChevronUp, Heart, Lightbulb, MapPin, MessageSquare, Plus, ReceiptText, Search, Sparkles, Star, Target, Timer, Users, Utensils, UtensilsCrossed, Wine, Baby } from 'lucide-react'
 import { AUDIENCE_ICON, CARD_ICON, Icon, type LucideIcon } from '../icons'
 import '../styles/game.css'
 
@@ -420,6 +420,12 @@ function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked
                   )}
                 </div>
               )}
+              {c.kosher_note && (
+                <div className="fact">
+                  <Label icon={UtensilsCrossed}>כשרות (בלי חזיר ופירות ים)</Label>
+                  <p dir="auto">{c.kosher_note}</p>
+                </div>
+              )}
               {c.todo && (
                 <div className="fact">
                   {c.serves ? <Label icon={ReceiptText}>איך זה עובד</Label> : <Label icon={Target}>מה עושים שם</Label>}
@@ -496,6 +502,7 @@ function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked
 
 function Tags({ c }: { c: Candidate }) {
   const verdict = c.verdict ? VERDICTS[c.verdict] : null
+  const kosher = c.kosher ? KOSHER[c.kosher] : null
   return (
     <>
       <div className="row tags">
@@ -503,6 +510,11 @@ function Tags({ c }: { c: Candidate }) {
         {c.audience && (
           <div className={'verdict aud-' + c.audience}>
             {AUDIENCE_ICON[c.audience] && <Icon as={AUDIENCE_ICON[c.audience]} />} {AUDIENCES[c.audience]}
+          </div>
+        )}
+        {kosher && (
+          <div className={'verdict ' + kosher.tone}>
+            <Icon as={UtensilsCrossed} /> {kosher.label}
           </div>
         )}
         {c.local_pick && (

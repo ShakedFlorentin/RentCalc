@@ -160,6 +160,9 @@ export type Candidate = {
   special?: string | null
   highlights?: string[] | null
   time_needed?: string | null
+  /** for food, cafes and bars: how easy it is to eat there without pork or seafood, and what to order */
+  kosher?: 'friendly' | 'options' | 'hard' | null
+  kosher_note?: string | null
   name_ja: string | null
   city: string
   area: string | null
@@ -210,6 +213,13 @@ export const VERDICTS: Record<string, { label: string; tone: string }> = {
   worth_it: { label: 'שווה את ההייפ', tone: 'good' },
   overhyped: { label: 'מוגזם ברשתות', tone: 'meh' },
   trap: { label: 'מלכודת תיירים', tone: 'bad' },
+}
+
+// no place in Japan is certified, so these describe eating without pork or seafood
+export const KOSHER: Record<string, { label: string; tone: string }> = {
+  friendly: { label: 'ידידותי לכשרות', tone: 'good' },
+  options: { label: 'יש אפשרויות כשרות', tone: 'meh' },
+  hard: { label: 'קשה לשומרי כשרות', tone: 'bad' },
 }
 
 export const AUDIENCES: Record<string, string> = {

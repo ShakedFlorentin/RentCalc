@@ -170,6 +170,9 @@ type MediaEntry = {
   special?: string
   highlights?: string[]
   time_needed?: string
+  // how easy it is to eat there without pork or seafood
+  kosher?: 'friendly' | 'options' | 'hard'
+  kosher_note?: string
 }
 let mediaCache: Promise<Record<string, MediaEntry>> | null = null
 
@@ -216,6 +219,8 @@ export function withMedia<T extends { name: string }>(row: T, index: Record<stri
           special: m.special ?? r.special,
           highlights: m.highlights ?? r.highlights,
           time_needed: m.time_needed ?? r.time_needed,
+          kosher: m.kosher ?? r.kosher,
+          kosher_note: m.kosher_note ?? r.kosher_note,
         }
       : {}),
   }

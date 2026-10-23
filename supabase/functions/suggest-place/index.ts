@@ -37,6 +37,8 @@ const PlaceDraft = z.object({
   special: z.string().nullable(),
   highlights: z.array(z.string()),
   time_needed: z.string().nullable(),
+  kosher: z.enum(['friendly', 'options', 'hard']).nullable(),
+  kosher_note: z.string().nullable(),
   sources: z.array(z.string()),
 })
 // a post can be a roundup ("10 ramen spots in Tokyo"), so the answer is a list; empty when nothing was identified
@@ -52,6 +54,7 @@ If the post names several places (a list or roundup), identify each one (up to 1
 - for a restaurant, cafe or bar: what it serves (cuisine, signature dishes or drinks, format such as counter course or street stall)
 - for anything else (sight, experience, shopping): what you actually do there, what makes it special, what not to miss, and how long a visit takes
 - price level, booking/queue tips
+- for food, cafes and bars: whether you can eat there without pork (incl. pork broth, lard, chashu) or seafood (shellfish, shrimp, crab, octopus, squid, eel, sea urchin); fish with fins and scales is fine. Name what to order or what to avoid
 - with a milk-only baby: stroller access, a quiet spot or private room to nurse, nursing room nearby, smoking; or why it's better as an adults-only outing
 - honest verdict: hidden gem, worth it, overhyped, or tourist trap
 If you only have a link with no caption, search for the post itself (its URL, its code and the account) to find which places it shows.
@@ -62,6 +65,7 @@ const EXTRACT = `Turn the research notes into place cards, one per real place th
 - hype, reality, tip, baby_notes, price: one short sentence each in natural, casual Hebrew; keep place names, brand names (Tabelog, Google) and numbers as they are.
 - serves: for a restaurant, cafe or bar, one or two short Hebrew sentences on what it serves, explaining Japanese dish names in plain words (e.g. "אוקונומיאקי (פנקייק כרוב על הפלנצ׳ה)"); null for other places. dishes: 2-4 signature items as short Hebrew labels, or [].
 - todo / special / highlights / time_needed: for sights, experiences and shopping (null / [] for restaurants, cafes and bars). todo: 2-3 Hebrew sentences on what you actually do there, as a visit plays out. special: 1-2 Hebrew sentences on what sets it apart, specific rather than generic praise. highlights: 2-4 short Hebrew labels of what not to miss. time_needed: e.g. "שעה-שעתיים" or "חצי יום".
+- kosher / kosher_note: for a restaurant, cafe or bar only (null for other places). kosher is "friendly" when most of the menu has no pork or seafood (fish with fins and scales is fine), "options" when there are good dishes without them but you must choose, "hard" when the core of the place is pork or seafood. kosher_note: one short Hebrew sentence on what to order or avoid. Never claim kosher certification.
 - tabelog_score / google_score / lat / lng: only if stated in the notes, else null.
 - audience: "baby" if it works with the baby, otherwise "adults".
 - sources: the URLs the notes relied on.
