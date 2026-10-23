@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import type { Place } from '../types'
+import type { GuidePlace, Place } from '../types'
 
 const PIN_COLORS: Record<string, string> = {
   food: '#d7263d',
@@ -11,10 +11,19 @@ const PIN_COLORS: Record<string, string> = {
   other: '#3f7d5a',
 }
 
-export default function PlacesMap({ places, onPick }: { places: Place[]; onPick: (p: Place) => void }) {
+type Props = {
+  places: Place[]
+  onPick: (p: Place) => void
+  /** a guide's places, drawn as small dots under the trip's own pins */
+  guide?: GuidePlace[]
+  onPickGuide?: (g: GuidePlace) => void
+}
+
+export default function PlacesMap({ places, onPick, guide = [], onPickGuide }: Props) {
   const el = useRef<HTMLDivElement>(null)
   const map = useRef<L.Map | null>(null)
   const layer = useRef<L.LayerGroup | null>(null)
+  const guideLayer = useRef<L.LayerGroup | null>(null)
   const fitted = useRef('')
 
   useEffect(() => {
@@ -24,6 +33,7 @@ export default function PlacesMap({ places, onPick }: { places: Place[]; onPick:
       maxZoom: 19,
       attribution: '© OpenStreetMap',
     }).addTo(map.current)
+    guideLayer.current = L.layerGroup().addTo(map.current)
     layer.current = L.layerGroup().addTo(map.current)
     return () => {
       map.current?.remove()
@@ -52,6 +62,20 @@ export default function PlacesMap({ places, onPick }: { places: Place[]; onPick:
       map.current.fitBounds(L.latLngBounds(pts.map((p) => [p.lat!, p.lng!])), { padding: [30, 30], maxZoom: 15 })
     }
   }, [places, onPick])
+
+  useEffect(() => {
+    if (!map.current || !guideLayer.current) return
+    guideLayer.current.clearLayers()
+    const icon = L.divIcon({ className: '', html: '<div class="pin guide"></div>', iconSize: [14, 14], iconAnchor: [7, 7] })
+    for (const g of guide) {
+      L.marker([g.lat, g.lng], { icon, title: g.name }).on('click', () => onPickGuide?.(g)).addTo(guideLayer.current)
+    }
+    // with no trip pins to frame, frame the guide instead
+    if (guide.length && !places.some((p) => p.lat != null) && fitted.current !== 'guide') {
+      fitted.current = 'guide'
+      map.current.fitBounds(L.latLngBounds(guide.map((g) => [g.lat, g.lng])), { padding: [30, 30], maxZoom: 15 })
+    }
+  }, [guide, onPickGuide, places])
 
   return <div ref={el} className="map" />
 }

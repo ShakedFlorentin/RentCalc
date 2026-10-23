@@ -1,8 +1,8 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../supabase'
-import { AUDIENCES, CATEGORIES, VERDICTS, type DayInfo, type ItineraryItem, type Member, type Place, type Trip } from '../types'
+import { AUDIENCES, CATEGORIES, VERDICTS, type DayInfo, type GuidePlace, type ItineraryItem, type Member, type Place, type Trip } from '../types'
 import { couplesOf, mapsUrl, mutate, useMediaIndex, useTripTable, withMedia } from '../lib'
-import { CalendarCheck, CalendarPlus, Check, List, Map as MapIcon, MapPin, Plus, Users, Wand2 } from 'lucide-react'
+import { BookOpen, CalendarCheck, CalendarPlus, Check, Heart, List, Map as MapIcon, MapPin, Plus, Users, Wand2 } from 'lucide-react'
 import { Empty, Field, LoadNote, Sheet, useRemembered } from '../ui'
 import { AUDIENCE_ICON, CATEGORY_ICON, Icon } from '../icons'
 import '../styles/game.css'
@@ -18,6 +18,13 @@ const PLACE_TABS: Record<string, string> = {
   transport: 'תחבורה',
   other: 'אחר',
 }
+
+// the Ptitim map's folders, filed under the Places tabs
+const GUIDE_TAB: Record<string, string> = { 'חנויות': 'shopping', 'איזורים ואתרים': 'sight' }
+const guideTab = (g: GuidePlace) => GUIDE_TAB[g.folder] ?? 'food'
+const guideCategory = (g: GuidePlace) =>
+  g.folder === 'חנויות' ? 'shopping' : g.folder === 'איזורים ואתרים' ? 'sight' : g.folder.startsWith('קפה') ? 'cafe' : 'food'
+const PTITIM_URL = 'https://www.ptitim.com/tokyoguide'
 
 const CITY_ORDER = ['טוקיו', 'קיוטו', 'נארה', 'אוסקה', 'טיולי יום', 'טיול יום']
 
@@ -49,8 +56,31 @@ export default function Places({ trip, me, userId, members }: Props) {
   const [planning, setPlanning] = useState<Place | null>(null)
   // keep the id, not the row, so the card under the map shows live data (visited, edits, deletion)
   const [pickedId, setPickedId] = useState<string | null>(null)
-  const onPick = useCallback((p: Place) => setPickedId(p.id), [])
+  const onPick = useCallback((p: Place) => {
+    setPickedId(p.id)
+    setGuidePick(null)
+  }, [])
   const picked = rows.find((p) => p.id === pickedId) ?? null
+  // the Ptitim blog's Tokyo map as an optional layer, loaded the first time it's turned on
+  const [showGuide, setShowGuide] = useRemembered('guideLayer', '')
+  const [guide, setGuide] = useState<GuidePlace[]>([])
+  const [guidePick, setGuidePick] = useState<GuidePlace | null>(null)
+  const onPickGuide = useCallback((g: GuidePlace) => {
+    setPickedId(null)
+    setGuidePick(g)
+  }, [])
+  useEffect(() => {
+    if (!showGuide || guide.length) return
+    supabase
+      .from('guide_places')
+      .select('id, source, folder, name, note, lat, lng')
+      .then(({ data }) => setGuide((data as GuidePlace[]) ?? []))
+  }, [showGuide, guide.length])
+  const guideShown = useMemo(() => {
+    if (!showGuide || (city && city !== 'טוקיו')) return []
+    const mine = new Set(rows.map((p) => p.name.toLowerCase()))
+    return guide.filter((g) => (!cat || guideTab(g) === cat) && !mine.has(g.name.toLowerCase()))
+  }, [showGuide, guide, city, rows, cat])
 
   const cities = [...new Set(rows.map((p) => p.city).filter(Boolean))] as string[]
   cities.sort((a, b) => rank(a) - rank(b))
@@ -149,7 +179,13 @@ export default function Places({ trip, me, userId, members }: Props) {
 
       {view === 'map' ? (
         <>
-          <PlacesMap places={shown} onPick={onPick} />
+          <PlacesMap places={shown} onPick={onPick} guide={guideShown} onPickGuide={onPickGuide} />
+          <button className={'chip' + (showGuide ? ' on' : '')} aria-pressed={!!showGuide} onClick={() => setShowGuide(showGuide ? '' : '1')}>
+            <Icon as={BookOpen} /> המפה של פתיתים {showGuide && guideShown.length ? `(${guideShown.length})` : ''}
+          </button>
+          {guidePick && !picked && (
+            <GuideCard g={guidePick} tripId={trip.id} userId={userId} me={me} onClose={() => setGuidePick(null)} />
+          )}
           {picked && (
             <PlaceRow p={picked} planned={plannedIds.has(picked.id)} onEdit={setEdit} onPlan={setPlanning} />
           )}
@@ -438,5 +474,62 @@ function AddToDay(props: { trip: Trip; place: Place; onClose: () => void }) {
         הוספה
       </button>
     </Sheet>
+  )
+}
+
+/** A place from the Ptitim map: Gal's note, a link, and a way to put it in the game. */
+function GuideCard({ g, tripId, userId, me, onClose }: { g: GuidePlace; tripId: string; userId: string; me: string; onClose: () => void }) {
+  const [state, setState] = useState<'' | 'busy' | 'added' | 'there'>('')
+  useEffect(() => setState(''), [g.id])
+  const suggest = async () => {
+    setState('busy')
+    const { data, error } = await supabase
+      .from('candidates')
+      .insert({
+        trip_id: tripId,
+        name: g.name,
+        city: 'tokyo',
+        category: guideCategory(g),
+        lat: g.lat,
+        lng: g.lng,
+        hype: g.note ? 'גל מפתיתים: ' + g.note.replace(/\s*\n\s*/g, ' ') : null,
+        sources: [PTITIM_URL],
+        added_by: me,
+      })
+      .select('id')
+      .single()
+    // 23505: it's already in the game under the same name
+    if (error) {
+      setState(error.code === '23505' ? 'there' : '')
+      if (error.code !== '23505') alert('שגיאה: ' + error.message)
+      return
+    }
+    await supabase.from('swipes').insert({ trip_id: tripId, candidate_id: data.id, user_id: userId, liked: true })
+    setState('added')
+  }
+  return (
+    <div className="card place-row stack">
+      <div className="row">
+        <b dir="auto">{g.name}</b>
+        <span className="muted small">{g.folder}</span>
+      </div>
+      {g.note && <p dir="auto" className="small" style={{ whiteSpace: 'pre-line' }}>{g.note}</p>}
+      <div className="row">
+        <a className="chip" href={mapsUrl(g.name + ' Tokyo')} target="_blank" rel="noreferrer">
+          <Icon as={MapPin} /> גוגל מפות
+        </a>
+        {state === 'added' ? (
+          <span className="small">נוסף למשחק עם הלייק שלך</span>
+        ) : state === 'there' ? (
+          <span className="small">כבר במשחק</span>
+        ) : (
+          <button className="chip" disabled={state === 'busy'} onClick={suggest}>
+            <Icon as={Heart} /> הצעה במשחק
+          </button>
+        )}
+        <button className="link small" onClick={onClose}>סגירה</button>
+      </div>
+      <a className="small muted" href={PTITIM_URL} target="_blank" rel="noreferrer">מתוך המדריך של פתיתים</a>
+    </div>
   )
 }

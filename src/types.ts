@@ -148,6 +148,17 @@ export const BOOKING_TABS: Record<string, string> = {
   other: 'אחר',
 }
 
+/** A place from a published guide map (e.g. the Ptitim blog's Tokyo map), shown as an optional map layer. */
+export type GuidePlace = {
+  id: number
+  source: string
+  folder: string
+  name: string
+  note: string | null
+  lat: number
+  lng: number
+}
+
 export type Candidate = {
   id: string
   trip_id: string
