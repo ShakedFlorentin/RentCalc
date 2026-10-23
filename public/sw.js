@@ -34,7 +34,8 @@ self.addEventListener('fetch', (e) => {
   const req = e.request
   if (req.method !== 'GET') return
   const u = new URL(req.url)
-  if (u.hostname.endsWith('tile.openstreetmap.org')) e.respondWith(tile(req))
+  if (u.hostname.endsWith('tile.openstreetmap.org') || (u.hostname === 'server.arcgisonline.com' && u.pathname.includes('/tile/')))
+    e.respondWith(tile(req))
   else if (u.origin !== self.location.origin) return
   else if (req.mode === 'navigate') e.respondWith(page(req))
   else e.respondWith(asset(e, req, u))
@@ -81,7 +82,7 @@ async function tile(req) {
   const hit = await cache.match(req.url)
   if (hit) return hit
   try {
-    // <img> tiles arrive as opaque no-cors responses, which count for megabytes of quota each; OSM allows CORS
+    // <img> tiles arrive as opaque no-cors responses, which count for megabytes of quota each; OSM and Esri allow CORS
     const res = await fetch(req.url, { mode: 'cors' })
     if (res.ok) {
       await cache.put(req.url, res.clone())

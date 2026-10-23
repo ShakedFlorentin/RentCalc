@@ -29,9 +29,11 @@ export default function PlacesMap({ places, onPick, guide = [], onPickGuide }: P
   useEffect(() => {
     map.current = L.map(el.current!, { zoomControl: false }).setView([35.0, 136.5], 6)
     L.control.zoom({ position: 'bottomleft' }).addTo(map.current)
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    // no tile service has Hebrew names for Tokyo's streets and areas; Esri's street map labels Japan in English
+    // instead of OpenStreetMap's Japanese
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
       maxZoom: 19,
-      attribution: '© OpenStreetMap',
+      attribution: 'Tiles © Esri',
     }).addTo(map.current)
     guideLayer.current = L.layerGroup().addTo(map.current)
     layer.current = L.layerGroup().addTo(map.current)
