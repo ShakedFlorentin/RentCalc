@@ -1,11 +1,10 @@
 import { Fragment, useEffect, useState } from 'react'
-import { Check, Download, Link as LinkIcon, Mail, Map as MapIcon, Paperclip, Plus, Users } from 'lucide-react'
+import { Check, Download, Link as LinkIcon, Mail, Map as MapIcon, Paperclip, Pencil, Plus, Users } from 'lucide-react'
 import { supabase } from '../supabase'
 import { BOOKING_KINDS, BOOKING_TABS, TOGETHER, type Booking, type Member, type Trip } from '../types'
 import { aiError, couplesOf, normName, fmtDateTime, fromInputDateTime, mapsUrl, mutate, toInputDateTime, useTripTable } from '../lib'
 import { Empty, Field, LoadNote, Sheet, Tabs, useRemembered } from '../ui'
 import { BOOKING_ICON, Icon } from '../icons'
-import { stripMarker } from './planUtils'
 
 type Props = { trip: Trip; members: Member[]; userId: string }
 
@@ -101,6 +100,9 @@ export default function Bookings({ trip, members, userId }: Props) {
                     </a>
                   )}
                   {b.file_path && <DocButtons path={b.file_path} />}
+                  <button className="pill" onClick={() => setEdit(b)}>
+                    <Icon as={Pencil} /> עריכה
+                  </button>
                 </div>
               </div>
           </Fragment>
@@ -252,7 +254,6 @@ function BookingForm(props: { trip: Trip; couples: string[]; booking: Partial<Bo
     if (ok) {
       // the old attachment goes only once the row points at the new one
       if (file && f.file_path) await supabase.storage.from('docs').remove([f.file_path])
-      if (row.kind === 'hotel') await fillHotelNights(props.trip, [row])
     } else if (file && filePath) {
       await supabase.storage.from('docs').remove([filePath])
     }
@@ -410,7 +411,6 @@ function ImportSheet(props: { trip: Trip; couples: string[]; myCouple: string | 
       ),
     )
     if (ok) {
-      await fillHotelNights(trip, fresh)
       setSkipped(skipped)
       setDone(fresh.map((b) => ({ kind: b.kind, title: b.title })))
     }
@@ -491,28 +491,3 @@ function toBase64(file: File): Promise<string> {
  * Write each hotel on the trip nights it covers (needs the trip start date). A couple's hotel becomes its own line,
  * "couple: hotel", so the two couples' hotels sit side by side on nights they stay apart.
  */
-async function fillHotelNights(trip: Trip, bookings: Pick<Booking, 'kind' | 'title' | 'starts_at' | 'ends_at' | 'who'>[]) {
-  if (!trip.start_date) return
-  const day1 = Date.parse(trip.start_date + 'T00:00:00Z')
-  const nights = new Map<number, { who: string | null; title: string }[]>()
-  for (const b of bookings) {
-    if (b.kind !== 'hotel' || !b.starts_at || !b.ends_at) continue
-    const first = Math.round((Date.parse(b.starts_at.slice(0, 10) + 'T00:00:00Z') - day1) / 86400000) + 1
-    const last = Math.round((Date.parse(b.ends_at.slice(0, 10) + 'T00:00:00Z') - day1) / 86400000)
-    for (let d = Math.max(first, 1); d <= Math.min(last, trip.num_days); d++)
-      nights.set(d, [...(nights.get(d) ?? []), { who: b.who, title: b.title }])
-  }
-  if (!nights.size) return
-  const { data: existing } = await supabase.from('day_info').select('day, hotel').eq('trip_id', trip.id)
-  const rows = [...nights].map(([day, stays]) => {
-    let lines: string[] = ((existing?.find((r) => r.day === day)?.hotel as string | null) ?? '').split('\n').filter(Boolean)
-    for (const s of stays) {
-      // the group's hotel replaces the night; a couple's replaces only that couple's line
-      if (!s.who) lines = [s.title]
-      else lines = [...lines.filter((l) => !stripMarker(l).startsWith(`${s.who}:`)), `${s.who}: ${s.title}`]
-    }
-    return { trip_id: trip.id, day, hotel: lines.join('\n') }
-  })
-  const { error } = await supabase.from('day_info').upsert(rows)
-  if (error) alert('ההזמנה נשמרה, אבל לא הצלחתי לרשום את המלון בימים במסלול: ' + error.message)
-}

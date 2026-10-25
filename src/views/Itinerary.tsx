@@ -10,7 +10,7 @@ import {
   COUPLE_AIRPORT,
   arrivalAirport,
   dayEntries,
-  hotelLines,
+  nightLines,
   navUrl,
   visible,
   ymd,
@@ -83,7 +83,7 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
             </>
           )}
         </div>
-        {hotelLines(info?.hotel ?? null, couples)
+        {nightLines(info?.hotel ?? null, bookings, date, couples)
           .filter((l) => visible(l.who, mode, myCouple))
           .map((l, n) => (
             <div key={n}>

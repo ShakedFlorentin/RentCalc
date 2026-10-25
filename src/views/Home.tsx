@@ -32,7 +32,7 @@ import { couplesOf, currentDay, dayDate, fmtDay, mutate, useTripTable } from '..
 import { Field, Sheet } from '../ui'
 import { BOOKING_ICON, Icon } from '../icons'
 import type { MoreTab } from './More'
-import { dayEntries, fmtUntil, hotelFor, minutesOf, navUrl, ymd, type Entry, type PlanItem } from './planUtils'
+import { dayEntries, fmtUntil, hotelFor, nightLines, minutesOf, navUrl, ymd, type Entry, type PlanItem } from './planUtils'
 import '../styles/plan.css'
 
 type Props = {
@@ -70,7 +70,9 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
   const next = entries.find((e) => !e.done && e.time && e.time >= nowHM) ?? entries.find((e) => !e.done && !e.time)
   const rest = entries.filter((e) => e !== next && e.item && !e.done)
   const todayBookings = entries.filter((e) => e.booking)
-  const tonight = hotelFor(todayInfo?.hotel ?? null, couples, myCouple)
+  const tonight = today
+    ? hotelFor(nightLines(todayInfo?.hotel ?? null, bookings, ymd(dayDate(trip.start_date, today)!), couples), myCouple)
+    : []
   const cities = runs(days, 'city')
   const together = runs(days, 'who')
 
@@ -317,17 +319,8 @@ function BeforeTrip(props: {
     .map((c) => {
       const nights = days.filter((d) => d.day < props.numDays && (!d.who || d.who === c))
       const uncovered = nights.filter((d) => {
-        if (hotelFor(d.hotel, couples, c).length) return false
         const date = props.start ? ymd(dayDate(props.start, d.day)!) : ''
-        return !bookings.some(
-          (b) =>
-            b.kind === 'hotel' &&
-            (!b.who || b.who === c) &&
-            b.starts_at &&
-            b.ends_at &&
-            b.starts_at.slice(0, 10) <= date &&
-            date < b.ends_at.slice(0, 10),
-        )
+        return !hotelFor(nightLines(d.hotel, bookings, date, couples), c).length
       })
       return { c, n: uncovered.length }
     })

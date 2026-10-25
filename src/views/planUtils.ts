@@ -141,9 +141,25 @@ export function hotelLines(hotel: string | null, couples: string[]) {
     })
 }
 
+/** Hotel bookings covering the night of this date (YYYY-MM-DD): checked in on or before it, out after it. */
+export function stayLines(bookings: Booking[], date: string) {
+  return bookings
+    .filter((b) => b.kind === 'hotel' && b.starts_at && b.ends_at && b.starts_at.slice(0, 10) <= date && date < b.ends_at.slice(0, 10))
+    .map((b) => ({ who: b.who, text: b.title }))
+}
+
+/**
+ * A night's hotels, read straight from the bookings so an edit or a deletion shows at once, plus any hotel typed on
+ * the day by hand that no booking already names.
+ */
+export function nightLines(hotel: string | null, bookings: Booking[], date: string, couples: string[]) {
+  const booked = stayLines(bookings, date)
+  const titles = new Set(booked.map((l) => l.text))
+  return [...booked, ...hotelLines(hotel, couples).filter((l) => !titles.has(l.text))]
+}
+
 /** The hotel lines that apply to a couple: its own, or the shared ones when it has none. */
-export function hotelFor(hotel: string | null, couples: string[], mine: string | null) {
-  const lines = hotelLines(hotel, couples)
+export function hotelFor(lines: { who: string | null; text: string }[], mine: string | null) {
   const own = lines.filter((l) => l.who && l.who === mine)
   return (own.length ? own : lines.filter((l) => !l.who)).map((l) => l.text)
 }
