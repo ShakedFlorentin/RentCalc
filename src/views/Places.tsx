@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../supabase'
 import { AUDIENCES, CATEGORIES, VERDICTS, type DayInfo, type GuidePlace, type ItineraryItem, type Member, type Place, type Trip } from '../types'
-import { couplesOf, mapsUrl, mutate, useMediaIndex, useTripTable, withMedia } from '../lib'
+import { couplesOf, errorText, mapsUrl, mutate, normName, safeUrl, useMediaIndex, useTripTable, withMedia } from '../lib'
 import { BookOpen, CalendarCheck, CalendarPlus, Check, Heart, List, Map as MapIcon, MapPin, Plus, Users, Wand2 } from 'lucide-react'
 import { Empty, Field, LoadNote, Sheet, useRemembered } from '../ui'
 import { AUDIENCE_ICON, CATEGORY_ICON, Icon } from '../icons'
@@ -60,8 +60,7 @@ export default function Places({ trip, me, userId, members }: Props) {
     setPickedId(p.id)
     setGuidePick(null)
   }, [])
-  const picked = rows.find((p) => p.id === pickedId) ?? null
-  // the Ptitim blog's Tokyo map as an optional layer, loaded the first time it's turned on
+    // the Ptitim blog's Tokyo map as an optional layer, loaded the first time it's turned on
   const [showGuide, setShowGuide] = useRemembered('guideLayer', '')
   const [guide, setGuide] = useState<GuidePlace[]>([])
   const [guidePick, setGuidePick] = useState<GuidePlace | null>(null)
@@ -91,6 +90,8 @@ export default function Places({ trip, me, userId, members }: Props) {
   )
   const counts = Object.fromEntries(Object.keys(tabs).map((k) => [k, filtered.filter((p) => !k || p.category === k).length]))
   const shown = filtered.filter((p) => !cat || p.category === cat)
+  // the picked place only shows while the filters still let it through
+  const picked = shown.find((p) => p.id === pickedId) ?? null
   const plannedIds = new Set(items.map((i) => i.place_id).filter(Boolean))
 
   // city → area → places
@@ -117,7 +118,7 @@ export default function Places({ trip, me, userId, members }: Props) {
   const runAutoPlan = async () => {
     const { data: planned } = await supabase.from('itinerary_items').select('place_id').eq('trip_id', trip.id)
     const done = new Set((planned ?? []).map((i) => i.place_id))
-    const plan = buildPlan(rows.filter((p) => !done.has(p.id)), days)
+    const plan = buildPlan(rows.filter((p) => !done.has(p.id) && !p.visited), days)
     if (!plan.rows.length) {
       alert('אין מקומות חדשים לשבץ' + (plan.skipped ? ` (${plan.skipped} בלי יום מתאים לעיר שלהם)` : ''))
       return
@@ -201,7 +202,9 @@ export default function Places({ trip, me, userId, members }: Props) {
             <Icon as={Wand2} /> שיבוץ המקומות בימים
           </button>
           {error && <LoadNote onRetry={reload} />}
-          {!loading && !error && shown.length === 0 && <Empty>אין עדיין מקומות. מקומות שמקבלים מאצ׳ במשחק מופיעים כאן</Empty>}
+          {!loading && !error && shown.length === 0 && (
+            <Empty>{rows.length ? 'אין מקומות בסינון הזה' : 'אין עדיין מקומות. מקומות שמקבלים מאצ׳ במשחק מופיעים כאן'}</Empty>
+          )}
           {[...groups].map(([c, areas]) => (
             <section key={c} className="stack">
               <h2 className="group-title">{c}</h2>
@@ -230,7 +233,7 @@ export default function Places({ trip, me, userId, members }: Props) {
 
 function PlaceRow(props: { p: Place; planned: boolean; onEdit: (p: Place) => void; onPlan: (p: Place) => void }) {
   const { p } = props
-  const mapLink = p.url || (p.lat != null ? `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}` : mapsUrl(p.name + ' ' + (p.city ?? '')))
+  const mapLink = safeUrl(p.url) || (p.lat != null ? `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}` : mapsUrl(p.name + ' ' + (p.city ?? '')))
   return (
     <div className={'item card place-row' + (p.visited ? ' done' : '')}>
       <button
@@ -297,18 +300,21 @@ function buildPlan(places: Place[], days: DayInfo[]) {
   const byCity = new Map<string, Place[]>()
   for (const p of places) byCity.set(p.city ?? '', [...(byCity.get(p.city ?? '') ?? []), p])
 
+  // rows already put on each day, so sort values never repeat within a day
+  const load = new Map<number, number>()
+
   for (const [city, ps] of byCity) {
     // Nara is a day trip: use the day whose notes mention it
     const inCity = days.filter((d) => d.city === city || (city === 'נארה' && d.notes?.includes('נארה')))
     for (const [who, wps] of groupBy(ps, (p) => p.who ?? '')) {
       // a group place needs everyone there; a couple's place fits any day that couple is in Japan
       const fits = (d: DayInfo) => !d.who || (!!who && who.split(' + ').every((c) => c === d.who))
-      planCity(wps, inCity.filter(fits).map((d) => d.day))
+      planCity(wps, inCity.filter(fits))
     }
   }
   return { rows, skipped }
 
-  function planCity(ps: Place[], cityDays: number[]) {
+  function planCity(ps: Place[], cityDays: DayInfo[]) {
     if (!cityDays.length) {
       skipped += ps.length
       return
@@ -320,16 +326,25 @@ function buildPlan(places: Place[], days: DayInfo[]) {
         (areaLng.get(a.area ?? '') ?? 999) - (areaLng.get(b.area ?? '') ?? 999) ||
         (a.area ?? '').localeCompare(b.area ?? ''),
     )
-    const per = Math.ceil(sorted.length / cityDays.length)
+    // the emptiest days first, so a second group doesn't pile onto day 1; chunks still run west→east by day
+    const used = [...cityDays]
+      .sort((a, b) => (load.get(a.day) ?? 0) - (load.get(b.day) ?? 0) || a.day - b.day)
+      .slice(0, sorted.length)
+      .sort((a, b) => a.day - b.day)
+    const per = Math.ceil(sorted.length / used.length)
     sorted.forEach((p, i) => {
+      const d = used[Math.min(Math.floor(i / per), used.length - 1)]
+      const n = load.get(d.day) ?? 0
+      load.set(d.day, n + 1)
       rows.push({
-        day: cityDays[Math.min(Math.floor(i / per), cityDays.length - 1)],
+        day: d.day,
         title: p.name,
         location: p.lat != null ? `${p.lat},${p.lng}` : `${p.name} ${p.city ?? ''}`,
         notes: p.notes,
         category: p.category,
         place_id: p.id,
-        sort: 100 + i,
+        who: p.who ?? d.who ?? null,
+        sort: 100 + n,
       })
     })
   }
@@ -499,13 +514,28 @@ function GuideCard({ g, tripId, userId, me, onClose }: { g: GuidePlace; tripId: 
       .select('id')
       .single()
     // 23505: it's already in the game under the same name
+    let id: string | undefined = data?.id
     if (error) {
-      setState(error.code === '23505' ? 'there' : '')
-      if (error.code !== '23505') alert('שגיאה: ' + error.message)
+      if (error.code !== '23505') {
+        setState('')
+        alert(errorText(error.message))
+        return
+      }
+      // already in the game: find that card and like it, same as AddPlace's "same place"
+      const { data: same } = await supabase.from('candidates').select('id, name').eq('trip_id', tripId).ilike('name', g.name.replace(/[%_\\]/g, '\\$&'))
+      id = (same ?? []).find((c) => normName(c.name) === normName(g.name))?.id ?? same?.[0]?.id
+      if (!id) {
+        setState('there')
+        return
+      }
+    }
+    const { error: likeErr } = await supabase.from('swipes').upsert({ trip_id: tripId, candidate_id: id, user_id: userId, liked: true })
+    if (likeErr) {
+      setState('')
+      alert(errorText(likeErr.message))
       return
     }
-    await supabase.from('swipes').insert({ trip_id: tripId, candidate_id: data.id, user_id: userId, liked: true })
-    setState('added')
+    setState(error ? 'there' : 'added')
   }
   return (
     <div className="card place-row stack">
@@ -521,7 +551,7 @@ function GuideCard({ g, tripId, userId, me, onClose }: { g: GuidePlace; tripId: 
         {state === 'added' ? (
           <span className="small">נוסף למשחק עם הלייק שלך</span>
         ) : state === 'there' ? (
-          <span className="small">כבר במשחק</span>
+          <span className="small">כבר במשחק, עם הלייק שלך</span>
         ) : (
           <button className="chip" disabled={state === 'busy'} onClick={suggest}>
             <Icon as={Heart} /> הצעה במשחק

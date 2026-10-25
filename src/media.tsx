@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ExternalLink, Globe, MapPin, Play } from 'lucide-react'
 import { Sheet } from './ui'
+import { safeUrl } from './lib'
 import { Icon, type LucideIcon } from './icons'
 
 type Media = {
@@ -37,7 +38,7 @@ export function VideoSheet({ media, title, onClose }: { media: NonNullable<Retur
           referrerPolicy="no-referrer"
         />
       ) : null}
-      <a className="secondary btn-link" href={media.href} target="_blank" rel="noreferrer">
+      <a className="secondary btn-link" href={safeUrl(media.href)} target="_blank" rel="noreferrer">
         <Icon as={ExternalLink} />
         {media.kind === 'instagram' ? 'פתיחה באינסטגרם' : 'פתיחה בטיקטוק'}
       </a>
@@ -48,10 +49,11 @@ export function VideoSheet({ media, title, onClose }: { media: NonNullable<Retur
 /** Maps / website / video chips. Renders nothing when there is nothing to link to. */
 export function MediaActions(props: { name: string; maps?: string | null; website?: string | null; m: Media; compact?: boolean }) {
   const [open, setOpen] = useState(false)
+  const website = safeUrl(props.website)
   const maps =
-    props.maps || (props.m.lat != null && props.m.lng != null ? `https://www.google.com/maps/search/?api=1&query=${props.m.lat},${props.m.lng}` : null)
+    safeUrl(props.maps) || (props.m.lat != null && props.m.lng != null ? `https://www.google.com/maps/search/?api=1&query=${props.m.lat},${props.m.lng}` : null)
   const video = videoEmbed(props.m)
-  if (!maps && !props.website && !video) return null
+  if (!maps && !website && !video) return null
   return (
     <div className={'actions' + (props.compact ? ' compact' : '')}>
       {maps && (
@@ -59,8 +61,8 @@ export function MediaActions(props: { name: string; maps?: string | null; websit
           <Icon as={MapPin} /> <span>Google Maps</span>
         </a>
       )}
-      {props.website && (
-        <a className="action" href={props.website} target="_blank" rel="noreferrer">
+      {website && (
+        <a className="action" href={website} target="_blank" rel="noreferrer">
           <Icon as={Globe} /> <span>אתר</span>
         </a>
       )}

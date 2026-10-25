@@ -39,7 +39,13 @@ const CouplePill = ({ name }: { name: string }) => (
 const japanToday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tokyo' })
 
 /** What the user typed ("1,200", "12.5") as a number, or NaN. */
-const parseAmount = (s: string) => Number(s.trim().replace(',', '.'))
+// "1,200" is twelve hundred (thousands separators), "12,5" is twelve and a half
+const parseAmount = (s: string) => {
+  const t = s.trim().replace(/\s/g, '')
+  return Number(/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(t) ? t.replace(/,/g, '') : t.replace(',', '.'))
+}
+// agorot at most, so a typed 12.345 doesn't leave a half-agora in the books
+const roundFor = (n: number, currency: string) => (currency === 'JPY' ? Math.round(n) : Math.round(n * 100) / 100)
 
 export default function Expenses({ trip, members, userId }: Props) {
   const { rows, loading, error, reload } = useTripTable<Expense>('expenses', trip.id, 'spent_on')
@@ -271,7 +277,7 @@ function ExpenseForm(props: {
   const toggle = (id: string) => setSplit(split.includes(id) ? split.filter((s) => s !== id) : [...split, id])
 
   const save = async () => {
-    const n = parseAmount(amount)
+    const n = roundFor(parseAmount(amount), currency)
     if (!(n > 0)) return setErr('צריך סכום גדול מאפס')
     if (!split.length) return setErr('צריך לבחור לפחות אדם אחד')
     setErr('')
@@ -280,8 +286,7 @@ function ExpenseForm(props: {
       trip_id: props.trip.id,
       kind: 'expense' as const,
       title: title.trim() || (CATS[category]?.label ?? CATS.other.label),
-      // agorot at most, so a typed 12.345 doesn't leave a half-agora in the books
-      amount: currency === 'JPY' ? Math.round(n) : Math.round(n * 100) / 100,
+      amount: n,
       currency,
       paid_by: paidBy,
       split_among: split,
@@ -416,10 +421,10 @@ function SettleSheet(props: {
   const [busy, setBusy] = useState(false)
 
   const save = async () => {
-    const n = parseAmount(amount)
+    const n = roundFor(parseAmount(amount), cur)
     if (!(n > 0)) return setErr('צריך סכום גדול מאפס')
     setBusy(true)
-    const fields = { amount: cur === 'JPY' ? Math.round(n) : Math.round(n * 100) / 100 }
+    const fields = { amount: n }
     const ok = await mutate(
       row
         ? supabase.from('expenses').update(fields).eq('id', row.id)
@@ -473,7 +478,8 @@ function RateSheet(props: { tripId: string; rate: number; onSaved: (r: number) =
 
   const save = async () => {
     const n = parseAmount(v)
-    if (!(n > 0)) return setErr('צריך מספר גדול מאפס')
+    // 100 yen has been worth between one and five shekels for decades; anything far outside is a typo
+    if (!(n >= 0.5 && n <= 20)) return setErr('השער נראה לא סביר. כמה שקלים שווים 100 ין? בערך 2.5')
     const rate = Math.round((n / 100) * 1e6) / 1e6
     if (await mutate(supabase.from('trips').update({ ils_per_jpy: rate }).eq('id', props.tripId))) {
       props.onSaved(rate)

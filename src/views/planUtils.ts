@@ -34,7 +34,7 @@ export type WhoMode = 'mine' | 'group' | 'all'
 
 export function visible(who: string | null | undefined, mode: WhoMode, mine: string | null) {
   if (mode === 'all' || !who) return true
-  return mode === 'mine' && (!mine || who === mine)
+  return mode === 'mine' && !!mine && who === mine
 }
 
 export function ymd(d: Date) {
@@ -49,8 +49,11 @@ export function navUrl(destination: string) {
 const JAPAN = /\b(HND|NRT|KIX|ITM|NGO|CTS|FUK)\b|Haneda|Narita|Kansai|הנדה|נריטה|קנסאי|טוקיו|יפן/i
 
 /** Which side of "A → B" a flight title puts Japan on; null when it can't tell. */
+// besides the arrows and dashes, a plain hyphen counts when spaced or between two airport codes ("NRT-TLV")
+const ROUTE_SEP = /→|->|⟶|—|–|\s-\s|(?<=\b[A-Z]{3})-(?=[A-Z]{3}\b)/
+
 function flightSide(title: string): 'from' | 'to' | null {
-  const parts = title.split(/→|->|⟶|—|–/)
+  const parts = title.split(ROUTE_SEP)
   if (parts.length < 2) return null
   const from = JAPAN.test(parts[0])
   const to = JAPAN.test(parts.slice(1).join(' '))
@@ -61,11 +64,25 @@ export type Airport = 'HND' | 'NRT'
 
 /** The Tokyo airport a flight lands at, from its title/notes, falling back to the couple's known airport. */
 export function arrivalAirport(b: Booking): Airport | null {
-  const dest = b.title.split(/→|->|⟶|—|–/).slice(1).join(' ') || b.title
+  const dest = b.title.split(ROUTE_SEP).slice(1).join(' ') || b.title
   const text = `${dest} ${b.notes ?? ''}`
   if (/\bHND\b|Haneda|הנדה/i.test(text)) return 'HND'
   if (/\bNRT\b|Narita|נריטה/i.test(text)) return 'NRT'
   return null
+}
+
+const OTHER_AIRPORT = /\b(KIX|ITM|NGO|FUK|CTS|OKA|UKB)\b|Kansai|Osaka|Itami|Nagoya|Fukuoka|Sapporo|Okinawa|קנסאי|אוסקה|נגויה|פוקואוקה|סאפורו|אוקינאווה/i
+
+/**
+ * The Tokyo airport to show an arrival card for: the one the booking names, else the couple's known airport.
+ * null when the flight lands somewhere else in Japan (no Tokyo card), or when nothing says where.
+ */
+export function tokyoArrival(b: Booking): Airport | null {
+  const named = arrivalAirport(b)
+  if (named) return named
+  const dest = b.title.split(ROUTE_SEP).slice(1).join(' ') || b.title
+  if (OTHER_AIRPORT.test(`${dest} ${b.notes ?? ''}`)) return null
+  return (b.who && COUPLE_AIRPORT[b.who]) || null
 }
 
 /** Bookings that happen on this date (YYYY-MM-DD), as timeline rows. Insurance has no moment, so it is left out. */

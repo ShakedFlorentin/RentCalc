@@ -66,6 +66,8 @@ export default function Lists({ tripId, members }: { tripId: string; members: Me
         <div key={i.id} className={'item card slim' + (i.done ? ' done' : '')}>
           <button
             className="check"
+            aria-label={i.done ? 'לבטל סימון' : 'לסמן כבוצע'}
+            aria-pressed={i.done}
             onClick={() => mutate(supabase.from('checklist_items').update({ done: !i.done }).eq('id', i.id))}
           >
             {i.done ? <Icon as={Check} size="1em" strokeWidth={3} /> : null}

@@ -518,7 +518,7 @@ html[dir='rtl'] .ja { text-align: right; }
 .small-round { width: 48px; height: 48px; }
 .small-round svg { width: 22px; height: 22px; stroke-width: 2.2; color: var(--muted); }
 .small-round:disabled { opacity: 0.35; }
-.left-count { position: absolute; left: 0; direction: rtl; font-size: 0.8125rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.left-count { position: absolute; left: 0; max-width: calc(50% - 120px); line-height: 1.2; direction: rtl; font-size: 0.8125rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .center-modal { align-items: center; }
 .match-pop {
   width: min(340px, 90vw);
@@ -560,7 +560,7 @@ html[dir='rtl'] .ja { text-align: right; }
   font-size: 0.875rem;
   font-weight: 500;
 }
-.actions.compact .action, .compact-link { min-height: 36px; padding: 4px 12px; font-size: 0.8125rem; }
+.actions.compact .action, .compact-link { min-height: 40px; padding: 4px 12px; font-size: 0.8125rem; }
 .compact-link { display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; background: var(--fill); color: var(--text); border-radius: 999px; }
 .sheet-body .btn-link { text-decoration: none; }
 
@@ -583,7 +583,7 @@ html[dir='rtl'] .ja { text-align: right; }
   .backdrop { background: rgba(0, 0, 0, 0.6); }
   @media (prefers-contrast: more) { :root { --line: #8a8378; --muted: #d2cbbf; } }
 }
-.chip.add-chip { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+.chip.add-chip { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
 .dishes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 /* bookings: one tab per kind, pinned under the top bar */
 .tabs-bar {

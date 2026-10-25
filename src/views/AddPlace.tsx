@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../supabase'
 import { AUDIENCES, CARD_STYLE, CITY_HE, VERDICTS, type Candidate } from '../types'
-import { aiError, mutate, samePlace } from '../lib'
+import { aiError, mutate, safeUrl, samePlace } from '../lib'
 import { ArrowRight, Heart, List, PencilLine, Search, Star } from 'lucide-react'
 import { Field, Sheet } from '../ui'
 import { Icon } from '../icons'
@@ -14,8 +14,9 @@ type TripPlaces = { deck: Row[]; list: Row[] }
 
 function existingIn(trip: TripPlaces, d: Draft): Existing | null {
   const probe = { name: d.name ?? '', lat: d.lat, lng: d.lng }
+  // the game card first: on a tie, "same place" should like it
   let best: Existing | null = null
-  for (const [rows, where] of [[trip.list, 'list'], [trip.deck, 'deck']] as const) {
+  for (const [rows, where] of [[trip.deck, 'deck'], [trip.list, 'list']] as const) {
     for (const r of rows) {
       const hit = samePlace(probe, r)
       if (hit && (!best || (hit === 'exact' && !best.exact))) best = { id: r.id, name: r.name, where, exact: hit === 'exact' }
@@ -35,6 +36,8 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
   const [to, setTo] = useState(defaultTo)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
+  // what was typed when the duplicate sheet opened, so going back to edit doesn't lose it
+  const [typed, setTyped] = useState<Draft | null>(null)
   const [existing, setExisting] = useState<{ found: Existing; draft: Draft } | null>(null)
   // a post that names several places: each with what's already in the trip, and whether it's ticked
   const [many, setMany] = useState<{ d: Draft; found: Existing | null; on: boolean }[] | null>(null)
@@ -69,7 +72,7 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
     const { data, error } = await supabase.functions.invoke('suggest-place', { body: { link: link.trim(), text: note.trim() } })
     setBusy(false)
     if (error || !data) {
-      setErr(aiError(error, 'החיפוש לא הצליח. אפשר לנסות שוב או למלא ידנית.'))
+      setErr(await aiError(error, 'החיפוש לא הצליח. אפשר לנסות שוב או למלא ידנית.'))
       return
     }
     // older function versions return one place; newer ones a list
@@ -78,7 +81,7 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
       const trip = await loadTrip()
       setMany(found.map((d) => {
         const ex = existingIn(trip, d)
-        return { d, found: ex, on: !ex }
+        return { d, found: ex, on: !ex || ex.where === 'deck' }
       }))
       return
     }
@@ -91,27 +94,33 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
     if (!many) return
     setBusy(true)
     const trip = await loadTrip()
-    let added = 0
+    setErr('')
+    let done = 0
     for (const m of many.filter((x) => x.on)) {
       const ex = existingIn(trip, m.d)
       if (ex) {
-        if (ex.where === 'deck')
-          await supabase.from('swipes').upsert({ trip_id: tripId, candidate_id: ex.id, user_id: userId, liked: true })
+        if (ex.where === 'deck') {
+          const { error } = await supabase.from('swipes').upsert({ trip_id: tripId, candidate_id: ex.id, user_id: userId, liked: true })
+          if (!error) done++
+        }
         continue
       }
-      if ((await insertDraft(m.d)) === 'ok') added++
+      if ((await insertDraft(m.d)) === 'ok') done++
     }
     setBusy(false)
-    if (added || many.some((x) => x.on)) onClose()
+    if (done) onClose()
+    else setErr('לא נוסף אף מקום. הם כבר ברשימה או שהשמירה לא הצליחה, אפשר לנסות שוב.')
   }
 
   const save = async (d: Draft, anyway = false) => {
     if (!d.name?.trim() || !d.city) return
     setBusy(true)
+    setErr('')
     // two friends often add the same place: offer the one that's there instead of a second copy
     if (!anyway) {
       const found = await findExisting(d)
       if (found) {
+        setTyped(d)
         setExisting({ found, draft: d })
         setBusy(false)
         return
@@ -120,7 +129,10 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
     const res = await insertDraft(d)
     if (res === 'dup') {
       const found = await findExisting(d)
-      if (found) setExisting({ found, draft: d })
+      if (found) {
+        setTyped(d)
+        setExisting({ found, draft: d })
+      } else setErr('כבר יש מקום בשם הזה בטיול')
     }
     setBusy(false)
     if (res === 'ok') onClose()
@@ -129,7 +141,8 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
   /** Writes one place to the game (with my like) or straight to the list. */
   const insertDraft = async (d: Draft): Promise<'ok' | 'dup' | 'error'> => {
     if (!d.name?.trim() || !d.city) return 'error'
-    const l = d.link?.trim() || null
+    // only http(s) links are stored: the rest would end up as clickable hrefs
+    const l = safeUrl(d.link) ?? null
     const social = {
       instagram_url: l && /instagram\.com/i.test(l) ? l : null,
       tiktok_url: l && /tiktok\.com/i.test(l) ? l : null,
@@ -169,7 +182,7 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
           time_needed: d.time_needed || null,
           kosher: d.kosher ?? null,
           kosher_note: d.kosher_note || null,
-          sources: d.sources ?? (l ? [l] : []),
+          sources: d.sources ? d.sources.filter((u) => safeUrl(u)) : l ? [l] : [],
         })
         .select('id')
         .single()
@@ -243,7 +256,8 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
   }
 
   if (many) {
-    const picked = many.filter((m) => m.on).length
+    // ticked places already on the list are skipped, so they don't count
+    const picked = many.filter((m) => m.on && m.found?.where !== 'list').length
     return (
       <Sheet title={`נמצאו ${many.length} מקומות`} onClose={onClose}>
         <p className="muted small">מסמנים את המקומות להוסיף. מקום שכבר קיים בטיול לא יתווסף שוב; אם הוא במשחק, יסומן לך לייק.</p>
@@ -279,11 +293,12 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
             )
           })}
         </div>
+        {err && <p className="msg">{err}</p>}
         {destination}
         <button className="primary" onClick={addMany} disabled={busy || !picked}>
           {busy ? 'מוסיף…' : picked === 1 ? 'הוספת מקום אחד' : `הוספת ${picked} מקומות`}
         </button>
-        <button className="link" onClick={() => setMany(null)}>
+        <button className="link" onClick={() => (setErr(''), setMany(null))}>
           <Icon as={ArrowRight} /> חזרה
         </button>
       </Sheet>
@@ -294,13 +309,13 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
     return (
       <Sheet title={draft ? 'זה המקום?' : 'הוספת מקום'} onClose={onClose}>
         <DraftForm
-          draft={draft ?? { city: 'tokyo', category: 'food', audience: 'baby', link: '' }}
+          draft={typed ?? draft ?? { city: 'tokyo', category: 'food', audience: 'baby', link: '' }}
           researched={!!draft}
           busy={busy}
           err={err}
           destination={destination}
           onSave={save}
-          onBack={() => (draft ? setDraft(null) : setMode('link'))}
+          onBack={() => (setTyped(null), draft ? setDraft(null) : setMode('link'))}
         />
       </Sheet>
     )

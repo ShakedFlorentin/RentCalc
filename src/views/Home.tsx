@@ -57,9 +57,9 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
   const now = useNow()
 
   const today = currentDay(trip.start_date, trip.num_days)
-  const daysLeft = trip.start_date
-    ? Math.ceil((new Date(trip.start_date + 'T00:00:00').getTime() - now.getTime()) / 86400000)
-    : null
+  // count on Tokyo's calendar, not the phone's: abroad the local date can differ from Japan's
+  const tokyoDate = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Tokyo' })
+  const daysLeft = trip.start_date ? Math.round((Date.parse(trip.start_date) - Date.parse(tokyoDate)) / 86400000) : null
   const tokyoTime = now.toLocaleTimeString('he-IL', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit' })
   const couples = couplesOf(members)
   const myCouple = members.find((m) => m.user_id === userId)?.couple ?? null
@@ -86,8 +86,8 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
           </>
         ) : daysLeft !== null && daysLeft > 0 ? (
           <>
-            <div className="big">{daysLeft}</div>
-            <div className="muted">ימים להמראה</div>
+            <div className="big">{daysLabel(daysLeft)}</div>
+            <div className="muted">להמראה</div>
           </>
         ) : daysLeft !== null ? (
           <div className="big">הטיול הסתיים</div>
@@ -106,7 +106,7 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
 
       {today && (
         <>
-          <NextCard next={next} nowHM={nowHM} hasPlan={entries.length > 0} onOpenDay={() => onOpenDay(today)} />
+          <NextCard next={next} nowHM={nowHM} hasPlan={entries.length > 0} leftCount={rest.length} onOpenDay={() => onOpenDay(today)} />
 
           {tonight.length > 0 && (
             <section className="card">
@@ -182,7 +182,7 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
                 </b>
                 <span className="muted small">
                   {fmtDay(dayDate(trip.start_date, t.from))}
-                  {t.to !== t.from && ` – ${fmtDay(dayDate(trip.start_date, t.to))}`} · {t.to - t.from + 1} ימים
+                  {t.to !== t.from && ` – ${fmtDay(dayDate(trip.start_date, t.to))}`} · {daysLabel(t.to - t.from + 1)}
                 </span>
               </button>
             ))}
@@ -197,7 +197,7 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
             <button key={c.from} className="route-stop" onClick={() => onOpenDay(c.from)}>
               <b>{c.value || '—'}</b>
               <span className="muted small">
-                {c.from === c.to ? `יום ${c.from}` : `ימים ${c.from}–${c.to}`}
+                {c.from === c.to ? `יום ${c.from}` : <>ימים <bdi dir="ltr">{c.from}–{c.to}</bdi></>}
               </span>
             </button>
           ))}
@@ -247,14 +247,18 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
 }
 
 /** Hero for trip days: what is next, how long until it, and a one-tap route there. */
-function NextCard(props: { next?: Entry; nowHM: string; hasPlan: boolean; onOpenDay: () => void }) {
+function NextCard(props: { next?: Entry; nowHM: string; hasPlan: boolean; leftCount: number; onOpenDay: () => void }) {
   const { next, nowHM } = props
   if (!next)
     return (
       <section className="card">
-        <h3>{props.hasPlan ? 'סיימתם להיום' : 'אין עדיין תוכנית להיום'}</h3>
+        <h3>{!props.hasPlan ? 'אין עדיין תוכנית להיום' : props.leftCount ? 'אין עוד פעילויות עם שעה' : 'סיימתם להיום'}</h3>
         <p className="muted">
-          {props.hasPlan ? 'אין עוד פעילויות להיום.' : 'אפשר לבחור מקום בלשונית מקומות ולהוסיף אותו למסלול, או לכתוב פעילות בתוכנית.'}
+          {props.hasPlan
+            ? props.leftCount
+              ? `נשארו ${props.leftCount === 1 ? 'פעילות אחת' : `${props.leftCount} פעילויות`} שלא סומנו כבוצעו.`
+              : 'אין עוד פעילויות להיום.'
+            : 'אפשר לבחור מקום בלשונית מקומות ולהוסיף אותו למסלול, או לכתוב פעילות בתוכנית.'}
         </p>
         <button className="link" onClick={props.onOpenDay}>
           לתוכנית של היום <Icon as={ChevronLeft} />
@@ -317,10 +321,13 @@ function BeforeTrip(props: {
   const missing = [...couples]
     .sort((a, b) => Number(b === mine) - Number(a === mine))
     .map((c) => {
-      const nights = days.filter((d) => d.day < props.numDays && (!d.who || d.who === c))
-      const uncovered = nights.filter((d) => {
-        const date = props.start ? ymd(dayDate(props.start, d.day)!) : ''
-        return !hotelFor(nightLines(d.hotel, bookings, date, couples), c).length
+      // every night counts, even a day with no day_info row yet
+      const nights = Array.from({ length: Math.max(props.numDays - 1, 0) }, (_, i) => i + 1)
+        .map((day) => ({ day, info: days.find((d) => d.day === day) }))
+        .filter(({ info }) => !info?.who || info.who === c)
+      const uncovered = nights.filter(({ day, info }) => {
+        const date = props.start ? ymd(dayDate(props.start, day)!) : ''
+        return !hotelFor(nightLines(info?.hotel ?? null, bookings, date, couples), c).length
       })
       return { c, n: uncovered.length }
     })
@@ -423,6 +430,11 @@ function Settings(props: { trip: Trip; me: string; userId: string; onClose: () =
       </button>
     </Sheet>
   )
+}
+
+/** "יום אחד" / "יומיים" / "5 ימים" */
+function daysLabel(n: number) {
+  return n === 1 ? 'יום אחד' : n === 2 ? 'יומיים' : `${n} ימים`
 }
 
 function useNow() {

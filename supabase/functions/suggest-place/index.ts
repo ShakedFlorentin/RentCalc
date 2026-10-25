@@ -90,7 +90,7 @@ async function postContext(link: string) {
   if (url.protocol !== 'https:') return ''
   try {
     if (host === 'tiktok.com' || host === 'vm.tiktok.com') {
-      const r = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(link)}`)
+      const r = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(link)}`, { signal: AbortSignal.timeout(8000) })
       if (r.ok) {
         const o = await r.json()
         return `TikTok post by @${o.author_unique_id ?? o.author_name}: ${o.title ?? ''}`
@@ -105,7 +105,9 @@ async function postContext(link: string) {
       ]
       const parts: string[] = []
       for (const page of pages) {
-        const r = await fetch(page, { headers: { 'User-Agent': 'facebookexternalhit/1.1' } }).catch(() => null)
+        const r = await fetch(page, { headers: { 'User-Agent': 'facebookexternalhit/1.1' }, signal: AbortSignal.timeout(8000) }).catch(
+          () => null,
+        )
         if (!r?.ok) continue
         const html = await r.text()
         for (const tag of html.match(/<meta[^>]+>/gi) ?? []) {
@@ -168,12 +170,15 @@ Deno.serve(async (req) => {
   const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
 
-  const admin = await admit(req, 'suggest-place', json)
-  if (admin instanceof Response) return admin
-
-  const { link, text } = (await req.json()) as { link?: string; text?: string }
+  // check the request before admit(), so a malformed one doesn't use up the daily quota
+  const body = (await req.json().catch(() => null)) as { link?: unknown; text?: unknown } | null
+  const link = typeof body?.link === 'string' ? body.link : undefined
+  const text = typeof body?.text === 'string' ? body.text : undefined
   if (!link?.trim() && !text?.trim()) return json({ error: 'nothing to look up' }, 400)
   if ((link?.length ?? 0) > 500 || (text?.length ?? 0) > 1000) return json({ error: 'too long' }, 413)
+
+  const admin = await admit(req, 'suggest-place', json)
+  if (admin instanceof Response) return admin
 
   const caption = link ? await postContext(link) : ''
   console.log('caption', caption.length, caption.slice(0, 300))
@@ -216,10 +221,12 @@ Deno.serve(async (req) => {
     const found = research.content.flatMap((b) =>
       b.type === 'web_search_tool_result' && Array.isArray(b.content) ? b.content.map((r) => r.url) : [],
     )
-    const fallback = [...new Set([...cited, ...found])].slice(0, 5)
+    // sources become links in the app, so keep real web addresses only
+    const web = (urls: string[]) => urls.filter((u) => /^https?:\/\//i.test(u))
+    const fallback = web([...new Set([...cited, ...found])]).slice(0, 5)
     const places = card.parsed_output.places
       .slice(0, MAX_PLACES)
-      .map((p) => ({ ...p, sources: p.sources.length ? p.sources : fallback }))
+      .map((p) => ({ ...p, sources: web(p.sources).length ? web(p.sources) : fallback }))
     console.log('places', places.length, places.map((p) => p.name).join(' | ') || notes.slice(0, 500))
     return json({ places })
   } catch (error) {

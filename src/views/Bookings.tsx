@@ -2,7 +2,7 @@ import { Fragment, useEffect, useState } from 'react'
 import { Check, Download, Link as LinkIcon, Mail, Map as MapIcon, Paperclip, Pencil, Plus, Users } from 'lucide-react'
 import { supabase } from '../supabase'
 import { BOOKING_KINDS, BOOKING_TABS, TOGETHER, type Booking, type Member, type Trip } from '../types'
-import { aiError, couplesOf, normName, fmtDateTime, fromInputDateTime, mapsUrl, mutate, toInputDateTime, useTripTable } from '../lib'
+import { aiError, couplesOf, errorText, normName, fmtDateTime, fromInputDateTime, mapsUrl, mutate, safeUrl, toInputDateTime, useTripTable } from '../lib'
 import { Empty, Field, LoadNote, Sheet, Tabs, useRemembered } from '../ui'
 import { BOOKING_ICON, Icon } from '../icons'
 
@@ -94,8 +94,8 @@ export default function Bookings({ trip, members, userId }: Props) {
                       <Icon as={MapIcon} /> מפה
                     </a>
                   )}
-                  {b.url && (
-                    <a className="pill" href={b.url} target="_blank" rel="noreferrer">
+                  {safeUrl(b.url) && (
+                    <a className="pill" href={safeUrl(b.url)} target="_blank" rel="noreferrer">
                       <Icon as={LinkIcon} /> קישור
                     </a>
                   )}
@@ -212,6 +212,20 @@ function DocButtons({ path }: { path: string }) {
   )
 }
 
+/** Remove a stored document unless another booking in the trip still points at it (one confirmation can feed several). */
+async function removeDocIfUnused(tripId: string, path: string, exceptId: string) {
+  const { data, error } = await supabase
+    .from('bookings')
+    .select('id')
+    .eq('trip_id', tripId)
+    .eq('file_path', path)
+    .neq('id', exceptId)
+    .limit(1)
+  // if we can't tell, keep the file: an orphan is better than a broken attachment
+  if (error || (data?.length ?? 0) > 0) return
+  await supabase.storage.from('docs').remove([path])
+}
+
 function BookingForm(props: { trip: Trip; couples: string[]; booking: Partial<Booking>; onClose: () => void }) {
   const tripId = props.trip.id
   const [f, setF] = useState<Partial<Booking>>(props.booking)
@@ -253,7 +267,7 @@ function BookingForm(props: { trip: Trip; couples: string[]; booking: Partial<Bo
     else if (error) alert('שגיאה: ' + error.message)
     if (ok) {
       // the old attachment goes only once the row points at the new one
-      if (file && f.file_path) await supabase.storage.from('docs').remove([f.file_path])
+      if (file && f.file_path && f.id) await removeDocIfUnused(tripId, f.file_path, f.id)
     } else if (file && filePath) {
       await supabase.storage.from('docs').remove([filePath])
     }
@@ -263,8 +277,9 @@ function BookingForm(props: { trip: Trip; couples: string[]; booking: Partial<Bo
 
   const remove = async () => {
     if (!f.id || !confirm('למחוק את ההזמנה?')) return
-    if (f.file_path) await supabase.storage.from('docs').remove([f.file_path])
-    if (await mutate(supabase.from('bookings').delete().eq('id', f.id))) props.onClose()
+    if (!(await mutate(supabase.from('bookings').delete().eq('id', f.id)))) return
+    if (f.file_path) await removeDocIfUnused(tripId, f.file_path, f.id)
+    props.onClose()
   }
 
   return (
@@ -311,7 +326,7 @@ function BookingForm(props: { trip: Trip; couples: string[]; booking: Partial<Bo
       <Field label={f.file_path ? 'החלפת מסמך (PDF / תמונה)' : 'מסמך מצורף (PDF / תמונה)'}>
         <input type="file" accept="application/pdf,image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
       </Field>
-      <button className="primary" onClick={save} disabled={busy}>
+      <button className="primary" onClick={save} disabled={busy || !f.title?.trim()}>
         {busy ? 'שומר…' : 'שמירה'}
       </button>
       {f.id && (
@@ -347,6 +362,7 @@ function ImportSheet(props: { trip: Trip; couples: string[]; myCouple: string | 
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState<{ kind: string; title: string }[] | null>(null)
   const [skipped, setSkipped] = useState(0)
+  const [docLost, setDocLost] = useState(false)
   const [err, setErr] = useState('')
 
   const run = async () => {
@@ -363,7 +379,7 @@ function ImportSheet(props: { trip: Trip; couples: string[]; myCouple: string | 
     }
     const { data, error } = await supabase.functions.invoke('parse-booking', { body: payload })
     if (error || !data?.bookings) {
-      setErr(aiError(error, 'לא הצלחתי לקרוא את האישור. אפשר לנסות שוב או להוסיף ידנית.'))
+      setErr(await aiError(error, 'לא הצלחתי לקרוא את האישור. אפשר לנסות שוב או להוסיף ידנית.'))
       setBusy(false)
       return
     }
@@ -381,15 +397,27 @@ function ImportSheet(props: { trip: Trip; couples: string[]; myCouple: string | 
     }
 
     // the same confirmation imported by two people (or twice) adds nothing the second time
-    const { data: have } = await supabase.from('bookings').select('kind, title, starts_at, confirmation').eq('trip_id', trip.id)
-    const isDup = (b: (typeof bookings)[number]) =>
-      (have ?? []).some(
+    const { data: have, error: haveErr } = await supabase
+      .from('bookings')
+      .select('kind, title, starts_at, confirmation, who')
+      .eq('trip_id', trip.id)
+    if (haveErr) {
+      setErr(errorText(haveErr.message))
+      setBusy(false)
+      return
+    }
+    // another couple's booking with the same title and time is theirs, not a duplicate (unless it is the same code)
+    const isDup = (b: (typeof bookings)[number], list: { kind: string; title: string; starts_at: string | null; confirmation: string | null; who: string | null }[]) =>
+      list.some(
         (h) =>
           h.kind === b.kind &&
           sameTime(h.starts_at, b.starts_at) &&
-          (normName(h.title) === normName(b.title) || (!!b.confirmation && h.confirmation === b.confirmation)),
+          ((!!b.confirmation && h.confirmation === b.confirmation) ||
+            (normName(h.title) === normName(b.title) && (h.who ?? null) === (b.who ?? null))),
       )
-    const fresh = bookings.filter((b) => !isDup(b))
+    // the parser can also repeat itself within one reply
+    const fresh: typeof bookings = []
+    for (const b of bookings) if (!isDup(b, have ?? []) && !isDup(b, fresh)) fresh.push(b)
     const skipped = bookings.length - fresh.length
     if (!fresh.length) {
       setErr(skipped > 1 ? 'כל ההזמנות באישור הזה כבר קיימות.' : 'ההזמנה הזו כבר קיימת.')
@@ -399,11 +427,15 @@ function ImportSheet(props: { trip: Trip; couples: string[]; myCouple: string | 
 
     // keep the original confirmation with the booking
     let filePath: string | null = null
+    let lost = false
     if (file) {
       const ext = file.name.includes('.') ? file.name.split('.').pop() : 'bin'
       filePath = `${trip.id}/${crypto.randomUUID()}.${ext}`
       const up = await supabase.storage.from('docs').upload(filePath, file, { contentType: file.type })
-      if (up.error) filePath = null
+      if (up.error) {
+        filePath = null
+        lost = true
+      }
     }
     const ok = await mutate(
       supabase.from('bookings').insert(
@@ -412,6 +444,7 @@ function ImportSheet(props: { trip: Trip; couples: string[]; myCouple: string | 
     )
     if (ok) {
       setSkipped(skipped)
+      setDocLost(lost)
       setDone(fresh.map((b) => ({ kind: b.kind, title: b.title })))
     }
     setBusy(false)
@@ -425,6 +458,7 @@ function ImportSheet(props: { trip: Trip; couples: string[]; myCouple: string | 
             <Icon as={BOOKING_ICON[d.kind] ?? BOOKING_ICON.other} /> {d.title}
           </div>
         ))}
+        {docLost && <p className="msg">הקובץ המצורף לא נשמר, ההזמנות נוספו בלי המסמך. אפשר לצרף אותו ידנית בעריכת ההזמנה.</p>}
         {skipped > 0 && <p className="small">{skipped === 1 ? 'הזמנה אחת כבר הייתה קיימת ולא נוספה שוב.' : `${skipped} הזמנות כבר היו קיימות ולא נוספו שוב.`}</p>}
         <p className="muted small">אפשר ללחוץ על הזמנה כדי לתקן פרטים. מלונות נכתבו גם בלילות שלהם במסלול.</p>
         <button className="primary" onClick={onClose}>

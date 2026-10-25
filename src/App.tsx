@@ -43,6 +43,11 @@ export default function App() {
       if (e === 'SIGNED_OUT') {
         clearCache()
         window.caches?.delete('docs').catch(() => {})
+        try {
+          localStorage.removeItem('tripId')
+        } catch {
+          // nothing remembered to forget
+        }
       }
       if (s) writeCache(UID_KEY, s.user.id)
       setUserId(s?.user.id ?? null)
@@ -71,8 +76,8 @@ function TripGate({ userId }: { userId: string }) {
 
   const choose = (id: string | null) => {
     try {
-      if (id) localStorage.setItem('tripId', id)
-      else localStorage.removeItem('tripId')
+      // '' remembers that the trip was left on purpose, so the next launch opens the trip list instead of it
+      localStorage.setItem('tripId', id ?? '')
     } catch {
       // the choice just won't be remembered
     }
@@ -87,6 +92,7 @@ function TripGate({ userId }: { userId: string }) {
       .eq('user_id', userId)
       .then(({ data, error }) => {
         const saved = savedTrip()
+        if (saved === '') return setTripId(null)
         // offline or a server hiccup is not "you have no trip": keep the last trip, or offer a retry
         if (error) {
           if (saved) setTripId(saved)

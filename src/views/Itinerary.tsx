@@ -7,9 +7,8 @@ import { Empty, Field, Sheet, useRemembered } from '../ui'
 import { Icon } from '../icons'
 import {
   ARRIVAL,
-  COUPLE_AIRPORT,
-  arrivalAirport,
   dayEntries,
+  tokyoArrival,
   nightLines,
   navUrl,
   visible,
@@ -183,7 +182,7 @@ function EntryRow({ e, onEdit }: { e: Entry; onEdit: (i: PlanItem) => void }) {
 
 function ArrivalCard({ entry }: { entry: Entry }) {
   const b = entry.booking!
-  const airport = arrivalAirport(b) ?? COUPLE_AIRPORT[b.who ?? '']
+  const airport = tokyoArrival(b)
   if (!airport) return null
   const a = ARRIVAL[airport]
   return (

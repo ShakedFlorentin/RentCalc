@@ -83,16 +83,19 @@ Deno.serve(async (req) => {
   const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
 
-  const admin = await admit(req, 'parse-booking', json)
-  if (admin instanceof Response) return admin
-
-  const { text, file } = (await req.json()) as {
-    text?: string
-    file?: { data: string; media_type: string }
-  }
+  // check the request before admit(), so a malformed one doesn't use up the daily quota
+  const body = (await req.json().catch(() => null)) as { text?: unknown; file?: { data?: unknown; media_type?: unknown } } | null
+  const text = typeof body?.text === 'string' ? body.text : undefined
+  const file =
+    body?.file && typeof body.file.data === 'string' && typeof body.file.media_type === 'string'
+      ? { data: body.file.data, media_type: body.file.media_type }
+      : undefined
   if (!text?.trim() && !file) return json({ error: 'nothing to read' }, 400)
   if ((text?.length ?? 0) > 50_000) return json({ error: 'text too long' }, 413)
   if (file && file.data.length * 0.75 > MAX_BYTES) return json({ error: 'file too large' }, 413)
+
+  const admin = await admit(req, 'parse-booking', json)
+  if (admin instanceof Response) return admin
 
   const content: Anthropic.ContentBlockParam[] = []
   if (file?.media_type === 'application/pdf') {
@@ -119,7 +122,9 @@ Deno.serve(async (req) => {
     if (response.stop_reason === 'refusal' || !response.parsed_output) {
       return json({ error: 'could not read this confirmation' }, 422)
     }
-    return json(response.parsed_output)
+    // the reply is shown as a link, so only a real web address may come through
+    const bookings = response.parsed_output.bookings.map((b) => ({ ...b, url: b.url && /^https?:\/\//i.test(b.url) ? b.url : null }))
+    return json({ bookings })
   } catch (error) {
     if (error instanceof Anthropic.AuthenticationError) return json({ error: 'ANTHROPIC_API_KEY is missing or invalid' }, 500)
     if (error instanceof Anthropic.RateLimitError) return json({ error: 'busy, try again in a minute' }, 429)

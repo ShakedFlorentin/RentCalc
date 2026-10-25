@@ -98,10 +98,23 @@ export function useTripTable<T>(table: string, tripId: string, order: string = '
   return { rows, loading, error, reload, stale, updatedAt }
 }
 
+/** A save failed: say so in plain Hebrew, and say it's the connection when there's no network. */
+export function errorText(message: string) {
+  return !navigator.onLine || /failed to fetch|network|load failed/i.test(message)
+    ? 'אין חיבור לאינטרנט, לא נשמר. נסו שוב כשיש קליטה.'
+    : 'שגיאה: ' + message
+}
+
 export async function mutate(promise: PromiseLike<{ error: { message: string } | null }>) {
   const { error } = await promise
-  if (error) alert('שגיאה: ' + error.message)
+  if (error) alert(errorText(error.message))
   return !error
+}
+
+/** Only real web links become clickable: a stored "javascript:" link would run inside the app. */
+export function safeUrl(u: string | null | undefined) {
+  const v = u?.trim()
+  return v && /^https?:\/\//i.test(v) ? v : undefined
 }
 
 export function mapsUrl(query: string) {
@@ -138,13 +151,14 @@ export function fromInputDateTime(v: string) {
 }
 export function fmtDateTime(iso: string | null) {
   if (!iso) return ''
+  // a booking with a date but no time is stored at midnight; show just the date
+  const dateOnly = iso.slice(11, 16) === '00:00'
   return new Date(iso).toLocaleString('he-IL', {
     timeZone: 'UTC',
     weekday: 'short',
     day: 'numeric',
     month: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
+    ...(dateOnly ? {} : { hour: '2-digit', minute: '2-digit' }),
   })
 }
 
@@ -244,10 +258,18 @@ export function matchFor(likers: string[], members: Member[], threshold: number)
 }
 
 /** Hebrew text for a failed Claude edge-function call, or `fallback` when there is nothing more specific. */
-export function aiError(error: unknown, fallback: string) {
-  const status = (error as { context?: { status?: number } } | null)?.context?.status
-  if (status === 429) return 'הגעתם למגבלה היומית (30 בדיקות ביום לכל אחד). אפשר להוסיף ידנית או לנסות מחר.'
+export async function aiError(error: unknown, fallback: string) {
+  const res = (error as { context?: Response } | null)?.context
+  const status = res?.status
+  if (status === 429) {
+    // the same status means either today's cap or Claude being busy for a minute
+    const body = await res?.clone().json().catch(() => null)
+    return /daily limit/.test(body?.error ?? '')
+      ? 'הגעתם למגבלה היומית (30 בדיקות ביום לכל אחד). אפשר להוסיף ידנית או לנסות מחר.'
+      : 'השירות עמוס כרגע. נסו שוב בעוד דקה.'
+  }
   if (status === 413) return 'הטקסט או הקובץ ארוכים מדי.'
+  if (!navigator.onLine) return 'אין חיבור לאינטרנט.'
   return fallback
 }
 

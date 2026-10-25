@@ -2,7 +2,7 @@ import { PointerEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../supabase'
 import { AUDIENCES, CARD_STYLE, CITY_HE, KOSHER, VERDICTS, type Candidate, type Member, type Swipe, type Trip } from '../types'
-import { matchFor, mutate, useMediaIndex, useTripTable, withMedia } from '../lib'
+import { matchFor, mutate, safeUrl, useMediaIndex, useTripTable, withMedia } from '../lib'
 import AddPlace from './AddPlace'
 import { Empty, Sheet } from '../ui'
 import { MediaActions } from '../media'
@@ -74,14 +74,19 @@ export default function SwipeGame({ trip, userId, members }: Props) {
     .filter((c) => !mine.has(c.id) && (!city || c.city === city) && (!aud || c.audience === aud))
     .sort((a, b) => hash(a.id + userId) - hash(b.id + userId))
 
+  // the card stays up until the reload lands, so a second tap would swipe it again
+  const pending = useRef(new Set<string>())
   const swipe = async (c: Candidate, liked: boolean) => {
+    if (pending.current.has(c.id)) return false
+    pending.current.add(c.id)
     const ok = await mutate(
       supabase.from('swipes').upsert({ trip_id: trip.id, candidate_id: c.id, user_id: userId, liked }),
     )
     if (ok) {
-      setHistory((h) => [...h, c.id])
-      reloadSwipes()
+      setHistory((h) => (h[h.length - 1] === c.id ? h : [...h, c.id]))
+      await reloadSwipes()
     }
+    pending.current.delete(c.id)
     return ok
   }
 
@@ -186,7 +191,11 @@ export default function SwipeGame({ trip, userId, members }: Props) {
       <div className="deck">
         {!loading && deck.length === 0 && (
           <Empty>
-            {candidates.length ? 'עברתם על כל המקומות. אפשר לחכות לחברים או לבדוק את המאצ׳ים בלשונית מקומות' : 'עדיין אין מקומות במשחק'}
+            {!candidates.length
+              ? 'עדיין אין מקומות במשחק'
+              : candidates.some((c) => !mine.has(c.id))
+                ? 'אין מקומות בסינון הזה'
+                : 'עברתם על כל המקומות. אפשר לחכות לחברים או לבדוק את המאצ׳ים בלשונית מקומות'}
           </Empty>
         )}
         {deck
@@ -196,18 +205,18 @@ export default function SwipeGame({ trip, userId, members }: Props) {
             <Card key={c.id} c={c} top={i === arr.length - 1} onSwipe={(liked) => swipe(c, liked)} />
           ))}
       </div>
-      {deck.length > 0 && (
+      {(deck.length > 0 || history.length > 0) && (
         <div className="swipe-buttons">
           <button className="round small-round" onClick={undo} disabled={!history.length} aria-label="ביטול החלקה אחרונה">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3" /></svg>
           </button>
-          <button className="round nope" onClick={() => swipe(deck[0], false)} aria-label="דלג">
+          <button className="round nope" onClick={() => deck[0] && swipe(deck[0], false)} disabled={!deck.length} aria-label="דלג">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
           </button>
-          <button className="round like" onClick={() => swipe(deck[0], true)} aria-label="אהבתי">
+          <button className="round like" onClick={() => deck[0] && swipe(deck[0], true)} disabled={!deck.length} aria-label="אהבתי">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path className="fill" d="M12 20.5s-7.5-4.6-9.2-9.4C1.6 7.7 4 4.5 7.2 4.5c1.9 0 3.4 1 4.8 2.8 1.4-1.8 2.9-2.8 4.8-2.8 3.2 0 5.6 3.2 4.4 6.6-1.7 4.8-9.2 9.4-9.2 9.4z" /></svg>
           </button>
-          <span className="left-count" aria-live="polite">נשארו {deck.length}</span>
+          {deck.length > 0 && <span className="left-count" aria-live="polite">נשארו {deck.length}</span>}
         </div>
       )}
 
@@ -473,9 +482,9 @@ function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked
                 </div>
               )}
               <MediaActions name={c.name} maps={c.maps_url} website={c.website_url} m={c} />
-              {c.sources.length > 0 && (
+              {c.sources.some((s) => safeUrl(s)) && (
                 <div className="row">
-                  {c.sources.slice(0, 4).map((s, i) => (
+                  {c.sources.flatMap((s) => safeUrl(s) ?? []).slice(0, 4).map((s, i) => (
                     <a key={s} className="pill" href={s} target="_blank" rel="noreferrer">
                       מקור {i + 1}
                     </a>
