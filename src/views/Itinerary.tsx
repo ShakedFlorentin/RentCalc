@@ -2,7 +2,7 @@ import { Fragment, useEffect, useRef, useState } from 'react'
 import { BedDouble, Check, Navigation, Pencil, PlaneLanding, Plus, Users } from 'lucide-react'
 import { supabase } from '../supabase'
 import { CATEGORIES, TOGETHER, WHO_OPTIONS, type Booking, type DayInfo, type Member, type Trip } from '../types'
-import { couplesOf, dayDate, fmtDay, mutate, useTripTable } from '../lib'
+import { couplesOf, dayDate, keepRanges, fmtDay, mutate, useTripTable } from '../lib'
 import { Empty, Field, Sheet, useRemembered } from '../ui'
 import { Icon } from '../icons'
 import {
@@ -90,7 +90,7 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
               {l.text}
             </div>
           ))}
-        {info?.notes && <div className="notes">{info.notes}</div>}
+        {info?.notes && <div className="notes">{keepRanges(info.notes)}</div>}
       </section>
 
       {couples.length > 1 && (
@@ -169,7 +169,7 @@ function EntryRow({ e, onEdit }: { e: Entry; onEdit: (i: PlanItem) => void }) {
           {i ? CATEGORIES[i.category] ?? i.category : 'הזמנה'}
           {e.who && <span className="who-pill">{e.who}</span>}
         </div>
-        {e.sub && <div className="notes">{e.sub}</div>}
+        {e.sub && <div className="notes">{keepRanges(e.sub)}</div>}
         {e.location && (
           <a className="action nav-btn" href={navUrl(e.location)} target="_blank" rel="noreferrer">
             <Icon as={Navigation} /> ניווט

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { supabase } from './supabase'
 import type { Member } from './types'
 
@@ -48,6 +48,10 @@ export function useTripTable<T>(table: string, tripId: string, order: string = '
   const haveRows = useRef(!!cached)
   // reloads can overlap when several changes arrive together; only the latest one may write
   const latest = useRef(0)
+  // Supabase hands back the existing channel for a name already in use, so two screens watching one table (search
+  // over the places list) would share it: adding listeners after subscribe() throws, and the first to close would
+  // stop the other's updates. Each screen gets its own channel.
+  const instance = useId()
 
   const reload = useCallback(async () => {
     const req = ++latest.current
@@ -75,7 +79,7 @@ export function useTripTable<T>(table: string, tripId: string, order: string = '
   useEffect(() => {
     reload()
     const channel = supabase
-      .channel(`${table}:${tripId}`)
+      .channel(`${table}:${tripId}:${instance}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table, filter: `trip_id=eq.${tripId}` },
@@ -93,10 +97,18 @@ export function useTripTable<T>(table: string, tripId: string, order: string = '
       document.removeEventListener('visibilitychange', refresh)
       window.removeEventListener('online', refresh)
     }
-  }, [table, tripId, reload])
+  }, [table, tripId, reload, instance])
 
   return { rows, loading, error, reload, stale, updatedAt }
 }
+
+/**
+ * Hebrew text often holds number ranges ("¥500–1,000", "10:00–13:00"). The dash between the numbers is a neutral
+ * character, so right-to-left text shows the range reversed ("1,000–¥500"). Isolating each range as left-to-right
+ * keeps its order. For display only: the isolate marks must not end up in saved text.
+ */
+export const keepRanges = (s: string) =>
+  s.replace(/[¥$€₪]?\d[\d.,:]*\s?[–—-]\s?[¥$€₪]?\d[\d.,:]*/g, (m) => '\u2066' + m + '\u2069')
 
 /** A save failed: say so in plain Hebrew, and say it's the connection when there's no network. */
 export function errorText(message: string) {

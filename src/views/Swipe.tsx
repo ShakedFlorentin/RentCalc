@@ -2,7 +2,7 @@ import { PointerEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../supabase'
 import { AUDIENCES, CARD_STYLE, CITY_HE, KOSHER, VERDICTS, type Candidate, type Member, type Swipe, type Trip } from '../types'
-import { matchFor, mutate, safeUrl, useMediaIndex, useTripTable, withMedia } from '../lib'
+import { keepRanges, matchFor, mutate, safeUrl, useMediaIndex, useTripTable, withMedia } from '../lib'
 import AddPlace from './AddPlace'
 import { Empty, Sheet } from '../ui'
 import { MediaActions } from '../media'
@@ -441,7 +441,7 @@ function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked
             {c.price && (
               <>
                 {' · '}
-                <bdi>{c.price}</bdi>
+                <bdi>{keepRanges(c.price)}</bdi>
               </>
             )}
           </div>
@@ -453,31 +453,31 @@ function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked
         {c.serves && (
           <div className="fact">
             <Label icon={Utensils}>מה מגישים</Label>
-            <p dir="auto" className="clamp">{c.serves}</p>
+            <p dir="auto" className="clamp">{keepRanges(c.serves)}</p>
           </div>
         )}
         {c.todo && !c.serves && (
           <div className="fact">
             <Label icon={Target}>מה עושים שם</Label>
-            <p dir="auto" className="clamp">{c.todo}</p>
+            <p dir="auto" className="clamp">{keepRanges(c.todo)}</p>
           </div>
         )}
         {c.special && (
           <div className="fact">
             <Label icon={Sparkles}>מה מיוחד</Label>
-            <p dir="auto" className="clamp">{c.special}</p>
+            <p dir="auto" className="clamp">{keepRanges(c.special)}</p>
           </div>
         )}
         {c.hype && !c.serves && !c.todo && !c.special && (
           <div className="fact">
             <Label icon={MessageSquare}>ברשתות</Label>
-            <p dir="auto" className="clamp">{c.hype}</p>
+            <p dir="auto" className="clamp">{keepRanges(c.hype)}</p>
           </div>
         )}
         {c.reality && !c.todo && !c.special && (
           <div className="fact">
             <Label icon={Search}>בביקורות</Label>
-            <p dir="auto" className="clamp">{c.reality}</p>
+            <p dir="auto" className="clamp">{keepRanges(c.reality)}</p>
           </div>
         )}
       </div>
@@ -494,7 +494,7 @@ function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked
               {c.serves && (
                 <div className="fact">
                   <Label icon={Utensils}>מה מגישים</Label>
-                  <p dir="auto">{c.serves}</p>
+                  <p dir="auto">{keepRanges(c.serves)}</p>
                   {!!c.dishes?.length && (
                     <div className="dishes">
                       {c.dishes.map((d) => (
@@ -509,20 +509,20 @@ function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked
               {c.kosher_note && (
                 <div className="fact">
                   <Label icon={UtensilsCrossed}>כשרות (בלי חזיר ופירות ים)</Label>
-                  <p dir="auto">{c.kosher_note}</p>
+                  <p dir="auto">{keepRanges(c.kosher_note)}</p>
                 </div>
               )}
               {c.todo && (
                 <div className="fact">
                   {c.serves ? <Label icon={ReceiptText}>איך זה עובד</Label> : <Label icon={Target}>מה עושים שם</Label>}
-                  <p dir="auto">{c.todo}</p>
+                  <p dir="auto">{keepRanges(c.todo)}</p>
                   {c.time_needed && <p className="muted small"><Icon as={Timer} /> {c.time_needed}</p>}
                 </div>
               )}
               {c.special && (
                 <div className="fact">
                   <Label icon={Sparkles}>מה מיוחד</Label>
-                  <p dir="auto">{c.special}</p>
+                  <p dir="auto">{keepRanges(c.special)}</p>
                   {!!c.highlights?.length && (
                     <div className="dishes">
                       {c.highlights.map((h) => (
@@ -537,25 +537,25 @@ function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked
               {c.hype && (
                 <div className="fact">
                   <Label icon={MessageSquare}>ברשתות</Label>
-                  <p dir="auto">{c.hype}</p>
+                  <p dir="auto">{keepRanges(c.hype)}</p>
                 </div>
               )}
               {c.reality && (
                 <div className="fact">
                   <Label icon={Search}>בביקורות</Label>
-                  <p dir="auto">{c.reality}</p>
+                  <p dir="auto">{keepRanges(c.reality)}</p>
                 </div>
               )}
               {c.baby_notes && (
                 <div className="fact">
                   {c.audience === 'adults' ? <Label icon={Wine}>למה בלי התינוק</Label> : <Label icon={Baby}>עם תינוק</Label>}
-                  <p dir="auto">{c.baby_notes}</p>
+                  <p dir="auto">{keepRanges(c.baby_notes)}</p>
                 </div>
               )}
               {c.tip && (
                 <div className="fact">
                   <Label icon={Lightbulb}>טיפ</Label>
-                  <p dir="auto">{c.tip}</p>
+                  <p dir="auto">{keepRanges(c.tip)}</p>
                 </div>
               )}
               <MediaActions name={c.name} maps={c.maps_url} website={c.website_url} m={c} />

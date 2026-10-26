@@ -70,7 +70,10 @@ export default function Bookings({ trip, members, userId }: Props) {
                   <b>
                     <Icon as={BOOKING_ICON[b.kind] ?? BOOKING_ICON.other} /> {b.title}
                   </b>
-                  {b.file_path && <Icon as={Paperclip} className="muted" label="קובץ מצורף" />}
+                  {/* the whole card opens the editor; the pencil says so (the document has its own button below) */}
+                  <span className="muted booking-edit" aria-hidden="true">
+                    <Icon as={Pencil} />
+                  </span>
                 </div>
                 {couples.length > 1 && (
                   <div className={'who-tag' + (b.who ? ' apart' : '')}>{b.who ?? <WhoAll />}</div>
@@ -86,6 +89,7 @@ export default function Bookings({ trip, members, userId }: Props) {
                     אישור: <b className="code" dir="ltr">{b.confirmation}</b>
                   </div>
                 )}
+                {(b.location || safeUrl(b.url) || b.file_path) && (
                 <div className="row" onClick={(e) => e.stopPropagation()}>
                   {b.location && (
                     <a className="pill" href={mapsUrl(b.location)} target="_blank" rel="noreferrer">
@@ -98,10 +102,8 @@ export default function Bookings({ trip, members, userId }: Props) {
                     </a>
                   )}
                   {b.file_path && <DocButtons path={b.file_path} />}
-                  <button className="pill" onClick={() => setEdit(b)}>
-                    <Icon as={Pencil} /> עריכה
-                  </button>
                 </div>
+                )}
               </div>
           </Fragment>
         ))}
@@ -199,12 +201,10 @@ function DocButtons({ path }: { path: string }) {
     <>
       <button className="pill" onClick={() => openFile(path)}>
         <Icon as={Paperclip} /> מסמך
+        {/* saved on the phone: a tick inside the button rather than a line of its own that pushed the row onto two lines */}
+        {saved && <Icon as={Check} label="שמור בטלפון, נפתח גם בלי אינטרנט" />}
       </button>
-      {saved ? (
-        <span className="small muted">
-          <Icon as={Check} /> נשמר לאופליין
-        </span>
-      ) : (
+      {saved ? null : (
         saved === false && (
           <button className="pill" disabled={busy} onClick={save}>
             {busy ? (

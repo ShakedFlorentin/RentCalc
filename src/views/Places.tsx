@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../supabase'
 import { AUDIENCES, CATEGORIES, VERDICTS, type DayInfo, type GuidePlace, type ItineraryItem, type Member, type Place, type Trip } from '../types'
-import { couplesOf, errorText, mapsUrl, mutate, normName, safeUrl, useMediaIndex, useTripTable, withMedia } from '../lib'
+import { couplesOf, errorText, keepRanges, mapsUrl, mutate, normName, safeUrl, useMediaIndex, useTripTable, withMedia } from '../lib'
 import { BookOpen, CalendarCheck, CalendarPlus, Check, Heart, List, Map as MapIcon, MapPin, Plus, Users, Wand2 } from 'lucide-react'
 import { Empty, Field, LoadNote, Sheet, useRemembered } from '../ui'
 import { AUDIENCE_ICON, CATEGORY_ICON, Icon } from '../icons'
@@ -210,7 +210,7 @@ export default function Places({ trip, me, userId, members }: Props) {
               <h2 className="group-title">{c}</h2>
               {[...areas].map(([a, ps]) => (
                 <div key={a} className="stack">
-                  {a !== '—' && <div className="area-title" dir="auto"><Icon as={MapPin} /> {a}</div>}
+                  {a !== '—' && <div className="area-title"><Icon as={MapPin} /> <bdi>{a}</bdi></div>}
                   {ps.map((p) => (
                     <PlaceRow key={p.id} p={p} planned={plannedIds.has(p.id)} onEdit={setEdit} onPlan={setPlanning} />
                   ))}
@@ -244,7 +244,8 @@ function PlaceRow(props: { p: Place; planned: boolean; onEdit: (p: Place) => voi
       >
         {p.visited ? <Icon as={Check} size="1em" strokeWidth={3} /> : null}
       </button>
-      <Thumb photos={p.photos} icon={CATEGORY_ICON[p.category] ?? MapPin} />
+      {/* without photos the square only repeats the category and squeezes the name and buttons */}
+      {!!p.photos?.length && <Thumb photos={p.photos} icon={CATEGORY_ICON[p.category] ?? MapPin} />}
       <div className="item-body" onClick={() => props.onEdit(p)}>
         <div className="item-title" dir="auto">
           {p.name}
@@ -264,28 +265,24 @@ function PlaceRow(props: { p: Place; planned: boolean; onEdit: (p: Place) => voi
               <Icon as={Users} /> <bdi>{p.who}</bdi>
             </>
           )}
-          {props.planned && (
-            <>
-              {' · '}
-              <Icon as={CalendarCheck} /> במסלול
-            </>
-          )}
         </div>
         {p.notes && (
           <div className="notes" dir="auto">
-            {p.notes}
+            {keepRanges(p.notes)}
           </div>
         )}
-        <MediaActions name={p.name} maps={p.url || null} m={{ ...p, lat: p.url ? null : p.lat, lng: p.url ? null : p.lng }} compact />
-        {!p.url && p.lat == null && (
-          <a className="action compact-link" href={mapLink} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
-            <Icon as={MapPin} /> <span>חיפוש במפות</span>
-          </a>
-        )}
+        {/* one row of chips under the text, the plan button among them, so the name gets the card's width */}
+        <MediaActions name={p.name} maps={p.url || null} m={{ ...p, lat: p.url ? null : p.lat, lng: p.url ? null : p.lng }} compact>
+          {!p.url && p.lat == null && (
+            <a className="action" href={mapLink} target="_blank" rel="noreferrer">
+              <Icon as={MapPin} /> <span>מפה</span>
+            </a>
+          )}
+          <button className="action" onClick={() => props.onPlan(p)}>
+            <Icon as={props.planned ? CalendarCheck : CalendarPlus} /> <span>{props.planned ? 'במסלול' : 'למסלול'}</span>
+          </button>
+        </MediaActions>
       </div>
-      <button className="icon" onClick={() => props.onPlan(p)} aria-label="הוספה למסלול">
-        <Icon as={CalendarPlus} size="1.2em" />
-      </button>
     </div>
   )
 }

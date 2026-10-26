@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { ExternalLink, Globe, MapPin, Play } from 'lucide-react'
 import { Sheet } from './ui'
 import { safeUrl } from './lib'
@@ -46,19 +46,20 @@ export function VideoSheet({ media, title, onClose }: { media: NonNullable<Retur
   )
 }
 
-/** Maps / website / video chips. Renders nothing when there is nothing to link to. */
-export function MediaActions(props: { name: string; maps?: string | null; website?: string | null; m: Media; compact?: boolean }) {
+/** Maps / website / video chips, then any extra chips the caller adds. Renders nothing when there is nothing to show. */
+export function MediaActions(props: { name: string; maps?: string | null; website?: string | null; m: Media; compact?: boolean; children?: ReactNode }) {
   const [open, setOpen] = useState(false)
   const website = safeUrl(props.website)
   const maps =
     safeUrl(props.maps) || (props.m.lat != null && props.m.lng != null ? `https://www.google.com/maps/search/?api=1&query=${props.m.lat},${props.m.lng}` : null)
   const video = videoEmbed(props.m)
-  if (!maps && !website && !video) return null
+  if (!maps && !website && !video && !props.children) return null
   return (
-    <div className={'actions' + (props.compact ? ' compact' : '')}>
+    // the chips sit inside tappable cards: a tap on a chip is only the chip's
+    <div className={'actions' + (props.compact ? ' compact' : '')} onClick={(e) => e.stopPropagation()}>
       {maps && (
         <a className="action" href={maps} target="_blank" rel="noreferrer">
-          <Icon as={MapPin} /> <span>Google Maps</span>
+          <Icon as={MapPin} /> <span>מפה</span>
         </a>
       )}
       {website && (
@@ -71,6 +72,7 @@ export function MediaActions(props: { name: string; maps?: string | null; websit
           <Icon as={Play} /> <span>סרטון</span>
         </button>
       )}
+      {props.children}
       {open && video && <VideoSheet media={video} title={props.name} onClose={() => setOpen(false)} />}
     </div>
   )
