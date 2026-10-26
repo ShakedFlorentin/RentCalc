@@ -117,6 +117,8 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
   const [trip, setTrip] = useState<Trip | null>(tripCache?.data ?? null)
   const [members, setMembers] = useState<Member[]>(() => readCache<Member[]>('members:' + tripId)?.data ?? [])
   const [tab, setTab] = useState<Tab>('home')
+  // the avatar asks Home to open trip settings; a counter so every tap reopens it
+  const [settingsAsk, setSettingsAsk] = useState(0)
   const [day, setDay] = useState(1)
   const [moreSub, setMoreSub] = useRemembered('moreTab', 'money') as [MoreTab, (s: MoreTab) => void]
   const [failed, setFailed] = useState(false)
@@ -178,12 +180,17 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
   return (
     <div className="app">
       <header className="topbar">
-        <div className="topbar-text">
-          <h1>{TABS.find((t) => t.id === tab)?.label}</h1>
-          <span className="small muted" dir="auto">
-            {trip.name}
-          </span>
-        </div>
+        <h1>{TABS.find((t) => t.id === tab)?.label}</h1>
+        <button
+          className="avatar"
+          aria-label={`הגדרות טיול, ${me}`}
+          onClick={() => {
+            setTab('home')
+            setSettingsAsk((n) => n + 1)
+          }}
+        >
+          {initials(me)}
+        </button>
       </header>
       <OfflineBanner since={stale ? syncedAt : null} />
       <main className={'tab-' + tab}>
@@ -196,6 +203,7 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
             onOpenDay={openDay}
             onOpenMore={openMore}
             onLeave={props.onLeave}
+            settingsAsk={settingsAsk}
           />
         )}
         {tab === 'swipe' && <SwipeGame trip={trip} userId={props.userId} members={members} />}
@@ -216,6 +224,12 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
       </nav>
     </div>
   )
+}
+
+/** Up to two initials, like the Music avatar: first letter of the first and last word */
+function initials(name: string) {
+  const words = name.trim().split(/\s+/).filter(Boolean)
+  return words.length > 1 ? words[0][0] + words[words.length - 1][0] : (words[0]?.[0] ?? '')
 }
 
 function LoadError({ onRetry }: { onRetry: () => void }) {

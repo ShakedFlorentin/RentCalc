@@ -45,9 +45,11 @@ type Props = {
   /** jump to a section of the "עוד" tab: money, lists, info or baby */
   onOpenMore: (sub: MoreTab) => void
   onLeave: () => void
+  /** bumped by the top bar's avatar: open trip settings */
+  settingsAsk: number
 }
 
-export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore, onLeave }: Props) {
+export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore, onLeave, settingsAsk }: Props) {
   const { rows: days } = useTripTable<DayInfo>('day_info', trip.id, 'day')
   const { rows: items } = useTripTable<PlanItem>('itinerary_items', trip.id, 'sort')
   const { rows: bookings } = useTripTable<Booking>('bookings', trip.id, 'starts_at')
@@ -55,6 +57,9 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
   const { rows: candidates } = useTripTable<Candidate>('candidates', trip.id)
   const { rows: swipes } = useTripTable<Swipe>('swipes', trip.id)
   const [editing, setEditing] = useState(false)
+  useEffect(() => {
+    if (settingsAsk) setEditing(true)
+  }, [settingsAsk])
   const now = useNow()
 
   const today = currentDay(trip.start_date, trip.num_days)
@@ -194,13 +199,13 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
         </section>
       )}
 
-      <section className="card">
-        <h3>המסלול</h3>
-        <div className="route">
-          {cities.map((c) => (
-            <button key={c.from} className="route-stop" onClick={() => onOpenDay(c.from)}>
+      <section>
+        <h3 className="shelf-title">המסלול</h3>
+        <div className="city-grid">
+          {cities.map((c, i) => (
+            <button key={c.from} className={'city-tile c' + (i % 7)} onClick={() => onOpenDay(c.from)}>
               <b>{c.value || '—'}</b>
-              <span className="muted small">
+              <span className="small">
                 {c.from === c.to ? `יום ${c.from}` : <>ימים <bdi dir="ltr">{c.from}–{c.to}</bdi></>}
               </span>
             </button>

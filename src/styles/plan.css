@@ -40,8 +40,34 @@
 .shortcuts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 /* tiles: tinted icon on top, label under it, like the mockup's tonight/expenses tiles */
 .shortcuts .secondary { flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 6px; min-height: 0; padding: 14px 16px; border-radius: 24px; text-align: start; }
-.shortcuts .secondary { color: var(--text); }
-.shortcuts .secondary .ic { width: 22px; height: 22px; color: var(--accent); }
+.shortcuts .secondary { align-items: center; justify-content: center; color: var(--accent); font-weight: 500; }
+.shortcuts .secondary .ic { width: 24px; height: 24px; color: var(--accent); }
+/* Music Search-style tiles: a colour block per city, bold name in the corner */
+.shelf-title { margin: 8px 0 10px; }
+.city-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
+.city-tile {
+  aspect-ratio: 16 / 9;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  color: #fff;
+  text-align: start;
+  transition: transform 100ms ease-out;
+}
+.city-tile:active { transform: scale(0.97); }
+.city-tile b { font-size: 1.375rem; font-weight: 700; letter-spacing: -0.015em; line-height: 1.1; }
+.city-tile .small { opacity: 0.92; }
+.city-tile.c0 { background: #c2253f; }
+.city-tile.c1 { background: #b4501a; }
+.city-tile.c2 { background: #1f7a73; }
+.city-tile.c3 { background: #5b3fa0; }
+.city-tile.c4 { background: #2f64b0; }
+.city-tile.c5 { background: #a3346f; }
+.city-tile.c6 { background: #7a600a; }
 /* iOS Settings-style icon squares */
 .tile { flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 7px; color: #fff; }
 .tile .ic { width: 18px; height: 18px; color: #fff; }

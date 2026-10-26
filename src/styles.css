@@ -19,7 +19,7 @@
   --raised: none;
   --bar-bg: rgba(250, 250, 250, 0.8);
   --tabbar-h: 52px;
-  --top-h: 66px;
+  --top-h: 60px;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -170,6 +170,7 @@ form.card, .login .card { display: flex; flex-direction: column; gap: 12px; widt
   z-index: 5;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   min-height: calc(var(--top-h) + env(safe-area-inset-top));
   padding: calc(env(safe-area-inset-top) + 6px) 20px 6px;
@@ -178,11 +179,25 @@ form.card, .login .card { display: flex; flex-direction: column; gap: 12px; widt
   -webkit-backdrop-filter: saturate(1.8) blur(20px);
   backdrop-filter: saturate(1.8) blur(20px);
 }
-.topbar h1 { font-size: 2.125rem; font-weight: 700; letter-spacing: -0.022em; line-height: 1.2; }
+.topbar h1 { font-size: 2.125rem; font-weight: 800; letter-spacing: -0.022em; line-height: 1.2; }
+/* Music's profile button: initials on a pink disc, opposite the large title */
+.avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #e8608f, #c4336a);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+}
+.avatar:active { transform: scale(0.94); transition: transform 100ms ease-out; }
 .topbar-text { display: flex; flex-direction: column; gap: 0; min-width: 0; }
 .topbar-text .small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--accent-fill); flex: none; }
-main { padding: 14px 16px calc(var(--tabbar-h) + 36px + env(safe-area-inset-bottom)); }
+main { padding: 14px 20px calc(var(--tabbar-h) + 36px + env(safe-area-inset-bottom)); }
 main.tab-swipe { padding-bottom: 0; }
 
 /* floating glass capsule, as in iOS 26 */
@@ -266,10 +281,10 @@ main.tab-swipe { padding-bottom: 0; }
 .chips.scroll {
   flex-wrap: nowrap;
   overflow-x: auto;
-  margin: 0 -16px;
-  padding: 2px 16px;
+  margin: 0 -20px;
+  padding: 2px 20px;
   scrollbar-width: none;
-  scroll-padding-inline: 16px;
+  scroll-padding-inline: 20px;
 }
 .chips.scroll::-webkit-scrollbar { display: none; }
 .chip {
@@ -296,8 +311,8 @@ button.chip { min-height: 36px; }
   display: flex;
   gap: 8px;
   overflow-x: auto;
-  margin: 0 -16px;
-  padding: 2px 16px 4px;
+  margin: 0 -20px;
+  padding: 2px 20px 4px;
   scrollbar-width: none;
   scroll-snap-type: x proximity;
 }
@@ -607,8 +622,8 @@ html[dir='rtl'] .ja { text-align: right; }
   display: flex;
   gap: 8px;
   overflow-x: auto;
-  margin: 0 -16px;
-  padding: 8px 16px;
+  margin: 0 -20px;
+  padding: 8px 20px;
   background: var(--bar-bg);
   -webkit-backdrop-filter: saturate(1.6) blur(20px);
   backdrop-filter: saturate(1.6) blur(20px);
