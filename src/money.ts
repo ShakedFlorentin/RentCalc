@@ -63,6 +63,38 @@ export function simplify(bal: Record<string, number>): Transfer[] {
   return out
 }
 
+/**
+ * Who settles up together. A couple shares one wallet, so by couples a debt is between couples and it doesn't matter
+ * which of the two pays; someone without a couple is their own party.
+ */
+export type Party = { key: string; label: string; ids: string[] }
+
+export function partiesOf(members: Member[], byCouple: boolean): Party[] {
+  const out: Party[] = []
+  for (const m of members) {
+    const key = byCouple && m.couple ? 'c:' + m.couple : 'p:' + m.user_id
+    const p = out.find((x) => x.key === key)
+    if (p) p.ids.push(m.user_id)
+    else out.push({ key, label: byCouple && m.couple ? m.couple : m.display_name, ids: [m.user_id] })
+  }
+  return out
+}
+
+// under a shekel (or 100 yen) isn't worth a transfer, and it is what rounding to whole shekels leaves behind
+const NOISE: Record<Cur, number> = { JPY: 100, ILS: 100 }
+
+/**
+ * The payments that settle the parties (from/to are party keys), in whole yen or shekels as people actually pay,
+ * without leftovers too small to bother with.
+ */
+export function settleUp(bal: Record<string, number>, parties: Party[], cur: Cur): Transfer[] {
+  const net = Object.fromEntries(parties.map((p) => [p.key, p.ids.reduce((s, id) => s + (bal[id] ?? 0), 0)]))
+  // drop the small ones before rounding: half a shekel left after paying a rounded amount must not come back as ₪1
+  return simplify(net)
+    .filter((t) => t.amount >= NOISE[cur])
+    .map((t) => ({ ...t, amount: cur === 'ILS' ? Math.round(t.amount / 100) * 100 : t.amount }))
+}
+
 /** Per couple: net balance, and what they put in (settlements don't count as spending). */
 export function coupleTotals(expenses: Expense[], members: Member[], bal: Record<string, number>, cur: Cur, rate: number) {
   const coupleOf = new Map(members.map((m) => [m.user_id, m.couple]))

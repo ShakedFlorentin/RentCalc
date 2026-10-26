@@ -2,10 +2,10 @@ import { useState, type ReactNode } from 'react'
 import { supabase } from '../supabase'
 import type { Expense, Member, Trip } from '../types'
 import { couplesOf, fmtDay, mutate, useTripTable } from '../lib'
-import { balances, convert, coupleTotals, fmtMoney, simplify, toMinor, SYMBOL, type Cur, type Transfer } from '../money'
+import { balances, convert, coupleTotals, fmtMoney, partiesOf, settleUp, toMinor, SYMBOL, type Cur, type Transfer } from '../money'
 import { Empty, Field, LoadNote, Sheet, useRemembered } from '../ui'
 import { Icon, type LucideIcon } from '../icons'
-import { ArrowLeft, BedDouble, Handshake, Package, Plus, ShoppingBag, Ticket, TrainFront, Users, Utensils } from 'lucide-react'
+import { BedDouble, Check, Handshake, Package, Plus, ShoppingBag, Ticket, TrainFront, Users, Utensils } from 'lucide-react'
 import '../styles/expenses.css'
 
 type Props = { trip: Trip; members: Member[]; userId: string }
@@ -21,18 +21,11 @@ const CATS: Record<string, { label: string; icon: LucideIcon }> = {
 const flip = (c: Cur): Cur => (c === 'JPY' ? 'ILS' : 'JPY')
 const iconOf = (e: Expense): LucideIcon => (e.kind === 'settlement' ? Handshake : (CATS[e.category ?? '']?.icon ?? Package))
 
-/** A name with the arrow showing who pays whom (points from payer to receiver in RTL). */
-const Pays = ({ from, to }: { from: string; to: string }) => (
+/** Who paid whom, as it is said: "from Almog to Maor". */
+const FromTo = ({ from, to }: { from: string; to: string }) => (
   <>
-    {from} <Icon as={ArrowLeft} /> {to}
+    מ<bdi>{from}</bdi> ל<bdi>{to}</bdi>
   </>
-)
-
-/** A couple's name in a small pill. */
-const CouplePill = ({ name }: { name: string }) => (
-  <span className="exp-couple">
-    <Icon as={Users} /> {name}
-  </span>
 )
 
 /** Today by the date in Japan, whatever timezone the phone is still set to. */
@@ -50,7 +43,7 @@ const roundFor = (n: number, currency: string) => (currency === 'JPY' ? Math.rou
 export default function Expenses({ trip, members, userId }: Props) {
   const { rows, loading, error, reload } = useTripTable<Expense>('expenses', trip.id, 'spent_on')
   const [cur, setCur] = useRemembered('expensesCurrency', 'ILS')
-  const [group, setGroup] = useRemembered('expensesGroup', 'people')
+  const [settleBy, setSettleBy] = useRemembered('expensesSettleBy', 'couples')
   const [edit, setEdit] = useState<Partial<Expense> | null>(null)
   const [settle, setSettle] = useState<{ t: Transfer; row?: Expense } | null>(null)
   const [editingRate, setEditingRate] = useState(false)
@@ -65,9 +58,22 @@ export default function Expenses({ trip, members, userId }: Props) {
   const ids = members.map((m) => m.user_id)
 
   const bal = balances(rows, ids, show, rate)
-  const transfers = simplify(bal)
-  const mine = bal[userId] ?? 0
-  const byCouple = coupleTotals(rows, members, bal, show, rate)
+  // two couples share expenses as two wallets, so by default the debts are settled between couples
+  const canByCouple = couples.length > 1
+  const byCouple = canByCouple && settleBy !== 'people'
+  const parties = partiesOf(members, byCouple)
+  const partyOf = (id: string) => parties.find((p) => p.ids.includes(id))
+  const mineKey = partyOf(userId)?.key
+  const labelOf = (key: string) => parties.find((p) => p.key === key)?.label ?? 'מישהו'
+  const transfers = settleUp(bal, parties, show)
+  const toPay = transfers.filter((t) => t.from === mineKey)
+  const toGet = transfers.filter((t) => t.to === mineKey)
+  const others = transfers.filter((t) => t.from !== mineKey && t.to !== mineKey)
+  const owe = toPay.reduce((s, t) => s + t.amount, 0)
+  const owed = toGet.reduce((s, t) => s + t.amount, 0)
+  const totals = coupleTotals(rows, members, bal, show, rate)
+  // "we" for a couple, "you" for one person
+  const we = byCouple && (partyOf(userId)?.ids.length ?? 0) > 1
 
   // newest first, grouped by day
   const sorted = [...rows].sort((a, b) => b.spent_on.localeCompare(a.spent_on) || b.created_at.localeCompare(a.created_at))
@@ -81,13 +87,34 @@ export default function Expenses({ trip, members, userId }: Props) {
     return couple ?? split.map(nameOf).join(', ')
   }
 
+  // a repayment between couples is the couple's, whichever of the two handed over the money
+  const whoOf = (id: string) => (byCouple ? (partyOf(id)?.label ?? nameOf(id)) : nameOf(id))
   const money = (minor: number, c: Cur = show) => <bdi dir="ltr">{fmtMoney(minor, c)}</bdi>
+  /** A transfer between parties, recorded as one person paying another: someone from each side, preferably me. */
+  const asPeople = (t: Transfer): Transfer => {
+    const pick = (key: string) => {
+      const p = parties.find((x) => x.key === key)!
+      return p.ids.includes(userId) ? userId : p.ids[0]
+    }
+    return { from: pick(t.from), to: pick(t.to), amount: t.amount }
+  }
 
   return (
     <div className="stack">
+      {canByCouple && (
+        <div className="segmented exp-by" role="group" aria-label="סוגרים חשבון">
+          <button className={byCouple ? 'on' : ''} aria-pressed={byCouple} onClick={() => setSettleBy('couples')}>
+            בין הזוגות
+          </button>
+          <button className={!byCouple ? 'on' : ''} aria-pressed={!byCouple} onClick={() => setSettleBy('people')}>
+            כל אחד לחוד
+          </button>
+        </div>
+      )}
+
       <div className="card exp-hero">
-        <div className="row spread">
-          <span className="muted small">היתרה שלך</span>
+        <div className="row spread nowrap">
+          <span className="muted small">{byCouple ? `היתרה של ${labelOf(mineKey ?? '')}` : 'היתרה שלך'}</span>
           <div className="segmented exp-cur" role="group" aria-label="מטבע להצגה">
             {(['JPY', 'ILS'] as const).map((c) => (
               <button key={c} className={show === c ? 'on' : ''} aria-pressed={show === c} onClick={() => setCur(c)}>
@@ -96,17 +123,31 @@ export default function Expenses({ trip, members, userId }: Props) {
             ))}
           </div>
         </div>
-        <div className={'exp-big' + (mine > 0 ? ' plus' : mine < 0 ? ' minus' : '')}>
-          {mine === 0 ? (
-            'אין יתרה פתוחה'
+        <div className={'exp-big' + (owe ? ' minus' : owed ? ' plus' : '')}>
+          {owe ? (
+            <>{we ? 'עליכם להחזיר' : 'עליך להחזיר'} {money(owe)}</>
+          ) : owed ? (
+            <>{we ? 'מגיע לכם' : 'מגיע לך'} {money(owed)}</>
           ) : (
-            <>
-              {mine > 0 ? 'מגיע לך ' : 'עליך להחזיר '}
-              {money(mine)}
-            </>
+            'הכול מאוזן'
           )}
         </div>
-        <div className="muted small">
+        {/* my own payments, each with its button: the one thing this screen is for */}
+        {[...toPay, ...toGet].map((t) => {
+          const paying = t.from === mineKey
+          return (
+            <div key={t.from + t.to} className="exp-transfer">
+              <span className="exp-transfer-who">
+                <span>{paying ? 'ל' : 'מ'}<bdi>{labelOf(paying ? t.to : t.from)}</bdi></span>
+                <b className="exp-num">{money(t.amount)}</b>
+              </span>
+              <button className="pill" onClick={() => setSettle({ t: asPeople(t) })}>
+                <Icon as={Check} /> {paying ? (we ? 'החזרנו' : 'החזרתי') : (we ? 'קיבלנו' : 'קיבלתי')}
+              </button>
+            </div>
+          )
+        })}
+        <div className="muted small exp-rate">
           שער: 100 ין = <bdi dir="ltr">₪{Number((rate * 100).toFixed(3))}</bdi>{' '}
           <button className="link exp-link" onClick={() => setEditingRate(true)}>
             עריכה
@@ -119,49 +160,38 @@ export default function Expenses({ trip, members, userId }: Props) {
         <Empty>אין הוצאות עדיין. מוסיפים הוצאה, בוחרים מי שילם ובין מי מחלקים, ופה רואים מי חייב למי.</Empty>
       )}
 
-      {rows.length > 0 && (
-        <>
-          <div className="card">
-            <h3 className="exp-h">מי מחזיר למי</h3>
-            {transfers.length === 0 && <p className="muted small">אין חובות פתוחים.</p>}
-            {transfers.map((t) => (
-              <div key={t.from + t.to} className="exp-transfer">
-                <div className="exp-transfer-who">
-                  <b>
-                    <Pays from={nameOf(t.from)} to={nameOf(t.to)} />
-                  </b>
-                  <span className="exp-num">{money(t.amount)}</span>
-                </div>
-                <button className="pill" onClick={() => setSettle({ t })}>
-                  סימון כהוחזר
-                </button>
-              </div>
-            ))}
-          </div>
-
-          <div className="card">
-            <div className="row spread">
-              <h3 className="exp-h">מצב כללי</h3>
-              {couples.length > 0 && (
-                <div className="segmented exp-group" role="group" aria-label="תצוגה">
-                  <button className={group !== 'couples' ? 'on' : ''} onClick={() => setGroup('people')}>
-                    אנשים
-                  </button>
-                  <button className={group === 'couples' ? 'on' : ''} onClick={() => setGroup('couples')}>
-                    זוגות
-                  </button>
-                </div>
-              )}
+      {others.length > 0 && (
+        <div className="card">
+          <h3 className="exp-h">החזרים בין האחרים</h3>
+          {others.map((t) => (
+            <div key={t.from + t.to} className="exp-transfer">
+              <span className="exp-transfer-who">
+                <span>
+                  מ<bdi>{labelOf(t.from)}</bdi> ל<bdi>{labelOf(t.to)}</bdi>
+                </span>
+                <b className="exp-num">{money(t.amount)}</b>
+              </span>
+              <button className="link exp-link" onClick={() => setSettle({ t: asPeople(t) })}>
+                הוחזר
+              </button>
             </div>
-            {group === 'couples' && couples.length > 0
+          ))}
+        </div>
+      )}
+
+      {rows.length > 0 && (
+        <details className="card tip exp-details">
+          <summary>
+            <span>{byCouple ? 'כמה כל זוג שילם' : 'היתרה של כל אחד'}</span>
+          </summary>
+          <div className="exp-details-body">
+            {byCouple
               ? couples.map((c) => (
-                  <Balance key={c} name={<CouplePill name={c} />} net={byCouple[c]?.net ?? 0} note={`שילמו ${fmtMoney(byCouple[c]?.paid ?? 0, show)}`} cur={show} />
+                  <Balance key={c} name={c} net={totals[c]?.net ?? 0} note={`שילמו ${fmtMoney(totals[c]?.paid ?? 0, show)}`} cur={show} />
                 ))
-              : members.map((m) => (
-                  <Balance key={m.user_id} name={m.display_name} net={bal[m.user_id] ?? 0} cur={show} />
-                ))}
+              : members.map((m) => <Balance key={m.user_id} name={m.display_name} net={bal[m.user_id] ?? 0} cur={show} />)}
           </div>
-        </>
+        </details>
       )}
 
       {days.map((d) => (
@@ -181,12 +211,16 @@ export default function Expenses({ trip, members, userId }: Props) {
                     <Icon as={iconOf(e)} size="1.25em" />
                   </span>
                   <span className="exp-main">
-                    <b>{settlement ? <>החזר: <Pays from={nameOf(e.paid_by)} to={nameOf(e.split_among[0])} /></> : e.title}</b>
-                    {!settlement && (
-                      <span className="muted small">
-                        שולם ע״י {nameOf(e.paid_by)} · בין: {splitLabel(e.split_among)}
-                      </span>
-                    )}
+                    <b>{settlement ? 'החזר' : e.title}</b>
+                    <span className="muted small">
+                      {settlement ? (
+                        <FromTo from={whoOf(e.paid_by)} to={whoOf(e.split_among[0])} />
+                      ) : (
+                        <>
+                          שולם ע״י {nameOf(e.paid_by)} · בין: {splitLabel(e.split_among)}
+                        </>
+                      )}
+                    </span>
                   </span>
                   <span className="exp-amt">
                     <b>
@@ -210,7 +244,7 @@ export default function Expenses({ trip, members, userId }: Props) {
         <SettleSheet
           trip={trip}
           userId={userId}
-          nameOf={nameOf}
+          nameOf={whoOf}
           cur={settle.row?.currency ?? show}
           {...settle}
           onClose={() => setSettle(null)}
@@ -449,18 +483,18 @@ function SettleSheet(props: {
   }
 
   return (
-    <Sheet title={row ? 'עריכת החזר' : 'סימון כהוחזר'} onClose={props.onClose}>
-      <p>
+    <Sheet title={row ? 'עריכת החזר' : 'רישום החזר'} onClose={props.onClose}>
+      <p className="exp-settle-who">
         <b>
-          <Pays from={props.nameOf(t.from)} to={props.nameOf(t.to)} />
+          <FromTo from={props.nameOf(t.from)} to={props.nameOf(t.to)} />
         </b>
       </p>
-      <Field label={`סכום שהוחזר (${SYMBOL[cur]})`}>
+      <Field label={`כמה הוחזר (${SYMBOL[cur]})`}>
         <input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} dir="ltr" />
       </Field>
       {err && <p className="msg" role="alert">{err}</p>}
       <button className="primary" onClick={save} disabled={busy}>
-        {busy ? 'שומר…' : row ? 'שמירה' : 'אישור החזר'}
+        {busy ? 'שומר…' : row ? 'שמירה' : 'רישום ההחזר'}
       </button>
       {row && (
         <button className="danger" onClick={remove}>

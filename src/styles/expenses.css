@@ -4,8 +4,7 @@
 .exp-big.plus, .exp-num.plus { color: var(--ok); }
 .exp-big.minus, .exp-num.minus { color: var(--nope); }
 .exp-cur { flex: none; width: 96px; }
-.exp-group { flex: none; width: 150px; }
-.exp-cur button, .exp-group button { min-height: 44px; }
+.exp-cur button, .exp-by button { min-height: 44px; }
 .exp-link { min-height: 44px; padding: 4px 8px; }
 .exp-h { font-size: 1rem; margin: 0 0 4px; }
 
@@ -18,7 +17,7 @@
   border-top: 1px solid var(--line);
 }
 .exp-transfer:first-of-type, .exp-bal:first-of-type { border-top: 0; }
-.exp-transfer-who { display: flex; flex-direction: column; min-width: 0; }
+.exp-transfer-who { display: flex; flex-direction: column; min-width: 0; font-size: 0.9375rem; }
 .exp-num { font-weight: 700; font-variant-numeric: tabular-nums; }
 .exp-transfer .pill { flex: none; min-height: 44px; }
 
@@ -33,9 +32,7 @@
   color: inherit;
 }
 .exp-icon { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--fill); color: var(--muted); }
-.exp-couple { display: inline-flex; align-items: center; gap: 5px; padding: 1px 9px; border-radius: 999px; background: var(--fill); font-size: 0.875rem; }
 .exp-bal b.exp-num { white-space: nowrap; }
-.exp-main > b .ic, .exp-transfer-who .ic { margin-inline: 2px; color: var(--muted); }
 .chips .chip .ic { margin-inline-end: 2px; }
 .exp-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .exp-main > b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -46,3 +43,11 @@
 .exp-amount .field { flex: 1; }
 .exp-amount .exp-cur { margin-bottom: 1px; }
 .exp-amount .exp-cur button { min-height: 44px; }
+
+/* settling up: by couples or person by person, above everything it changes */
+.exp-by button { flex: 1; }
+.exp-rate { margin-top: 2px; }
+.exp-transfer .link { flex: none; }
+/* everyone's balance, folded away: what to pay is already in the card above */
+.exp-details .exp-details-body { padding: 0 16px 6px; }
+.exp-settle-who { margin: 0; font-size: 1.125rem; }
