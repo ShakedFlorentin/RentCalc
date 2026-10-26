@@ -2,7 +2,7 @@
  * Destination photos for the Music-style city tiles, kept in public/cities/<slug>.webp. A slug is listed in
  * PHOTOS only once its file is there, so tiles never ask for a missing image; until then a tile is plain colour.
  */
-const PHOTOS = new Set<string>([])
+const PHOTOS = new Set<string>(['tokyo', 'yokohama', 'kyoto', 'osaka', 'nara', 'fuji'])
 
 // names as they are written in day_info / places (Hebrew, free text) and in the swipe deck (English keys)
 const SLUGS: [RegExp, string][] = [
