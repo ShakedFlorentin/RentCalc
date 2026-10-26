@@ -258,7 +258,7 @@ export default function Translator() {
     `קול בעברית: ${voiceFor('he')}`,
     `קול ביפנית: ${voiceFor('ja')}`,
     `שפה אחרונה: ${lang}`,
-    `נשמע: ${heard || '(ריק)'}`,
+    `נשמע: ${heard || turns[0]?.heard || '(ריק)'}`,
     turns[0] && `תרגום אחרון: ${turns[0].text}`,
     turns[0]?.back && `בחזרה לעברית: ${turns[0].back}`,
     error && `שגיאה: ${error}`,
