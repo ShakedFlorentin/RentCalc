@@ -32,7 +32,7 @@ import { couplesOf, currentDay, dayDate, fmtDay, mutate, useTripTable } from '..
 import { Field, Sheet } from '../ui'
 import { BOOKING_ICON, Icon } from '../icons'
 import type { MoreTab } from './More'
-import { dayEntries, fmtUntil, hotelFor, nightLines, minutesOf, navUrl, ymd, type Entry, type PlanItem } from './planUtils'
+import { dayEntries, fmtUntil, hotelFor, nightLines, stayInJapan, minutesOf, navUrl, ymd, type Entry, type PlanItem } from './planUtils'
 import '../styles/plan.css'
 
 type Props = {
@@ -317,25 +317,25 @@ function BeforeTrip(props: {
   const counts = ['flight', 'hotel', 'restaurant', 'activity'].map((k) => ({ k, n: bookings.filter((b) => b.kind === k).length }))
   const mine = props.myCouple
 
-  // a night needs a roof for every couple in Japan that day, except the last day of the trip
+  // each couple needs a roof for its own nights in Japan: from landing to the night before its flight out. Without
+  // both flights, fall back to the trip's days minus the other couple's days alone (and not the last day)
   const missing = [...couples]
     .sort((a, b) => Number(b === mine) - Number(a === mine))
     .map((c) => {
-      // every night counts, even a day with no day_info row yet
-      const nights = Array.from({ length: Math.max(props.numDays - 1, 0) }, (_, i) => i + 1)
-        .map((day) => ({ day, info: days.find((d) => d.day === day) }))
-        .filter(({ info }) => !info?.who || info.who === c)
-      const uncovered = nights.filter(({ day, info }) => {
-        const date = props.start ? ymd(dayDate(props.start, day)!) : ''
-        return !hotelFor(nightLines(info?.hotel ?? null, bookings, date, couples), c).length
-      })
-      return { c, n: uncovered.length }
+      const stay = stayInJapan(bookings, c)
+      const nights = Array.from({ length: Math.max(props.numDays - (stay ? 0 : 1), 0) }, (_, i) => i + 1)
+        .map((day) => ({ day, date: props.start ? ymd(dayDate(props.start, day)!) : '', info: days.find((d) => d.day === day) }))
+        .filter(({ date, info }) => (stay ? date >= stay.from && date < stay.to : !info?.who || info.who === c))
+      const uncovered = nights.filter(
+        ({ date, info }) => !hotelFor(nightLines(info?.hotel ?? null, bookings, date, couples), c).length,
+      )
+      return { c, n: uncovered.length, of: nights.length }
     })
     .filter((m) => m.n > 0)
   const noFlight = couples.filter((c) => !bookings.some((b) => b.kind === 'flight' && (!b.who || b.who === c)))
   const gaps = [
     ...noFlight.map((c) => `אין טיסה ל${c}`),
-    ...(missing.length ? [`חסרה לינה: ${missing.map((m) => `${m.c} ${m.n} לילות`).join(' · ')}`] : []),
+    ...(missing.length ? [`חסרה לינה: ${missing.map((m) => `${m.c} ${m.n} מתוך ${m.of} לילות`).join(' · ')}`] : []),
   ]
 
   if (!todo.length && !bookings.length && !gaps.length && !props.swipesLeft) return null

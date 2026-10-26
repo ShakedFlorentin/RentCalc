@@ -226,3 +226,18 @@ export const ARRIVAL: Record<Airport, { name: string; steps: ArrivalStep[] }> = 
 
 /** Fallback when the booking doesn't name its airport: where each couple is known to land. */
 export const COUPLE_AIRPORT: Record<string, Airport> = { 'שקד ומאור': 'HND', 'אלמוג ושניר': 'NRT' }
+
+/**
+ * A couple's time in Japan from its flights: the date it lands to the date it flies out (YYYY-MM-DD), or null when
+ * either end isn't booked. The group's flights (who null) count for every couple.
+ */
+export function stayInJapan(bookings: Booking[], who: string): { from: string; to: string } | null {
+  const flights = bookings.filter((b) => b.kind === 'flight' && (!b.who || b.who === who))
+  // only legs that actually land in or leave Japan (not the connection in Munich or Zurich)
+  const lands = flights.flatMap((b) => (flightSide(b.title) === 'to' && b.ends_at ? [b.ends_at.slice(0, 10)] : []))
+  const leaves = flights.flatMap((b) => (flightSide(b.title) === 'from' && b.starts_at ? [b.starts_at.slice(0, 10)] : []))
+  if (!lands.length || !leaves.length) return null
+  const from = lands.sort()[0]
+  const to = leaves.sort().reverse()[0]
+  return from < to ? { from, to } : null
+}
