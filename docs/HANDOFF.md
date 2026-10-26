@@ -32,7 +32,7 @@ Offline: `public/sw.js` + localStorage cache in `useTripTable` (`src/lib.ts`).
 - Edge functions (`supabase/functions/*`, deploy via MCP): `suggest-place` (v13, link/name → up to 10 place cards
   with kosher fields) and `parse-booking` (v8). Model `claude-haiku-5-5`, key in Vault `anthropic_api_key`,
   30 calls/user/day. Both validate the body before charging quota and only pass http(s) links.
-- Edge function `translate` (v1, deployed 2026-10-26): one spoken sentence he↔ja with Haiku, thinking off, effort low,
+- Edge function `translate` (v2, deployed 2026-10-26): one spoken sentence he↔ja with Haiku, thinking off, effort low,
   200 calls/user/day (own `ai_usage` fn). Used by the voice translator in More → Important (`src/views/Translator.tsx`):
   the phone's speech recognition (webkitSpeechRecognition) writes it down, the phone's voices read the result.
 

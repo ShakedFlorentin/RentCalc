@@ -62,7 +62,7 @@ export default function Translator() {
   const [listening, setListening] = useState(false)
   const [heard, setHeard] = useState('')
   const [interim, setInterim] = useState('')
-  const [translation, setTranslation] = useState<{ text: string; romaji: string; lang: Lang } | null>(null)
+  const [translation, setTranslation] = useState<{ text: string; romaji: string; back: string; lang: Lang } | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
@@ -117,15 +117,18 @@ export default function Translator() {
     const to = from === 'he-IL' ? 'ja-JP' : 'he-IL'
     setBusy(true)
     note('שולח לתרגום')
+    const sent = performance.now()
     const { data, error } = await supabase.functions.invoke('translate', { body: { text, from: from.slice(0, 2) } })
     setBusy(false)
+    const took = Math.round(performance.now() - sent)
     if (error || !data?.translation) {
       note('התרגום נכשל')
       setError(await translateError(error))
       return
     }
-    note('התקבל תרגום')
-    setTranslation({ text: data.translation, romaji: data.romaji ?? '', lang: to })
+    // where the wait went: the whole round trip, and inside the server its checks and the Claude call
+    note(`התקבל תרגום אחרי ${took}ms (בדיקות ${data.ms?.checks ?? '?'}ms, Claude ${data.ms?.claude ?? '?'}ms, רשת והפעלה ${data.ms ? took - data.ms.checks - data.ms.claude : '?'}ms)`)
+    setTranslation({ text: data.translation, romaji: data.romaji ?? '', back: data.back ?? '', lang: to })
     say(data.translation)
   }
 
@@ -233,6 +236,7 @@ export default function Translator() {
     `שפה אחרונה: ${lang}`,
     `נשמע: ${heard || '(ריק)'}`,
     translation && `תרגום: ${translation.text}`,
+    translation?.back && `בחזרה לעברית: ${translation.back}`,
     error && `שגיאה: ${error}`,
     spoke && `השמעה אחרונה: ${spoke}`,
     log.length > 0 && `אירועים:\n${log.join('\n')}`,
@@ -285,6 +289,11 @@ export default function Translator() {
               {translation.romaji && (
                 <p className="voice-romaji muted" lang="ja-Latn" dir="ltr">
                   {translation.romaji}
+                </p>
+              )}
+              {translation.back && (
+                <p className="voice-back muted" dir="auto">
+                  בעברית זה אומר: {translation.back}
                 </p>
               )}
             </>

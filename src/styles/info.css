@@ -115,3 +115,4 @@ button.pill, .info-card .pill { min-height: 44px; }
 .voice-romaji { font-size: 0.9375rem; font-style: italic; text-align: start; }
 .voice-details summary { cursor: pointer; min-height: 32px; color: var(--muted); font-size: 0.875rem; }
 .voice-details[open] { display: flex; flex-direction: column; gap: 8px; }
+.voice-back { font-size: 0.875rem; }
