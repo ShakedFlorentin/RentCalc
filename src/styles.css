@@ -325,10 +325,12 @@ main.tab-swipe { padding-bottom: 0; }
 .clock { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 0.9375rem; color: var(--muted); }
 .mini-item { padding: 10px 0; border-bottom: 0.5px solid var(--line); }
 .mini-item.done { text-decoration: line-through; color: var(--muted); }
-.route { display: flex; flex-wrap: wrap; gap: 8px; }
+/* stacked, full width: rows of different text lengths still line up */
+.route { display: flex; flex-direction: column; gap: 8px; }
 .route-stop {
   display: flex;
   flex-direction: column;
+  width: 100%;
   min-height: 52px;
   padding: 8px 14px;
   border-radius: 12px;
