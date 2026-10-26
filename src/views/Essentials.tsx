@@ -7,7 +7,7 @@ import { Empty, Field, LoadNote, Sheet } from '../ui'
 import { PHRASES, type Phrase } from '../phrases'
 import { Icon, type LucideIcon } from '../icons'
 import { Baby, Car, Copy, Lightbulb, Luggage, MapPin, Snowflake, Utensils, ExternalLink, FileText, Hotel, Languages, Phone, Pin, Plus, ReceiptText, ShieldAlert, ShieldCheck, StickyNote, Users, X, Check } from 'lucide-react'
-import VoiceTest from './VoiceTest'
+import Translator from './Translator'
 import '../styles/info.css'
 
 type Props = { trip: Trip; members: Member[]; userId: string }
@@ -231,7 +231,7 @@ export default function Essentials({ trip, members, userId }: Props) {
         ))}
       </section>
 
-      <VoiceTest />
+      <Translator />
 
       <section className="info-sec">
         <h2 className="info-h"><Icon as={Languages} /> ביפנית</h2>

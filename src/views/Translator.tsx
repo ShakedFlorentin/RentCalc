@@ -1,18 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
-import { Copy, Mic, Square, Volume2 } from 'lucide-react'
+import { Copy, Languages, Mic, Square, Volume2 } from 'lucide-react'
+import { supabase } from '../supabase'
 import { Icon } from '../icons'
 
 /*
- * A trial before building translation: does the phone's own speech recognition work in this app (Safari and,
- * the open question, the home-screen app), in Hebrew and in Japanese, and does it have voices to read back?
- * One tap starts recording, a second tap stops it. Nothing leaves the phone except what Safari itself sends to
- * Apple for dictation; no Claude call is made here.
+ * Voice translator between Hebrew and Japanese. Tap the language you are speaking, speak, tap again: the phone's
+ * own speech recognition writes it down, Claude Haiku translates it (edge function `translate`), and the phone
+ * reads the translation aloud in the other language. Recognition and speech are on the phone; only the text goes
+ * to the server.
  */
 
 type Lang = 'he-IL' | 'ja-JP'
-const LANGS: { id: Lang; label: string }[] = [
-  { id: 'he-IL', label: 'עברית' },
-  { id: 'ja-JP', label: '日本語' },
+const LANGS: { id: Lang; label: string; other: Lang }[] = [
+  { id: 'he-IL', label: 'עברית', other: 'ja-JP' },
+  { id: 'ja-JP', label: '日本語', other: 'he-IL' },
 ]
 
 // the Web Speech API still ships prefixed in Safari and has no TypeScript types in lib.dom
@@ -36,7 +37,7 @@ const Recognizer = (window as unknown as { SpeechRecognition?: new () => Recogni
 
 const ERRORS: Record<string, string> = {
   'not-allowed': 'אין הרשאה למיקרופון. אפשר לאשר בהגדרות > ספארי > מיקרופון.',
-  'service-not-allowed': 'ספארי חוסם זיהוי דיבור כאן. זה בדיוק מה שבודקים: קורה לפעמים כשהאפליקציה פתוחה ממסך הבית.',
+  'service-not-allowed': 'ספארי חוסם זיהוי דיבור כאן.',
   network: 'אין חיבור. זיהוי הדיבור צריך אינטרנט.',
   'no-speech': 'לא נשמע דיבור. נסו שוב קרוב יותר לטלפון.',
   'audio-capture': 'לא נמצא מיקרופון.',
@@ -46,25 +47,36 @@ const ERRORS: Record<string, string> = {
 const standalone = () =>
   (navigator as unknown as { standalone?: boolean }).standalone === true || matchMedia('(display-mode: standalone)').matches
 
-export default function VoiceTest() {
+/** Why a translation failed, in words a traveller can act on. */
+async function translateError(error: unknown) {
+  const res = (error as { context?: Response } | null)?.context
+  const body = await res?.clone().json().catch(() => null)
+  if (res?.status === 429)
+    return /daily limit/.test(body?.error ?? '') ? 'הגעתם למגבלה היומית (200 תרגומים ביום לכל אחד).' : 'השירות עמוס. נסו שוב בעוד דקה.'
+  if (!navigator.onLine) return 'אין חיבור לאינטרנט.'
+  return `התרגום לא הצליח${res?.status ? ` (${res.status}${body?.error ? `: ${body.error}` : ''})` : ''}.`
+}
+
+export default function Translator() {
   const [lang, setLang] = useState<Lang>('he-IL')
   const [listening, setListening] = useState(false)
-  const [text, setText] = useState('')
+  const [heard, setHeard] = useState('')
   const [interim, setInterim] = useState('')
+  const [translation, setTranslation] = useState<{ text: string; romaji: string; lang: Lang } | null>(null)
+  const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [endedAlone, setEndedAlone] = useState(false)
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
   const [log, setLog] = useState<string[]>([])
-  const [mic, setMic] = useState('')
   const [spoke, setSpoke] = useState('')
   const rec = useRef<Recognition | null>(null)
   const stopping = useRef(false)
   const live = useRef(false)
+  const unlocked = useRef(false)
   const t0 = useRef(0)
   const watchdog = useRef<ReturnType<typeof setTimeout>>()
-  // a timed trail of what the recognizer reported, so a hang shows where it stopped
-  const note = (what: string) => setLog((l) => [...l, `${((performance.now() - t0.current) / 1000).toFixed(1)}s ${what}`])
   const forceStop = useRef<ReturnType<typeof setTimeout>>()
+  // a timed trail of what the recognizer reported, for the technical details
+  const note = (what: string) => setLog((l) => [...l, `${((performance.now() - t0.current) / 1000).toFixed(1)}s ${what}`])
   const reset = () => {
     clearTimeout(watchdog.current)
     clearTimeout(forceStop.current)
@@ -85,8 +97,46 @@ export default function VoiceTest() {
     }
   }, [])
 
+  // read aloud in the text's own language: kana or kanji in Japanese, anything else in Hebrew. Prefer an exact
+  // voice (ja-JP), then any voice of the language; without one Safari reads in the phone's own language
+  const say = (text: string) => {
+    if (!text || !('speechSynthesis' in window)) return
+    const as: Lang = /[぀-ヿ一-鿿]/.test(text) ? 'ja-JP' : 'he-IL'
+    const norm = (v: SpeechSynthesisVoice) => v.lang.replace('_', '-')
+    const all = speechSynthesis.getVoices()
+    const v = all.find((x) => norm(x) === as) ?? all.find((x) => norm(x).startsWith(as.slice(0, 2)))
+    const u = new SpeechSynthesisUtterance(text)
+    u.lang = as
+    if (v) u.voice = v
+    setSpoke(`${as}, קול: ${v ? `${v.name} (${norm(v)})` : 'לא נמצא, ברירת מחדל'}`)
+    speechSynthesis.cancel()
+    speechSynthesis.speak(u)
+  }
+
+  const translate = async (text: string, from: Lang) => {
+    const to = from === 'he-IL' ? 'ja-JP' : 'he-IL'
+    setBusy(true)
+    note('שולח לתרגום')
+    const { data, error } = await supabase.functions.invoke('translate', { body: { text, from: from.slice(0, 2) } })
+    setBusy(false)
+    if (error || !data?.translation) {
+      note('התרגום נכשל')
+      setError(await translateError(error))
+      return
+    }
+    note('התקבל תרגום')
+    setTranslation({ text: data.translation, romaji: data.romaji ?? '', lang: to })
+    say(data.translation)
+  }
+
   // each language is its own button: a tap starts recording in it, a second tap on the same one stops
-  const toggle = (to: Lang) => {
+  const toggle = (from: Lang) => {
+    // iPhone reads aloud only after a tap has started speech once; the translation arrives later, so start an
+    // empty utterance now, while this tap counts
+    if (!unlocked.current && 'speechSynthesis' in window) {
+      speechSynthesis.speak(new SpeechSynthesisUtterance(''))
+      unlocked.current = true
+    }
     if (listening) {
       stopping.current = true
       note('נלחץ עצירה')
@@ -103,22 +153,24 @@ export default function VoiceTest() {
       return
     }
     if (!Recognizer) return
-    setLang(to)
-    setText('')
+    speechSynthesis?.cancel()
+    setLang(from)
+    setHeard('')
     setInterim('')
+    setTranslation(null)
     setError('')
-    setEndedAlone(false)
     setLog([])
     clearTimeout(forceStop.current)
     stopping.current = false
     t0.current = performance.now()
     const r = new Recognizer()
-    r.lang = to
+    r.lang = from
     r.continuous = true
     r.interimResults = true
     // every event carries the whole session's results, so rebuild both parts from the start each time;
     // adding only the changed ones repeats words when Safari resends a result it already finalised
-    let heard = false
+    let final = ''
+    let pending = ''
     r.onstart = () => note('התחיל')
     r.onaudiostart = () => {
       clearTimeout(watchdog.current)
@@ -127,27 +179,29 @@ export default function VoiceTest() {
     r.onsoundstart = () => note('נשמע קול')
     r.onspeechstart = () => note('זוהה דיבור')
     r.onresult = (e) => {
-      if (!heard) note('תוצאה ראשונה')
-      heard = true
-      let final = ''
-      let live = ''
+      final = ''
+      pending = ''
       for (let i = 0; i < e.results.length; i++) {
         const res = e.results[i]
         if (res.isFinal) final += res[0].transcript
-        else live += res[0].transcript
+        else pending += res[0].transcript
       }
-      setText(final)
-      setInterim(live)
+      setHeard(final)
+      setInterim(pending)
     }
     r.onerror = (e) => {
       note(`שגיאה: ${e.error}`)
       if (e.error !== 'aborted') setError(ERRORS[e.error] ?? `שגיאה: ${e.error}`)
     }
-    // Safari can end a session on its own after a pause; worth knowing before relying on a second tap to stop
+    // whatever was heard when recording ends, by a tap or by Safari after a pause, goes to translation; words
+    // still pending at the stop count too, since Safari doesn't always finalise the last one
     r.onend = () => {
       note('נגמר')
       reset()
-      if (!stopping.current) setEndedAlone(true)
+      if (rec.current !== r) return
+      const said = (final + pending).trim()
+      setHeard(said)
+      if (said) translate(said, from)
     }
     rec.current = r
     try {
@@ -159,7 +213,7 @@ export default function VoiceTest() {
       watchdog.current = setTimeout(() => {
         if (!live.current || rec.current !== r) return
         note('המיקרופון לא נפתח תוך 4 שניות')
-        setError('המיקרופון לא נפתח. ייתכן שספארי חוסם זיהוי דיבור באפליקציה ממסך הבית.')
+        setError('המיקרופון לא נפתח. סגרו את האפליקציה ופתחו מחדש, ונסו שוב.')
         r.abort()
         reset()
       }, 4000)
@@ -167,34 +221,6 @@ export default function VoiceTest() {
       note(`start נכשל: ${(err as Error).message}`)
       setError(`לא הצלחתי להתחיל: ${(err as Error).message}`)
     }
-  }
-
-  // the microphone alone, without speech recognition: if this works where recognition doesn't, recording audio
-  // in the app and sending it for transcription is a way out
-  const checkMic = async () => {
-    setMic('בודק…')
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      stream.getTracks().forEach((t) => t.stop())
-      setMic('עובד')
-    } catch (err) {
-      setMic(`לא עובד (${(err as Error).name})`)
-    }
-  }
-
-  // the voice follows the text, not the last button: kana or kanji read in Japanese, anything else in Hebrew.
-  // Prefer an exact match (ja-JP), then any voice of the language; without one Safari falls back to the
-  // phone's own language, which is what read Japanese in Hebrew
-  const say = () => {
-    const speak: Lang = /[\u3040-\u30ff\u4e00-\u9fff]/.test(text) ? 'ja-JP' : 'he-IL'
-    const norm = (v: SpeechSynthesisVoice) => v.lang.replace('_', '-')
-    const v = voices.find((x) => norm(x) === speak) ?? voices.find((x) => norm(x).startsWith(speak.slice(0, 2)))
-    const u = new SpeechSynthesisUtterance(text)
-    u.lang = speak
-    if (v) u.voice = v
-    setSpoke(`${speak}, קול: ${v ? `${v.name} (${norm(v)})` : 'לא נמצא, ברירת מחדל'}`)
-    speechSynthesis.cancel()
-    speechSynthesis.speak(u)
   }
 
   const voiceFor = (code: string) =>
@@ -205,10 +231,9 @@ export default function VoiceTest() {
     `קול בעברית: ${voiceFor('he')}`,
     `קול ביפנית: ${voiceFor('ja')}`,
     `שפה אחרונה: ${lang}`,
-    `תוצאה: ${text || '(ריק)'}`,
+    `נשמע: ${heard || '(ריק)'}`,
+    translation && `תרגום: ${translation.text}`,
     error && `שגיאה: ${error}`,
-    endedAlone && 'ההקלטה נעצרה לבד לפני הלחיצה השנייה',
-    mic && `מיקרופון ישיר: ${mic}`,
     spoke && `השמעה אחרונה: ${spoke}`,
     log.length > 0 && `אירועים:\n${log.join('\n')}`,
   ]
@@ -218,12 +243,10 @@ export default function VoiceTest() {
   return (
     <section className="info-sec">
       <h2 className="info-h">
-        <Icon as={Mic} /> בדיקת תרגום קולי
+        <Icon as={Languages} /> תרגום קולי
       </h2>
       <div className="card voice-test">
-        <p className="muted small">
-          לוחצים על השפה שמדברים בה כדי להקליט, ולוחצים שוב כדי לעצור. בודקים שהטלפון מזהה עברית ויפנית כאן באפליקציה, לפני שבונים תרגום.
-        </p>
+        <p className="muted small">לוחצים על השפה שמדברים בה, מדברים, ולוחצים שוב. התרגום מופיע ומוקרא בשפה השנייה.</p>
         {Recognizer ? (
           <div className="rec-row">
             {LANGS.map((l) => {
@@ -233,8 +256,8 @@ export default function VoiceTest() {
                   key={l.id}
                   className={'rec-btn' + (on ? ' on' : '')}
                   aria-pressed={on}
-                  aria-label={on ? `עצירת הקלטה ב${l.label}` : `הקלטה ב${l.label}`}
-                  disabled={listening && !on}
+                  aria-label={on ? `עצירה ותרגום מ${l.label}` : `דיבור ב${l.label}`}
+                  disabled={(listening && !on) || busy}
                   onClick={() => toggle(l.id)}
                 >
                   <Icon as={on ? Square : Mic} size="1.5rem" />
@@ -246,29 +269,45 @@ export default function VoiceTest() {
         ) : (
           <p className="msg">זיהוי דיבור לא קיים בדפדפן הזה.</p>
         )}
-        <div className="voice-out" lang={lang} dir="auto" aria-live="polite">
-          {text}
-          {interim && <span className="muted"> {interim}</span>}
-          {!text && !interim && <span className="muted">{listening ? 'מקשיב…' : 'מה שתגידו יופיע כאן'}</span>}
+        <div className="voice-out" aria-live="polite">
+          {(heard || interim) && (
+            <p className="voice-heard muted" lang={lang} dir="auto">
+              {heard}
+              {interim && ` ${interim}`}
+            </p>
+          )}
+          {busy && <p className="muted">מתרגם…</p>}
+          {translation && (
+            <>
+              <p className="voice-translation" lang={translation.lang} dir="auto">
+                {translation.text}
+              </p>
+              {translation.romaji && (
+                <p className="voice-romaji muted" lang="ja-Latn" dir="ltr">
+                  {translation.romaji}
+                </p>
+              )}
+            </>
+          )}
+          {!heard && !interim && !busy && !translation && (
+            <p className="muted">{listening ? 'מקשיב…' : 'התרגום יופיע כאן'}</p>
+          )}
         </div>
         {error && (
           <p className="msg" role="alert">
             {error}
           </p>
         )}
-        {endedAlone && !error && <p className="muted small">ההקלטה נעצרה לבד אחרי שקט, לפני הלחיצה השנייה.</p>}
-        <div className="row nowrap">
-          <button className="secondary" disabled={!text || listening || !('speechSynthesis' in window)} onClick={say}>
-            <Icon as={Volume2} /> השמעה
-          </button>
-          <button className="secondary" onClick={() => navigator.clipboard.writeText(report).then(() => alert('הועתק. אפשר להדביק לי בצ׳אט'))}>
-            <Icon as={Copy} /> העתקה
-          </button>
-        </div>
-        <button className="link" onClick={checkMic}>
-          בדיקת מיקרופון ישירה{mic && `: ${mic}`}
+        <button className="secondary" disabled={!translation || listening} onClick={() => translation && say(translation.text)}>
+          <Icon as={Volume2} /> השמעה שוב
         </button>
-        <pre className="voice-report">{report}</pre>
+        <details className="voice-details">
+          <summary>פרטים טכניים</summary>
+          <pre className="voice-report">{report}</pre>
+          <button className="link" onClick={() => navigator.clipboard.writeText(report).then(() => alert('הועתק. אפשר להדביק לי בצ׳אט'))}>
+            <Icon as={Copy} /> העתקת הפרטים
+          </button>
+        </details>
       </div>
     </section>
   )

@@ -108,3 +108,10 @@ button.pill, .info-card .pill { min-height: 44px; }
 .voice-report { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--fill); font: 0.75rem/1.5 ui-monospace, 'SF Mono', monospace; white-space: pre-wrap; direction: rtl; text-align: right; }
 .rec-row { display: flex; justify-content: center; gap: 28px; }
 .rec-btn:disabled { opacity: 0.35; }
+.voice-out { display: flex; flex-direction: column; gap: 6px; }
+.voice-out p { margin: 0; }
+.voice-heard { font-size: 0.9375rem; }
+.voice-translation { font-size: 1.5rem; font-weight: 600; line-height: 1.35; letter-spacing: -0.01em; }
+.voice-romaji { font-size: 0.9375rem; font-style: italic; text-align: start; }
+.voice-details summary { cursor: pointer; min-height: 32px; color: var(--muted); font-size: 0.875rem; }
+.voice-details[open] { display: flex; flex-direction: column; gap: 8px; }
