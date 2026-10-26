@@ -6,7 +6,7 @@ import { couplesOf, mutate, useTripTable } from '../lib'
 import { Empty, Field, LoadNote, Sheet } from '../ui'
 import { PHRASES, type Phrase } from '../phrases'
 import { Icon, type LucideIcon } from '../icons'
-import { Car, Copy, ExternalLink, FileText, Hotel, Languages, Phone, Pin, Plus, ReceiptText, ShieldAlert, ShieldCheck, StickyNote, Users, X, Check } from 'lucide-react'
+import { Baby, Car, Copy, Lightbulb, Luggage, MapPin, ExternalLink, FileText, Hotel, Languages, Phone, Pin, Plus, ReceiptText, ShieldAlert, ShieldCheck, StickyNote, Users, X, Check } from 'lucide-react'
 import '../styles/info.css'
 
 type Props = { trip: Trip; members: Member[]; userId: string }
@@ -20,6 +20,53 @@ const KINDS: Record<Essential['kind'], { label: string; icon: LucideIcon }> = {
   other: { label: 'אחר', icon: Pin },
 }
 const KIND_ORDER = Object.keys(KINDS) as Essential['kind'][]
+
+// what travellers in the Israeli Japan Facebook groups wish they had known (read October 2026)
+const TIPS: { title: string; icon: LucideIcon; items: string[] }[] = [
+  {
+    title: 'מזוודות ותחבורה',
+    icon: Luggage,
+    items: [
+      'שולחים את המזוודה הגדולה מראש בין המלונות (takkyubin, בכל מלון ובכל קומביני) ונוסעים עם טרולי קטן. לוקח בערך יומיים, אז שולחים לפחות יום לפני.',
+      'Airporter אוסף מזוודות מהמלון ומביא אותן לשדה התעופה באותו יום, כך שאפשר לטייל ביום הטיסה בלי לסחוב.',
+      'סואיקה באפל ווטש, והשעון על יד ימין: בשערים הקורא בצד ימין. מי שניסה אמר שזה משנה את החוויה.',
+      'גוגל מפות מצוין לתחבורה ציבורית, ובכל זאת שווה לשאול אנשים: הרבה פעמים יפנים פשוט הולכים איתכם עד המקום.',
+      'מונית לשדה התעופה הלוך וחזור דרך Booking הוזמנה מראש ועבדה טוב.',
+      'Sushiro ורשתות דומות: השלטים רק ביפנית, אז בודקים מראש בגוגל מפות את החזית ואת הקומה.',
+    ],
+  },
+  {
+    title: 'טוקיו',
+    icon: MapPin,
+    items: [
+      'מתחילים ומסיימים בטוקיו. מי שחזר המליץ על גינזה בהתחלה ואסקוסה בסוף.',
+      'שווה להזמין סיור מודרך כבר ביום הראשון בטוקיו, כדי להבין את העיר מהר.',
+      'החדרים בטוקיו קטנים בהרבה מקיוטו ואוסקה. לא להיבהל.',
+      'באים עם מזוודה חצי ריקה: הקניות זולות ומפתות.',
+      'אם רואים משהו שרוצים לקנות או לעשות בתחילת הטיול, עושים את זה מיד. כמעט אף פעם לא חוזרים.',
+    ],
+  },
+  {
+    title: 'קיוטו',
+    icon: MapPin,
+    items: [
+      'פושימי אינארי: מי שעלה עד הפסגה אמר שזה בעיקר הישג, ובכל זאת שווה. ילדים נהנו.',
+      'יער הבמבוק בארשיימה לבד קטן ומאכזב. עדיף להתחיל במקדשים שבצפון ולרדת ברגל דרך הכפר השמור עד היער.',
+      'קיבונה ואוג׳י יפים ושקטים בהרבה. אמאנוהשידטה ואינה בצפון המחוז כמעט בלי תיירים.',
+      'גיון עם מדריך, אחרת מפספסים את רוב מה שמעניין.',
+      'לא צריך לצאת מוקדם מדי: יציאה ב-10:00 הספיקה. שלושה ימים מספיקים כולל יום בנארה.',
+    ],
+  },
+  {
+    title: 'עם תינוק',
+    icon: Baby,
+    items: [
+      'עגלה קלה: הרבה פעמים צריך לסחוב אותה במדרגות. בגיל הזה לוקחים את העגלה שהתינוק כבר רגיל לישון בה.',
+      'עגלה עם סל אחסון: סוחבים מנשא, תיק החתלה וקניות.',
+      'אוכל לתינוקות היה קשה למצוא. מה שאפשר, מביאים מהארץ.',
+    ],
+  },
+]
 
 const telHref = (v: string) => 'tel:' + v.replace(/[^\d+]/g, '')
 // a phone value is worth a call button only when it is mostly digits
@@ -124,6 +171,23 @@ export default function Essentials({ trip, members, userId }: Props) {
             </div>
           )
         })}
+      </section>
+
+      <section className="info-sec">
+        <h2 className="info-h"><Icon as={Lightbulb} /> טיפים מהקבוצות</h2>
+        <p className="muted small info-note">ממה שכתבו מטיילים בקבוצות היפן בפייסבוק אחרי שחזרו.</p>
+        {TIPS.map((g) => (
+          <details key={g.title} className="card info-card tips">
+            <summary className="info-title">
+              <Icon as={g.icon} /> {g.title}
+            </summary>
+            <ul>
+              {g.items.map((t) => (
+                <li key={t}>{t}</li>
+              ))}
+            </ul>
+          </details>
+        ))}
       </section>
 
       <section className="info-sec">
