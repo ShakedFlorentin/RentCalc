@@ -26,6 +26,10 @@ type Recognition = {
   onresult: ((e: { resultIndex: number; results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }> }) => void) | null
   onerror: ((e: { error: string }) => void) | null
   onend: (() => void) | null
+  onstart: (() => void) | null
+  onaudiostart: (() => void) | null
+  onsoundstart: (() => void) | null
+  onspeechstart: (() => void) | null
 }
 const Recognizer = (window as unknown as { SpeechRecognition?: new () => Recognition; webkitSpeechRecognition?: new () => Recognition })
   .SpeechRecognition ?? (window as unknown as { webkitSpeechRecognition?: new () => Recognition }).webkitSpeechRecognition
@@ -50,8 +54,23 @@ export default function VoiceTest() {
   const [error, setError] = useState('')
   const [endedAlone, setEndedAlone] = useState(false)
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
+  const [log, setLog] = useState<string[]>([])
+  const [mic, setMic] = useState('')
   const rec = useRef<Recognition | null>(null)
   const stopping = useRef(false)
+  const live = useRef(false)
+  const t0 = useRef(0)
+  const watchdog = useRef<ReturnType<typeof setTimeout>>()
+  // a timed trail of what the recognizer reported, so a hang shows where it stopped
+  const note = (what: string) => setLog((l) => [...l, `${((performance.now() - t0.current) / 1000).toFixed(1)}s ${what}`])
+  const forceStop = useRef<ReturnType<typeof setTimeout>>()
+  const reset = () => {
+    clearTimeout(watchdog.current)
+    clearTimeout(forceStop.current)
+    live.current = false
+    setListening(false)
+    setInterim('')
+  }
 
   // voices load late in Safari; listen until they arrive
   useEffect(() => {
@@ -69,7 +88,17 @@ export default function VoiceTest() {
   const toggle = (to: Lang) => {
     if (listening) {
       stopping.current = true
-      rec.current?.stop()
+      note('נלחץ עצירה')
+      const r = rec.current
+      r?.stop()
+      // a recognizer that never really started may never end: free the button regardless. Tied to this
+      // recognizer, so a quick stop-and-start can't let it cut the next recording short
+      forceStop.current = setTimeout(() => {
+        if (!live.current || rec.current !== r) return
+        r?.abort()
+        note('לא נגמר תוך שנייה וחצי, עצרתי בכוח')
+        reset()
+      }, 1500)
       return
     }
     if (!Recognizer) return
@@ -78,14 +107,27 @@ export default function VoiceTest() {
     setInterim('')
     setError('')
     setEndedAlone(false)
+    setLog([])
+    clearTimeout(forceStop.current)
     stopping.current = false
+    t0.current = performance.now()
     const r = new Recognizer()
     r.lang = to
     r.continuous = true
     r.interimResults = true
     // every event carries the whole session's results, so rebuild both parts from the start each time;
     // adding only the changed ones repeats words when Safari resends a result it already finalised
+    let heard = false
+    r.onstart = () => note('התחיל')
+    r.onaudiostart = () => {
+      clearTimeout(watchdog.current)
+      note('המיקרופון נפתח')
+    }
+    r.onsoundstart = () => note('נשמע קול')
+    r.onspeechstart = () => note('זוהה דיבור')
     r.onresult = (e) => {
+      if (!heard) note('תוצאה ראשונה')
+      heard = true
       let final = ''
       let live = ''
       for (let i = 0; i < e.results.length; i++) {
@@ -97,20 +139,45 @@ export default function VoiceTest() {
       setInterim(live)
     }
     r.onerror = (e) => {
+      note(`שגיאה: ${e.error}`)
       if (e.error !== 'aborted') setError(ERRORS[e.error] ?? `שגיאה: ${e.error}`)
     }
     // Safari can end a session on its own after a pause; worth knowing before relying on a second tap to stop
     r.onend = () => {
-      setListening(false)
-      setInterim('')
+      note('נגמר')
+      reset()
       if (!stopping.current) setEndedAlone(true)
     }
     rec.current = r
     try {
+      note('קריאה ל-start')
       r.start()
+      live.current = true
       setListening(true)
+      // the microphone should open within a moment; if it doesn't, say so instead of waiting forever
+      watchdog.current = setTimeout(() => {
+        if (!live.current || rec.current !== r) return
+        note('המיקרופון לא נפתח תוך 4 שניות')
+        setError('המיקרופון לא נפתח. ייתכן שספארי חוסם זיהוי דיבור באפליקציה ממסך הבית.')
+        r.abort()
+        reset()
+      }, 4000)
     } catch (err) {
+      note(`start נכשל: ${(err as Error).message}`)
       setError(`לא הצלחתי להתחיל: ${(err as Error).message}`)
+    }
+  }
+
+  // the microphone alone, without speech recognition: if this works where recognition doesn't, recording audio
+  // in the app and sending it for transcription is a way out
+  const checkMic = async () => {
+    setMic('בודק…')
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      stream.getTracks().forEach((t) => t.stop())
+      setMic('עובד')
+    } catch (err) {
+      setMic(`לא עובד (${(err as Error).name})`)
     }
   }
 
@@ -134,6 +201,8 @@ export default function VoiceTest() {
     `תוצאה: ${text || '(ריק)'}`,
     error && `שגיאה: ${error}`,
     endedAlone && 'ההקלטה נעצרה לבד לפני הלחיצה השנייה',
+    mic && `מיקרופון ישיר: ${mic}`,
+    log.length > 0 && `אירועים:\n${log.join('\n')}`,
   ]
     .filter(Boolean)
     .join('\n')
@@ -188,6 +257,9 @@ export default function VoiceTest() {
             <Icon as={Copy} /> העתקה
           </button>
         </div>
+        <button className="link" onClick={checkMic}>
+          בדיקת מיקרופון ישירה{mic && `: ${mic}`}
+        </button>
         <pre className="voice-report">{report}</pre>
       </div>
     </section>
