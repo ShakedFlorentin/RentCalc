@@ -37,17 +37,20 @@ button.pill, .info-card .pill { min-height: 44px; }
 
 /* phrase cards */
 .phrase { display: flex; flex-direction: column; gap: 4px; width: 100%; text-align: start; padding: 14px 16px; }
-.phrase-he { color: var(--muted); font-size: 0.875rem; }
+.phrase-he { font-size: 0.9375rem; font-weight: 600; }
 .phrase-ja { text-align: right; font-size: 1.375rem; font-weight: 700; line-height: 1.35; }
-.phrase-ro { color: var(--muted); font-size: 0.8125rem; font-style: italic; text-align: start; }
+.phrase-ro { color: var(--muted); font-size: 0.8125rem; font-style: italic; text-align: right; }
 .phrase:active { transform: scale(0.98); }
 
 /* collapsible tips */
-.tip { padding: 0; }
+.card.tip { padding: 0; }
 .tip summary { list-style: none; cursor: pointer; padding: 14px 16px; min-height: 52px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .tip summary::-webkit-details-marker { display: none; }
 .tip summary::after { content: ''; flex: none; width: 7px; height: 7px; border-inline-end: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); margin-block-end: 3px; transition: transform 0.15s; }
-.tip[open] summary::after { transform: rotate(-135deg); margin-block-end: -3px; }
+/* closed: points forward (left in RTL); open: points down */
+.tip[open] summary::after { transform: rotate(-45deg); margin-block-end: 3px; }
+.tip summary > span { display: inline-flex; align-items: center; gap: 8px; }
+.tip .row { padding: 0 16px 14px; }
 .tip ul { margin: 0; padding: 0 34px 14px 16px; display: flex; flex-direction: column; gap: 8px; font-size: 0.9375rem; line-height: 1.5; }
 
 /* full-screen card to hold up to someone; always light with dark text so it reads in sunlight */
@@ -68,18 +71,12 @@ button.pill, .info-card .pill { min-height: 44px; }
   cursor: pointer;
 }
 .show-close { display: grid; place-items: center; position: absolute; top: calc(10px + env(safe-area-inset-top)); inset-inline-start: 10px; width: 48px; height: 48px; font-size: 1.5rem; color: #555; }
-.info-end { height: 56px; }
 .show-big { text-wrap: balance;font-size: clamp(2rem, 11vw, 3.5rem); font-weight: 800; line-height: 1.3; overflow-wrap: anywhere; white-space: pre-wrap; }
 .show-big.s { font-size: clamp(1.5rem, 8vw, 2.5rem); }
 .show-big.xs { font-size: clamp(1.125rem, 5.5vw, 1.75rem); }
 .show-sub { font-size: 1rem; color: #555; font-style: italic; overflow-wrap: anywhere; }
 .show-small { font-size: 1rem; color: #777; margin-top: 12px; }
 
-.tips summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 6px; min-height: 40px; }
-.tips summary::-webkit-details-marker { display: none; }
-.tips summary::after { content: '+'; margin-inline-start: auto; color: var(--muted); font-weight: 400; }
-.tips[open] summary::after { content: '−'; }
-.tips ul { margin: 4px 0 0; padding-inline-start: 18px; display: grid; gap: 8px; line-height: 1.5; }
 .couple-mark { display: inline-flex; align-items: center; gap: 3px; margin-inline-end: 12px; }
 .check-line { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .check-line input { width: 18px; height: 18px; min-height: 0; flex: none; margin: 0; accent-color: var(--accent); }

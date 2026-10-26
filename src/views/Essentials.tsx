@@ -4,7 +4,7 @@ import type { Booking, Essential, Member, Trip } from '../types'
 import { TOGETHER } from '../types'
 import { couplesOf, mutate, useTripTable } from '../lib'
 import { Empty, Field, LoadNote, Sheet } from '../ui'
-import type { Phrase } from '../phrases'
+import { PHRASES, type Phrase } from '../phrases'
 import { Icon, type LucideIcon } from '../icons'
 import { Baby, Car, Copy, Lightbulb, Luggage, MapPin, Snowflake, Utensils, ExternalLink, FileText, Hotel, Phone, Pin, Plus, ReceiptText, ShieldAlert, ShieldCheck, StickyNote, Users, X, Check } from 'lucide-react'
 import '../styles/info.css'
@@ -139,6 +139,7 @@ export default function Essentials({ trip, members, userId }: Props) {
           </a>
         </div>
         <p className="muted small info-note">השיחה חינם. בחירום אמיתי מתקשרים קודם לכאן. בהרבה ערים 119 מחברים מתורגמן באנגלית, לכן לא מנתקים.</p>
+        <PhraseList phrases={PHRASES.filter((p) => p.id === 'help')} />
 
         <div className="card info-card">
           <div className="info-title">Japan Visitor Hotline (JNTO)</div>
@@ -158,7 +159,7 @@ export default function Essentials({ trip, members, userId }: Props) {
           <div className="small" dir="ltr" lang="en">
             3 Niban-cho, Chiyoda-ku, Tokyo 102-0084
           </div>
-          <div className="muted small">מרכזייה. קבלת קהל קונסולרית ימים ב׳–ו׳ 10:00–13:00 (שעון יפן), סגור בחגי ישראל. בלי מספר חירום מאומת אחרי שעות העבודה, אז בלילה פונים קודם ל-110/119.</div>
+          <div className="muted small">מרכזייה. קבלת קהל קונסולרית ימים ב׳–ו׳ <bdi dir="ltr">10:00–13:00</bdi> (שעון יפן), סגור בחגי ישראל. בלי מספר חירום מאומת אחרי שעות העבודה, אז בלילה פונים קודם ל-110/119.</div>
           <div className="row">
             <a className="pill" href="tel:+81332640911" dir="ltr">
               <Icon as={Phone} /> 03-3264-0911
@@ -211,9 +212,11 @@ export default function Essentials({ trip, members, userId }: Props) {
         <h2 className="info-h"><Icon as={Lightbulb} /> טיפים מהקבוצות</h2>
         <p className="muted small info-note">ממה שכתבו מטיילים בקבוצות היפן בפייסבוק אחרי שחזרו.</p>
         {TIPS.map((g) => (
-          <details key={g.title} className="card info-card tips">
-            <summary className="info-title">
-              <Icon as={g.icon} /> {g.title}
+          <details key={g.title} className="card tip">
+            <summary>
+              <span>
+                <Icon as={g.icon} /> {g.title}
+              </span>
             </summary>
             <ul>
               {g.items.map((t) => (

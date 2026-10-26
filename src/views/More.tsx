@@ -1,3 +1,4 @@
+import type { KeyboardEvent } from 'react'
 import type { Member, Trip } from '../types'
 import Lists from './Lists'
 import Expenses from './Expenses'
@@ -20,9 +21,18 @@ type Props = { trip: Trip; members: Member[]; userId: string; sub: MoreTab; setS
 
 /** The fourth-row tools: shared expenses, checklists, emergency info, talking in Japanese and the baby corner. */
 export default function More({ trip, members, userId, sub, setSub }: Props) {
+  // the tab pattern: one tab stop, arrows move between sections (in RTL the left arrow goes to the next one)
+  const arrows = (e: KeyboardEvent<HTMLDivElement>) => {
+    const step = { ArrowLeft: 1, ArrowRight: -1, Home: -99, End: 99 }[e.key]
+    if (!step) return
+    e.preventDefault()
+    const i = Math.min(MORE_TABS.length - 1, Math.max(0, MORE_TABS.findIndex((t) => t.id === sub) + step))
+    setSub(MORE_TABS[i].id)
+    document.getElementById('more-tab-' + MORE_TABS[i].id)?.focus()
+  }
   return (
     <div className="stack">
-      <div className="more-tabs" role="tablist" aria-label="עוד">
+      <div className="more-tabs" role="tablist" aria-label="עוד" onKeyDown={arrows}>
         {MORE_TABS.map((t) => (
           <button
             key={t.id}
@@ -30,6 +40,7 @@ export default function More({ trip, members, userId, sub, setSub }: Props) {
             role="tab"
             aria-selected={sub === t.id}
             aria-controls="more-panel"
+            tabIndex={sub === t.id ? 0 : -1}
             className={sub === t.id ? 'on' : ''}
             onClick={() => setSub(t.id)}
           >

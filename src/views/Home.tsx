@@ -4,12 +4,13 @@ import {
   Check,
   ChevronLeft,
   Clock,
+  Languages,
   Layers,
   LogOut as LogOutIcon,
-  LifeBuoy,
   ListChecks,
   Navigation,
   Share2,
+  ShieldAlert,
   Ticket,
   Users,
   Wallet,
@@ -175,7 +176,10 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
 
       <div className="shortcuts">
         <button className="secondary" onClick={() => onOpenMore('info')}>
-          <Icon as={LifeBuoy} /> מידע חשוב
+          <Icon as={ShieldAlert} /> חירום
+        </button>
+        <button className="secondary" onClick={() => onOpenMore('say')}>
+          <Icon as={Languages} /> תרגום
         </button>
         <button className="secondary" onClick={() => onOpenMore('money')}>
           <Icon as={Wallet} /> הוצאות
