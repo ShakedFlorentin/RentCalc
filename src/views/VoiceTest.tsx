@@ -56,6 +56,7 @@ export default function VoiceTest() {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
   const [log, setLog] = useState<string[]>([])
   const [mic, setMic] = useState('')
+  const [spoke, setSpoke] = useState('')
   const rec = useRef<Recognition | null>(null)
   const stopping = useRef(false)
   const live = useRef(false)
@@ -181,11 +182,17 @@ export default function VoiceTest() {
     }
   }
 
+  // the voice follows the text, not the last button: kana or kanji read in Japanese, anything else in Hebrew.
+  // Prefer an exact match (ja-JP), then any voice of the language; without one Safari falls back to the
+  // phone's own language, which is what read Japanese in Hebrew
   const say = () => {
+    const speak: Lang = /[\u3040-\u30ff\u4e00-\u9fff]/.test(text) ? 'ja-JP' : 'he-IL'
+    const norm = (v: SpeechSynthesisVoice) => v.lang.replace('_', '-')
+    const v = voices.find((x) => norm(x) === speak) ?? voices.find((x) => norm(x).startsWith(speak.slice(0, 2)))
     const u = new SpeechSynthesisUtterance(text)
-    u.lang = lang
-    const v = voices.find((x) => x.lang.replace('_', '-').startsWith(lang.slice(0, 2)))
+    u.lang = speak
     if (v) u.voice = v
+    setSpoke(`${speak}, קול: ${v ? `${v.name} (${norm(v)})` : 'לא נמצא, ברירת מחדל'}`)
     speechSynthesis.cancel()
     speechSynthesis.speak(u)
   }
@@ -202,6 +209,7 @@ export default function VoiceTest() {
     error && `שגיאה: ${error}`,
     endedAlone && 'ההקלטה נעצרה לבד לפני הלחיצה השנייה',
     mic && `מיקרופון ישיר: ${mic}`,
+    spoke && `השמעה אחרונה: ${spoke}`,
     log.length > 0 && `אירועים:\n${log.join('\n')}`,
   ]
     .filter(Boolean)
