@@ -1,7 +1,7 @@
 import { FormEvent, useState } from 'react'
 import { supabase } from '../supabase'
-import type { ChecklistItem, Member } from '../types'
-import { mutate, useTripTable } from '../lib'
+import { itemDone, type ChecklistItem, type Member } from '../types'
+import { couplesOf, mutate, useTripTable } from '../lib'
 import { Empty } from '../ui'
 import { Icon, type LucideIcon } from '../icons'
 import { Check, ClipboardList, Luggage, Plus, ShoppingCart, Trash2 } from 'lucide-react'
@@ -12,22 +12,45 @@ const LISTS: { id: string; label: string; icon: LucideIcon }[] = [
   { id: 'shopping', label: 'לקנות ביפן', icon: ShoppingCart },
 ]
 
-export default function Lists({ tripId, members }: { tripId: string; members: Member[] }) {
+export default function Lists({ tripId, members, userId }: { tripId: string; members: Member[]; userId: string }) {
   const { rows } = useTripTable<ChecklistItem>('checklist_items', tripId)
   const [list, setList] = useState('todo')
   const [text, setText] = useState('')
   const [assignee, setAssignee] = useState('')
+  const [each, setEach] = useState(false)
+  const couples = couplesOf(members)
+  const myCouple = members.find((m) => m.user_id === userId)?.couple ?? null
+  // packing is each couple's own; the other lists are the trip's
+  const perCouple = list === 'packing'
 
-  const items = rows.filter((r) => r.list === list).sort((a, b) => Number(a.done) - Number(b.done))
-  const doneCount = items.filter((i) => i.done).length
+  const done = (i: ChecklistItem) => itemDone(i, myCouple)
+  const items = rows
+    .filter((r) => r.list === list && (!perCouple || !r.couple || r.couple === myCouple))
+    .sort((a, b) => Number(done(a)) - Number(done(b)))
+  const doneCount = items.filter(done).length
 
   const add = async (e: FormEvent) => {
     e.preventDefault()
     if (!text.trim()) return
     const ok = await mutate(
-      supabase.from('checklist_items').insert({ trip_id: tripId, list, text: text.trim(), assignee: assignee || null }),
+      supabase.from('checklist_items').insert({
+        trip_id: tripId,
+        list,
+        text: text.trim(),
+        assignee: assignee || null,
+        couple: perCouple ? myCouple : null,
+        each: !perCouple && each,
+      }),
     )
     if (ok) setText('')
+  }
+
+  const toggle = (i: ChecklistItem) => {
+    if (!i.each) return mutate(supabase.from('checklist_items').update({ done: !i.done }).eq('id', i.id))
+    if (!myCouple) return
+    const was = i.done_couples ?? []
+    const next = was.includes(myCouple) ? was.filter((c) => c !== myCouple) : [...was, myCouple]
+    return mutate(supabase.from('checklist_items').update({ done_couples: next }).eq('id', i.id))
   }
 
   return (
@@ -39,6 +62,7 @@ export default function Lists({ tripId, members }: { tripId: string; members: Me
           </button>
         ))}
       </div>
+      {perCouple && myCouple && <p className="muted small">הציוד של {myCouple}. לכל זוג רשימה משלו.</p>}
       {items.length > 0 && (
         <div className="progress">
           <div style={{ width: `${(doneCount / items.length) * 100}%` }} />
@@ -51,40 +75,60 @@ export default function Lists({ tripId, members }: { tripId: string; members: Me
       <form className="add-row" onSubmit={add}>
         <input value={text} onChange={(e) => setText(e.target.value)} placeholder="להוסיף…" />
         <select value={assignee} onChange={(e) => setAssignee(e.target.value)} aria-label="אחראי/ת">
-          <option value="">כולם</option>
-          {members.map((m) => (
-            <option key={m.user_id} value={m.display_name}>
-              {m.display_name}
-            </option>
-          ))}
+          <option value="">{perCouple ? 'שנינו' : 'כולם'}</option>
+          {members
+            .filter((m) => !perCouple || m.couple === myCouple)
+            .map((m) => (
+              <option key={m.user_id} value={m.display_name}>
+                {m.display_name}
+              </option>
+            ))}
         </select>
         <button className="primary" aria-label="הוספה"><Icon as={Plus} size="1.25em" /></button>
       </form>
+      {!perCouple && couples.length > 1 && (
+        <label className="small check-line">
+          <input type="checkbox" checked={each} onChange={(e) => setEach(e.target.checked)} /> כל זוג מסמן בנפרד (למשל טופס כניסה, ביטוח)
+        </label>
+      )}
 
       {items.length === 0 && <Empty>הרשימה ריקה</Empty>}
-      {items.map((i) => (
-        <div key={i.id} className={'item card slim' + (i.done ? ' done' : '')}>
-          <button
-            className="check"
-            aria-label={i.done ? 'לבטל סימון' : 'לסמן כבוצע'}
-            aria-pressed={i.done}
-            onClick={() => mutate(supabase.from('checklist_items').update({ done: !i.done }).eq('id', i.id))}
-          >
-            {i.done ? <Icon as={Check} size="1em" strokeWidth={3} /> : null}
-          </button>
-          <div className="item-body">
-            {i.text}
-            {i.assignee && <span className="chip tiny">{i.assignee}</span>}
+      {items.map((i) => {
+        const isDone = done(i)
+        return (
+          <div key={i.id} className={'item card slim' + (isDone ? ' done' : '')}>
+            <button
+              className="check"
+              aria-label={isDone ? 'לבטל סימון' : 'לסמן כבוצע'}
+              aria-pressed={isDone}
+              onClick={() => toggle(i)}
+            >
+              {isDone ? <Icon as={Check} size="1em" strokeWidth={3} /> : null}
+            </button>
+            <div className="item-body">
+              {i.text}
+              {i.assignee && <span className="chip tiny">{i.assignee}</span>}
+              {i.each && couples.length > 1 && (
+                <div className="muted small">
+                  {couples.map((c) => (
+                    <span key={c} className="couple-mark">
+                      {(i.done_couples ?? []).includes(c) && <Icon as={Check} />} {c === myCouple ? 'אנחנו' : c}
+                      {(i.done_couples ?? []).includes(c) ? '' : ': עוד לא'}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button
+              className="icon faint"
+              aria-label="מחיקה"
+              onClick={() => confirm(`למחוק את "${i.text}"?`) && mutate(supabase.from('checklist_items').delete().eq('id', i.id))}
+            >
+              <Icon as={Trash2} size="1.25em" />
+            </button>
           </div>
-          <button
-            className="icon faint"
-            aria-label="מחיקה"
-            onClick={() => confirm(`למחוק את "${i.text}"?`) && mutate(supabase.from('checklist_items').delete().eq('id', i.id))}
-          >
-            <Icon as={Trash2} size="1.25em" />
-          </button>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }

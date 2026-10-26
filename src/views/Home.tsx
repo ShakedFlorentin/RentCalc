@@ -18,6 +18,7 @@ import {
 import { supabase } from '../supabase'
 import {
   BOOKING_TABS,
+  itemDone,
   TOGETHER,
   type Booking,
   type Candidate,
@@ -313,7 +314,7 @@ function BeforeTrip(props: {
 }) {
   const { bookings, couples, days } = props
   const todo = props.todos.filter((t) => t.list === 'todo')
-  const left = todo.filter((t) => !t.done).length
+  const left = todo.filter((t) => !itemDone(t, props.myCouple)).length
   const counts = ['flight', 'hotel', 'restaurant', 'activity'].map((k) => ({ k, n: bookings.filter((b) => b.kind === k).length }))
   const mine = props.myCouple
 

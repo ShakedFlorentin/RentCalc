@@ -117,6 +117,16 @@ export type ChecklistItem = {
   text: string
   assignee: string | null
   done: boolean
+  /** a couple's own item (packing); null = the whole trip's */
+  couple?: string | null
+  /** every couple does it separately (an entry form, insurance): done per couple in done_couples */
+  each?: boolean
+  done_couples?: string[]
+}
+
+/** Whether an item is done as far as this couple is concerned. */
+export function itemDone(i: ChecklistItem, couple: string | null) {
+  return i.each ? !!couple && (i.done_couples ?? []).includes(couple) : i.done
 }
 
 export const CATEGORIES: Record<string, string> = {

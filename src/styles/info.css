@@ -80,3 +80,6 @@ button.pill, .info-card .pill { min-height: 44px; }
 .tips summary::after { content: '+'; margin-inline-start: auto; color: var(--muted); font-weight: 400; }
 .tips[open] summary::after { content: '−'; }
 .tips ul { margin: 4px 0 0; padding-inline-start: 18px; display: grid; gap: 8px; line-height: 1.5; }
+.couple-mark { display: inline-flex; align-items: center; gap: 3px; margin-inline-end: 12px; }
+.check-line { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.check-line input { width: 18px; height: 18px; min-height: 0; flex: none; margin: 0; accent-color: var(--accent); }
