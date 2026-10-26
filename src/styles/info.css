@@ -116,3 +116,28 @@ button.pill, .info-card .pill { min-height: 44px; }
 .voice-details summary { cursor: pointer; min-height: 32px; color: var(--muted); font-size: 0.875rem; }
 .voice-details[open] { display: flex; flex-direction: column; gap: 8px; }
 .voice-back { font-size: 0.875rem; }
+/* the conversation: each exchange a bubble, Hebrew speaker on the right (start), Japanese on the left */
+.turns { display: flex; flex-direction: column; gap: 10px; }
+.turn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 88%;
+  padding: 12px 14px;
+  padding-inline-end: 40px;
+  border-radius: 20px;
+  background: var(--bg);
+  text-align: start;
+  transition: transform 100ms ease-out;
+}
+.turn:active { transform: scale(0.98); }
+.turn.he { align-self: flex-start; border-start-start-radius: 6px; }
+.turn.ja { align-self: flex-end; border-start-end-radius: 6px; background: var(--fill); }
+.turn.pending { align-self: stretch; max-width: none; padding-inline-end: 14px; }
+.turn-heard { font-size: 0.875rem; }
+.turn-text { font-size: 1.375rem; font-weight: 600; line-height: 1.35; letter-spacing: -0.01em; }
+.turn-romaji { font-size: 0.875rem; font-style: italic; }
+.turn-back { font-size: 0.8125rem; }
+.turn-play { position: absolute; inset-inline-end: 14px; bottom: 12px; color: var(--accent); }
+.turns > .link { align-self: center; }

@@ -47,6 +47,19 @@ const ERRORS: Record<string, string> = {
 const standalone = () =>
   (navigator as unknown as { standalone?: boolean }).standalone === true || matchMedia('(display-mode: standalone)').matches
 
+/** One exchange of the conversation: what was said, and its translation into the other language. */
+type Turn = { id: number; from: Lang; heard: string; text: string; romaji: string; back: string }
+// the conversation stays on this phone between openings; it's a convenience, so storage may fail quietly
+const TURNS_KEY = 'translator-turns'
+const MAX_TURNS = 50
+function loadTurns(): Turn[] {
+  try {
+    return JSON.parse(localStorage.getItem(TURNS_KEY) ?? '[]')
+  } catch {
+    return []
+  }
+}
+
 /** Why a translation failed, in words a traveller can act on. */
 async function translateError(error: unknown) {
   const res = (error as { context?: Response } | null)?.context
@@ -62,7 +75,7 @@ export default function Translator() {
   const [listening, setListening] = useState(false)
   const [heard, setHeard] = useState('')
   const [interim, setInterim] = useState('')
-  const [translation, setTranslation] = useState<{ text: string; romaji: string; back: string; lang: Lang } | null>(null)
+  const [turns, setTurns] = useState<Turn[]>(loadTurns)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
@@ -84,6 +97,14 @@ export default function Translator() {
     setListening(false)
     setInterim('')
   }
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(TURNS_KEY, JSON.stringify(turns))
+    } catch {
+      /* private mode or full storage: the conversation just won't outlive this session */
+    }
+  }, [turns])
 
   // voices load late in Safari; listen until they arrive
   useEffect(() => {
@@ -114,7 +135,6 @@ export default function Translator() {
   }
 
   const translate = async (text: string, from: Lang) => {
-    const to = from === 'he-IL' ? 'ja-JP' : 'he-IL'
     setBusy(true)
     note('שולח לתרגום')
     const sent = performance.now()
@@ -128,7 +148,9 @@ export default function Translator() {
     }
     // where the wait went: the whole round trip, and inside the server its checks and the Claude call
     note(`התקבל תרגום אחרי ${took}ms (בדיקות ${data.ms?.checks ?? '?'}ms, Claude ${data.ms?.claude ?? '?'}ms, רשת והפעלה ${data.ms ? took - data.ms.checks - data.ms.claude : '?'}ms)`)
-    setTranslation({ text: data.translation, romaji: data.romaji ?? '', back: data.back ?? '', lang: to })
+    const turn = { id: Date.now(), from, heard: text, text: data.translation, romaji: data.romaji ?? '', back: data.back ?? '' }
+    setTurns((t) => [turn, ...t].slice(0, MAX_TURNS))
+    setHeard('')
     say(data.translation)
   }
 
@@ -163,7 +185,6 @@ export default function Translator() {
     setLang(from)
     setHeard('')
     setInterim('')
-    setTranslation(null)
     setError('')
     setLog([])
     clearTimeout(forceStop.current)
@@ -238,8 +259,8 @@ export default function Translator() {
     `קול ביפנית: ${voiceFor('ja')}`,
     `שפה אחרונה: ${lang}`,
     `נשמע: ${heard || '(ריק)'}`,
-    translation && `תרגום: ${translation.text}`,
-    translation?.back && `בחזרה לעברית: ${translation.back}`,
+    turns[0] && `תרגום אחרון: ${turns[0].text}`,
+    turns[0]?.back && `בחזרה לעברית: ${turns[0].back}`,
     error && `שגיאה: ${error}`,
     spoke && `השמעה אחרונה: ${spoke}`,
     log.length > 0 && `אירועים:\n${log.join('\n')}`,
@@ -276,43 +297,64 @@ export default function Translator() {
         ) : (
           <p className="msg">זיהוי דיבור לא קיים בדפדפן הזה.</p>
         )}
-        <div className="voice-out" aria-live="polite">
-          {(heard || interim) && (
-            <p className="voice-heard muted" lang={lang} dir="auto">
-              {heard}
-              {interim && ` ${interim}`}
-            </p>
-          )}
-          {busy && <p className="muted">מתרגם…</p>}
-          {translation && (
-            <>
-              <p className="voice-translation" lang={translation.lang} dir="auto">
-                {translation.text}
-              </p>
-              {translation.romaji && (
-                <p className="voice-romaji muted" lang="ja-Latn" dir="ltr">
-                  {translation.romaji}
-                </p>
-              )}
-              {translation.back && (
-                <p className="voice-back muted" dir="auto">
-                  בעברית זה אומר: {translation.back}
-                </p>
-              )}
-            </>
-          )}
-          {!heard && !interim && !busy && !translation && (
-            <p className="muted">{listening ? 'מקשיב…' : 'התרגום יופיע כאן'}</p>
-          )}
-        </div>
+        {(listening || busy || heard || interim) && (
+          // the exchange in progress: what is being heard, then the wait for its translation
+          <div className={'turn pending ' + (lang === 'he-IL' ? 'he' : 'ja')} aria-live="polite">
+            <span className="turn-heard" lang={lang} dir="auto">
+              {heard || interim ? `${heard}${interim ? ` ${interim}` : ''}` : 'מקשיב…'}
+            </span>
+            {busy && <span className="muted">מתרגם…</span>}
+          </div>
+        )}
         {error && (
           <p className="msg" role="alert">
             {error}
           </p>
         )}
-        <button className="secondary" disabled={!translation || listening} onClick={() => translation && say(translation.text)}>
-          <Icon as={Volume2} /> השמעה שוב
-        </button>
+        {turns.length > 0 ? (
+          <div className="turns">
+            {turns.map((t) => {
+              const to: Lang = t.from === 'he-IL' ? 'ja-JP' : 'he-IL'
+              return (
+                // the bubble is the replay button: tap to hear the translation again
+                <button
+                  key={t.id}
+                  className={'turn ' + (t.from === 'he-IL' ? 'he' : 'ja')}
+                  disabled={listening}
+                  aria-label={`השמעה שוב: ${t.text}`}
+                  onClick={() => say(t.text)}
+                >
+                  <span className="turn-heard muted" lang={t.from} dir="auto">
+                    {t.heard}
+                  </span>
+                  <span className="turn-text" lang={to} dir="auto">
+                    {t.text}
+                  </span>
+                  {t.romaji && (
+                    <span className="turn-romaji muted" lang="ja-Latn" dir="ltr">
+                      {t.romaji}
+                    </span>
+                  )}
+                  {t.back && (
+                    <span className="turn-back muted" dir="auto">
+                      בעברית זה אומר: {t.back}
+                    </span>
+                  )}
+                  <Icon as={Volume2} className="turn-play" />
+                </button>
+              )
+            })}
+            <button
+              className="link"
+              disabled={listening || busy}
+              onClick={() => confirm('למחוק את השיחה מהטלפון?') && setTurns([])}
+            >
+              ניקוי השיחה
+            </button>
+          </div>
+        ) : (
+          !listening && !busy && <p className="muted">השיחה תופיע כאן. לוחצים על תרגום כדי לשמוע אותו שוב.</p>
+        )}
         <details className="voice-details">
           <summary>פרטים טכניים</summary>
           <pre className="voice-report">{report}</pre>
