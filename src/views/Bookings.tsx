@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState } from 'react'
-import { Check, Download, Link as LinkIcon, Mail, Map as MapIcon, Paperclip, Pencil, Plus, Users } from 'lucide-react'
+import { Check, Download, Link as LinkIcon, Mail, Map as MapIcon, Paperclip, Pencil, Plus, Users, Wand2 } from 'lucide-react'
 import { supabase } from '../supabase'
 import { BOOKING_KINDS, BOOKING_TABS, TOGETHER, type Booking, type Member, type Trip } from '../types'
 import { aiError, couplesOf, errorText, normName, fmtDateTime, fromInputDateTime, mapsUrl, mutate, safeUrl, toInputDateTime, useTripTable } from '../lib'
@@ -23,8 +23,10 @@ export default function Bookings({ trip, members, userId }: Props) {
   const tabs = Object.keys(BOOKING_TABS).filter((k, i) => i < 4 || rows.some((b) => kindOf(b) === k))
   const [tab, pick] = useRemembered('bookingsTab', 'flight')
   const current = tabs.includes(tab) ? tab : 'flight'
-  // rows come sorted by start time; keep each couple's bookings together (the group's first)
-  const items = shown.filter((b) => kindOf(b) === current).sort((a, b) => (a.who ?? '').localeCompare(b.who ?? ''))
+  // by date, then whose; bookings with no date go last
+  const items = shown
+    .filter((b) => kindOf(b) === current)
+    .sort((a, b) => (a.starts_at ?? '~').localeCompare(b.starts_at ?? '~') || (a.who ?? '').localeCompare(b.who ?? ''))
 
   return (
     <div className="stack">
@@ -61,12 +63,8 @@ export default function Bookings({ trip, members, userId }: Props) {
         </Empty>
       )}
       <div className="stack">
-        {items.map((b, i) => (
+        {items.map((b) => (
           <Fragment key={b.id}>
-            {/* with no couple filter, head each couple's run of bookings */}
-            {couples.length > 1 && !whose && (i === 0 || b.who !== items[i - 1].who) && (
-              <div className="area-title">{b.who ?? <WhoAll />}</div>
-            )}
               <div className="card booking" onClick={() => setEdit(b)}>
                 <div className="row spread">
                   <b>
@@ -74,7 +72,7 @@ export default function Bookings({ trip, members, userId }: Props) {
                   </b>
                   {b.file_path && <Icon as={Paperclip} className="muted" label="קובץ מצורף" />}
                 </div>
-                {couples.length > 1 && whose && (
+                {couples.length > 1 && (
                   <div className={'who-tag' + (b.who ? ' apart' : '')}>{b.who ?? <WhoAll />}</div>
                 )}
                 {b.starts_at && (
@@ -111,7 +109,18 @@ export default function Bookings({ trip, members, userId }: Props) {
       <button className="fab" aria-label="הזמנה חדשה" onClick={() => setEdit({ kind: current, who: myCouple })}>
         <Plus size={28} strokeWidth={2} aria-hidden="true" />
       </button>
-      {edit && <BookingForm trip={trip} couples={couples} booking={edit} onClose={() => setEdit(null)} />}
+      {edit && (
+        <BookingForm
+          trip={trip}
+          couples={couples}
+          booking={edit}
+          onClose={() => setEdit(null)}
+          onImport={() => {
+            setEdit(null)
+            setImporting(true)
+          }}
+        />
+      )}
       {importing && <ImportSheet trip={trip} couples={couples} myCouple={myCouple} onClose={() => setImporting(false)} />}
     </div>
   )
@@ -226,11 +235,59 @@ async function removeDocIfUnused(tripId: string, path: string, exceptId: string)
   await supabase.storage.from('docs').remove([path])
 }
 
-function BookingForm(props: { trip: Trip; couples: string[]; booking: Partial<Booking>; onClose: () => void }) {
+function BookingForm(props: {
+  trip: Trip
+  couples: string[]
+  booking: Partial<Booking>
+  onClose: () => void
+  onImport: () => void
+}) {
   const tripId = props.trip.id
   const [f, setF] = useState<Partial<Booking>>(props.booking)
   const [file, setFile] = useState<File | null>(null)
   const [busy, setBusy] = useState(false)
+  const [reading, setReading] = useState(false)
+  const [readNote, setReadNote] = useState('')
+
+  /** Claude reads the attached confirmation and fills the form; the file stays attached. */
+  const readFile = async () => {
+    if (!file) return
+    setReading(true)
+    setReadNote('')
+    let data: { bookings?: Extracted[] } | null = null
+    try {
+      const res = await supabase.functions.invoke('parse-booking', {
+        body: { text: '', file: { data: await toBase64(file), media_type: file.type } },
+      })
+      if (res.error) setReadNote(await aiError(res.error, 'לא הצלחתי לקרוא את הקובץ. אפשר למלא ידנית.'))
+      data = res.data
+    } catch {
+      setReadNote('לא הצלחתי לקרוא את הקובץ. אפשר למלא ידנית.')
+    }
+    setReading(false)
+    const found = data?.bookings ?? []
+    if (!found.length) {
+      if (data) setReadNote('לא מצאתי הזמנה בקובץ הזה. אפשר למלא ידנית.')
+      return
+    }
+    const b = found[0]
+    setF((prev) => ({
+      ...prev,
+      kind: BOOKING_KINDS[b.kind] ? b.kind : prev.kind,
+      title: b.title || prev.title,
+      starts_at: wallClock(b.starts_at, b.kind === 'hotel' ? '15:00' : '00:00') ?? prev.starts_at,
+      ends_at: wallClock(b.ends_at, b.kind === 'hotel' ? '11:00' : '00:00') ?? prev.ends_at,
+      confirmation: b.confirmation || prev.confirmation,
+      location: b.location || prev.location,
+      url: safeUrl(b.url) ?? prev.url,
+      notes: prev.notes || b.notes,
+    }))
+    setReadNote(
+      found.length > 1
+        ? `מילאתי את ההזמנה הראשונה מתוך ${found.length} שבקובץ. בדקו ושמרו, או הוסיפו את כולן בבת אחת עם "הוספה מאישור הזמנה".`
+        : 'מילאתי את הפרטים מהקובץ. בדקו ושמרו.',
+    )
+  }
   const set = (k: keyof Booking) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value })
 
   const save = async () => {
@@ -284,6 +341,11 @@ function BookingForm(props: { trip: Trip; couples: string[]; booking: Partial<Bo
 
   return (
     <Sheet title={f.id ? 'עריכת הזמנה' : 'הזמנה חדשה'} onClose={props.onClose}>
+      {!f.id && (
+        <button className="secondary" onClick={props.onImport}>
+          <Icon as={Mail} /> יש אישור הזמנה? הוספה אוטומטית מקובץ או מייל
+        </button>
+      )}
       <Field label="סוג">
         <select value={f.kind} onChange={set('kind')}>
           {Object.entries(BOOKING_KINDS).map(([k, v]) => (
@@ -326,6 +388,16 @@ function BookingForm(props: { trip: Trip; couples: string[]; booking: Partial<Bo
       <Field label={f.file_path ? 'החלפת מסמך (PDF / תמונה)' : 'מסמך מצורף (PDF / תמונה)'}>
         <input type="file" accept="application/pdf,image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
       </Field>
+      {file && (
+        <button className="secondary" onClick={readFile} disabled={reading}>
+          <Icon as={Wand2} /> {reading ? 'קורא את הקובץ…' : 'קריאת הקובץ ומילוי הפרטים'}
+        </button>
+      )}
+      {readNote && (
+        <p className="small" role="status">
+          {readNote}
+        </p>
+      )}
       <button className="primary" onClick={save} disabled={busy || !f.title?.trim()}>
         {busy ? 'שומר…' : 'שמירה'}
       </button>
