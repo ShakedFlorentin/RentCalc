@@ -238,56 +238,137 @@ export default function SwipeGame({ trip, userId, members }: Props) {
   )
 }
 
+/**
+ * A spring in Apple's terms: damping ratio (1 = no overshoot) and response (roughly seconds to settle).
+ * It starts from wherever the card is and with whatever speed it has, so a gesture can grab it mid-flight.
+ */
+function springTo(
+  from: number,
+  to: number,
+  velocity: number,
+  { damping, response }: { damping: number; response: number },
+  onFrame: (x: number) => boolean | void,
+  onDone: () => void,
+) {
+  const k = ((2 * Math.PI) / response) ** 2
+  const c = (4 * Math.PI * damping) / response
+  let x = from
+  let v = velocity
+  let last = performance.now()
+  let id = requestAnimationFrame(function tick(now) {
+    let dt = Math.min(0.064, (now - last) / 1000)
+    last = now
+    while (dt > 0) {
+      const h = Math.min(dt, 0.004)
+      v += (-k * (x - to) - c * v) * h
+      x += v * h
+      dt -= h
+    }
+    const settled = Math.abs(x - to) < 0.5 && Math.abs(v) < 5
+    if (settled) x = to
+    if (onFrame(x) === true || settled) return onDone()
+    id = requestAnimationFrame(tick)
+  })
+  return () => cancelAnimationFrame(id)
+}
+
+/** Where a flick would come to rest, like scroll deceleration (Apple's projection, rate 0.998). */
+const project = (v: number) => ((v / 1000) * 0.998) / (1 - 0.998)
+const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches
+
 function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked: boolean) => Promise<boolean> }) {
   const [dx, setDx] = useState(0)
-  const [leaving, setLeaving] = useState<0 | 1 | -1>(0)
   const [more, setMore] = useState(false)
   const [photo, setPhoto] = useState(0)
   const [broken, setBroken] = useState<Set<string>>(new Set())
-  const start = useRef<number | null>(null)
+  const pos = useRef(0)
+  const grab = useRef<number | null>(null) // pointer x minus card x: the card stays where the finger took it
+  const downX = useRef(0)
+  const trail = useRef<{ t: number; x: number }[]>([])
+  const stop = useRef<(() => void) | null>(null)
+  const flying = useRef(false)
   const moved = useRef(false)
   const onInfo = useRef(false)
   const style = CARD_STYLE[c.category] ?? CARD_STYLE.sight
   const photos = (c.photos ?? []).filter((u) => !broken.has(u))
   const cur = photos[Math.min(photo, photos.length - 1)]
+  useEffect(() => () => stop.current?.(), [])
 
-  const fly = (dir: 1 | -1) => {
-    setLeaving(dir)
+  const show = (x: number) => {
+    pos.current = x
+    setDx(x)
+  }
+  const animate = (to: number, v: number, opts: { damping: number; response: number }, done?: () => void, until?: (x: number) => boolean) => {
+    stop.current?.()
+    stop.current = null
+    if (reducedMotion()) {
+      show(to)
+      done?.()
+      return
+    }
+    stop.current = springTo(pos.current, to, v, opts, (x) => (show(x), until?.(x)), () => {
+      stop.current = null
+      done?.()
+    })
+  }
+  // back to the middle; a little bounce only because a drag preceded it
+  const settle = (v = 0) => animate(0, v, { damping: 0.8, response: 0.4 })
+  const fly = (dir: 1 | -1, v = 0) => {
+    flying.current = true
     navigator.vibrate?.(12)
-    setTimeout(async () => {
-      // the swipe didn't save (e.g. offline): bring the card back instead of leaving it off-screen on top
-      if (!(await onSwipe(dir === 1))) {
-        setLeaving(0)
-        setDx(0)
-      }
-    }, 200)
+    const off = dir * (window.innerWidth + 200)
+    animate(
+      off,
+      v,
+      { damping: 1, response: 0.3 },
+      async () => {
+        // the swipe didn't save (e.g. offline): bring the card back instead of leaving it off-screen on top
+        if (!(await onSwipe(dir === 1))) {
+          flying.current = false
+          settle()
+        }
+      },
+      (x) => Math.abs(x) > window.innerWidth * 0.8,
+    )
   }
   const down = (e: PointerEvent) => {
-    if ((e.target as HTMLElement).closest('a,button')) return
-    start.current = e.clientX
+    if (flying.current || (e.target as HTMLElement).closest('a,button')) return
+    // grabbing a card that is still springing back stops it right where it is
+    stop.current?.()
+    stop.current = null
+    grab.current = e.clientX - pos.current
+    downX.current = e.clientX
+    trail.current = [{ t: e.timeStamp, x: pos.current }]
     moved.current = false
     onInfo.current = !!(e.target as HTMLElement).closest('.card-info')
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
   }
   const move = (e: PointerEvent) => {
-    if (start.current === null) return
-    const d = e.clientX - start.current
-    if (Math.abs(d) > 6) moved.current = true
-    setDx(d)
+    if (grab.current === null) return
+    if (Math.abs(e.clientX - downX.current) > 6) moved.current = true
+    const x = e.clientX - grab.current
+    trail.current = [...trail.current.filter((p) => e.timeStamp - p.t < 100), { t: e.timeStamp, x }]
+    show(x)
   }
-  const up = () => {
-    if (start.current === null) return
-    start.current = null
+  const up = (e: PointerEvent) => {
+    if (grab.current === null) return
+    grab.current = null
     // the card holds the pointer while dragging, so a tap on the text is caught here, not as a click
     if (!moved.current && onInfo.current) {
-      setDx(0)
+      settle()
       setMore(true)
       return
     }
-    // RTL doesn't change the gesture: right = like, as on every dating app
-    if (dx > 90) fly(1)
-    else if (dx < -90) fly(-1)
-    else setDx(0)
+    const t = trail.current
+    const a = t[0]
+    const b = t[t.length - 1]
+    // a finger that stopped before letting go has no speed left, whatever it had before the pause
+    const v = b.t > a.t && e.timeStamp - b.t < 50 ? ((b.x - a.x) / (b.t - a.t)) * 1000 : 0
+    // decide by where the flick is going, not where the finger let go. RTL doesn't change it: right = like
+    const rest = pos.current + project(v)
+    if (rest > 110) fly(1, v)
+    else if (rest < -110) fly(-1, v)
+    else settle(v)
   }
   const decide = (dir: 1 | -1) => {
     setMore(false)
@@ -298,15 +379,11 @@ function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked
     setPhoto((i) => (i + step + photos.length) % photos.length)
   }
 
-  const x = leaving ? leaving * 600 : dx
   const p = Math.min(1, Math.abs(dx) / 90)
   return (
     <div
       className={'swipe-card' + (top ? ' top' : ' under')}
-      style={{
-        transform: top ? `translateX(${x}px) rotate(${x / 20}deg)` : undefined,
-        transition: start.current !== null ? 'none' : 'transform 0.2s ease-out',
-      }}
+      style={{ transform: top ? `translateX(${dx}px) rotate(${dx / 20}deg)` : undefined }}
       onPointerDown={top ? down : undefined}
       onPointerMove={top ? move : undefined}
       onPointerUp={top ? up : undefined}

@@ -82,8 +82,11 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
       <section className={'hero card' + (today ? ' trip-line' : '')}>
         {today ? (
           <>
-            <div className="big">יום {today}</div>
-            <div className="muted">{todayInfo?.city ?? ''} · {fmtDay(dayDate(trip.start_date, today))}</div>
+            <div className="muted hero-date">{fmtDay(dayDate(trip.start_date, today))}</div>
+            <div className="big">
+              יום {today}
+              {todayInfo?.city && ` · ${todayInfo.city}`}
+            </div>
           </>
         ) : daysLeft !== null && daysLeft > 0 ? (
           <>

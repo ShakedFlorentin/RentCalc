@@ -40,6 +40,10 @@ sort by date with whose on each card, "read the file" in the + form. Info tab: t
 kosher (Chabad, product list, onigiri) and December; phrase card "no pork or seafood". Baby: formula note,
 tax-free now refunded at the airport (from Nov 2026).
 
+Look: iOS grouped style from the `apple-design` skill (grey ground, flat white groups, one red tint, large tight
+titles, iPhone system font). Swipe card moves on springs (`springTo` in `Swipe.tsx`): grabs mid-flight, keeps the
+finger's speed, and likes/skips by where the flick projects, not where it was let go.
+
 ## Open / ideas
 - Almog to add his own Shinjuku booking (who = אלמוג ושניר) → his missing nights drop 13 → 9.
 - "דרכונים בתוקף" was reset when it became per-couple; each couple should tick it again.

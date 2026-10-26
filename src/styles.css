@@ -1,38 +1,42 @@
 /* Tokens: semantic, light + dark. Accent red is reserved for primary actions and state. */
+/* iOS grouped look: grey ground, flat white groups, one tint. Raised shadows only on what you act on now. */
 :root {
-  --bg: #f4f0e8;
+  --bg: #f2f2f7;
   --card: #ffffff;
-  --fill: #ebe6dc;
-  --text: #1c1a17;
-  --muted: #655f56;
-  --line: #e2dccf;
-  --accent: #bc002d;
+  --fill: rgba(118, 118, 128, 0.12);
+  --text: #000000;
+  --muted: #6c6c70;
+  --line: #c6c6c8;
+  --accent: #c8322b;
   --on-accent: #fff;
-  --accent-soft: #fbe7ec;
-  --ok: #2f7a50;
-  --like: #1f8a4c;
-  --nope: #c9162f;
-  --shadow: 0 1px 2px rgba(40, 30, 20, 0.06), 0 4px 16px rgba(40, 30, 20, 0.06);
-  --bar-bg: color-mix(in srgb, var(--bg) 78%, transparent);
+  --accent-soft: #fbe9e8;
+  --ok: #248a3d;
+  --like: #248a3d;
+  --nope: #d70015;
+  --shadow: none;
+  --raised: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.07);
+  --bar-bg: rgba(249, 249, 249, 0.78);
   --tabbar-h: 52px;
-  --top-h: 52px;
+  --top-h: 56px;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #12100d;
-    --card: #1e1b17;
-    --fill: #2b2721;
-    --text: #f3eee6;
-    --muted: #aaa297;
-    --line: #34302a;
-    --accent: #ff5a79;
-    --on-accent: #1a0509;
-    --accent-soft: #3a1a22;
-    --ok: #6fbf8f;
-    --like: #4cc47f;
-    --nope: #ff6b7d;
-    --shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
+    --bg: #000000;
+    --card: #1c1c1e;
+    --fill: rgba(118, 118, 128, 0.24);
+    --text: #ffffff;
+    --muted: #98989f;
+    --line: #38383a;
+    --accent: #ff6961;
+    --on-accent: #000000;
+    --accent-soft: #3a1614;
+    --ok: #30d158;
+    --like: #30d158;
+    --nope: #ff453a;
+    --shadow: none;
+    --raised: 0 8px 24px rgba(0, 0, 0, 0.5);
+    --bar-bg: rgba(22, 22, 24, 0.78);
     color-scheme: dark;
   }
 }
@@ -46,7 +50,9 @@ html, body { margin: 0; }
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, 'Segoe UI', 'Noto Sans Hebrew', sans-serif;
+  /* the iPhone's own font (SF Pro, SF Hebrew); other devices get their system font */
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Hebrew', system-ui, 'Segoe UI', 'Noto Sans Hebrew', sans-serif;
+  font-optical-sizing: auto;
   font-size: 1rem;
   line-height: 1.4;
   -webkit-tap-highlight-color: transparent;
@@ -54,8 +60,8 @@ body {
   overscroll-behavior-y: none;
 }
 h1, h2, h3 { margin: 0; line-height: 1.2; }
-h2 { font-size: 1.2rem; }
-h3 { font-size: 1.05rem; margin-bottom: 8px; }
+h2 { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em; }
+h3 { font-size: 1.0625rem; font-weight: 600; margin-bottom: 8px; }
 a { color: var(--accent); text-decoration: none; }
 bdi { unicode-bidi: isolate; }
 :focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 65%, transparent); outline-offset: 2px; }
@@ -84,13 +90,15 @@ button:disabled { cursor: default; }
   border-radius: 14px;
   font-weight: 600;
   width: 100%;
-  transition: transform 0.12s, opacity 0.12s;
+  transition: transform 100ms ease-out, opacity 100ms ease-out;
 }
 .primary { background: var(--accent); color: var(--on-accent); }
 .primary:disabled { opacity: 0.45; }
-.secondary { background: var(--card); border: 1px solid var(--line); color: var(--text); }
+.secondary { background: var(--card); color: var(--text); }
+/* inside a white group a white button vanishes: use the grey fill there */
+.card .secondary { background: var(--fill); }
 .danger { color: var(--accent); min-height: 46px; }
-.primary:active, .secondary:active { transform: scale(0.98); opacity: 0.85; }
+.primary:active, .secondary:active { transform: scale(0.97); opacity: 0.85; }
 .link { color: var(--accent); min-height: 44px; padding: 8px 4px; font-weight: 500; }
 .icon {
   display: inline-grid;
@@ -131,8 +139,7 @@ button:disabled { cursor: default; }
 
 .card {
   background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: 16px;
   padding: 16px;
   box-shadow: var(--shadow);
 }
@@ -166,10 +173,9 @@ form.card, .login .card { display: flex; flex-direction: column; gap: 12px; widt
   padding: calc(env(safe-area-inset-top) + 6px) 20px 6px;
   background: var(--bar-bg);
   -webkit-backdrop-filter: saturate(1.6) blur(20px);
-  backdrop-filter: saturate(1.6) blur(20px);
-  border-bottom: 0.5px solid var(--line);
+  backdrop-filter: saturate(1.8) blur(20px);
 }
-.topbar h1 { font-size: 1.375rem; font-weight: 700; }
+.topbar h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.015em; line-height: 1.15; }
 .topbar-text { display: flex; flex-direction: column; gap: 0; min-width: 0; }
 .topbar-text .small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--accent); flex: none; }
@@ -204,7 +210,7 @@ main.tab-swipe { padding-bottom: 0; }
   font-weight: 500;
   color: var(--muted);
 }
-.tabbar button.active { color: var(--accent); font-weight: 700; }
+.tabbar button.active { color: var(--accent); font-weight: 600; }
 .tab-icon { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .tabbar button.active .tab-icon { fill: color-mix(in srgb, currentColor 18%, transparent); stroke-width: 2.1; }
 
@@ -219,16 +225,18 @@ main.tab-swipe { padding-bottom: 0; }
   color: var(--on-accent);
   display: grid;
   place-items: center;
-  box-shadow: 0 6px 18px rgba(188, 0, 45, 0.35);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 30%, transparent);
   z-index: 4;
-  transition: transform 0.12s;
+  transition: transform 100ms ease-out;
 }
 .fab:active { transform: scale(0.92); }
 
 /* Home */
-.hero { text-align: center; padding: 26px 16px; }
-.big { font-size: 2.75rem; font-weight: 800; color: var(--accent); line-height: 1.1; }
-.clock { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 10px; font-size: 0.9375rem; color: var(--muted); }
+/* Home's title block sits on the ground like an iOS large title, not in a box */
+.hero.card { background: none; padding: 4px 4px 0; text-align: start; }
+.hero-date { font-size: 0.8125rem; font-weight: 600; }
+.big { font-size: 2.125rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+.clock { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 0.9375rem; color: var(--muted); }
 .mini-item { padding: 10px 0; border-bottom: 0.5px solid var(--line); }
 .mini-item.done { text-decoration: line-through; color: var(--muted); }
 .route { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -266,10 +274,11 @@ main.tab-swipe { padding-bottom: 0; }
   padding: 6px 14px;
   border-radius: 999px;
   background: var(--card);
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
   font-size: 0.9375rem;
   white-space: nowrap;
 }
+.card .chip { background: var(--fill); }
 button.chip { min-height: 44px; }
 .chip.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
 .chip.tiny { min-height: 0; font-size: 0.75rem; padding: 1px 8px; margin-inline-start: 6px; background: var(--fill); }
@@ -297,7 +306,7 @@ button.chip { min-height: 44px; }
   padding: 6px 8px;
   border-radius: 14px;
   background: var(--card);
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
   font-size: 0.75rem;
   scroll-snap-align: center;
 }
@@ -331,9 +340,9 @@ button.chip { min-height: 44px; }
 .booking { display: flex; flex-direction: column; gap: 8px; cursor: pointer; }
 
 /* Segmented control (iOS) */
-.segmented { display: flex; background: var(--fill); border-radius: 12px; padding: 3px; gap: 2px; }
+.segmented { display: flex; background: var(--fill); border-radius: 10px; padding: 2px; gap: 2px; }
 .segmented button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex: 1; min-height: 40px; padding: 6px 4px; border-radius: 9px; font-size: 0.9375rem; transition: background 0.15s; }
-.segmented button.on { background: var(--card); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18); font-weight: 600; }
+.segmented button.on { background: var(--card); box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12); font-weight: 600; }
 .progress { position: relative; height: 26px; background: var(--fill); border-radius: 999px; overflow: hidden; }
 .progress div { height: 100%; background: var(--ok); transition: width 0.3s; }
 .progress span { position: absolute; inset: 0; display: grid; place-items: center; font-size: 0.8125rem; font-weight: 700; }
@@ -409,8 +418,6 @@ button.chip { min-height: 44px; }
   padding: 8px 14px;
   border-radius: 16px;
   background: var(--card);
-  border: 1px solid var(--line);
-  box-shadow: var(--shadow);
   text-align: start;
   flex: none;
 }
@@ -435,22 +442,23 @@ button.chip { min-height: 44px; }
   display: flex;
   flex-direction: column;
   background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 24px;
+  border-radius: 28px;
   overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04), 0 18px 40px rgba(0, 0, 0, 0.12);
   touch-action: pan-y;
+  /* the card under rises with scale/translate, so CSS never animates the drag's inline transform */
+  transition: scale 0.3s ease-out, translate 0.3s ease-out, filter 0.3s ease-out;
   user-select: none;
   -webkit-user-select: none;
   will-change: transform;
 }
 .swipe-card.top { cursor: grab; }
-.swipe-card.under { transform: scale(0.95) translateY(10px); filter: brightness(0.97); }
+.swipe-card.under { scale: 0.95; translate: 0 10px; filter: brightness(0.97); }
 .card-hero { position: relative; height: clamp(150px, 28dvh, 230px); flex: none; color: #fff; display: flex; align-items: flex-end; overflow: hidden; }
 .card-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; animation: fade 0.25s; }
 .card-emoji { position: absolute; top: 14%; left: 50%; transform: translateX(-50%); font-size: 4.5rem; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.25)); }
 .card-title { position: relative; width: 100%; padding: 36px 16px 12px; background: linear-gradient(transparent, rgba(0, 0, 0, 0.72)); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4); }
-.card-title h2 { font-size: 1.5rem; font-weight: 800; }
+.card-title h2 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.015em; }
 .card-meta { font-size: 0.8125rem; opacity: 0.95; margin-top: 2px; }
 .ja { opacity: 0.92; font-size: 0.9375rem; text-align: start; unicode-bidi: isolate; }
 html[dir='rtl'] .ja { text-align: right; }
@@ -506,9 +514,8 @@ html[dir='rtl'] .ja { text-align: right; }
   height: 68px;
   border-radius: 50%;
   background: var(--card);
-  border: 1px solid var(--line);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.14);
-  transition: transform 0.12s;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+  transition: transform 100ms ease-out;
 }
 .round svg { width: 30px; height: 30px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
 .round svg .fill { fill: currentColor; stroke-width: 1.5; }
@@ -539,7 +546,7 @@ html[dir='rtl'] .ja { text-align: right; }
 /* Places */
 .group-title { margin-top: 10px; font-size: 1.375rem; }
 .area-title { display: flex; align-items: center; gap: 6px; font-weight: 600; color: var(--muted); font-size: 0.875rem; padding-top: 2px; }
-.map { height: 58dvh; border-radius: 18px; border: 1px solid var(--line); z-index: 0; }
+.map { height: 58dvh; border-radius: 16px; z-index: 0; }
 .pin { width: 22px; height: 22px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4); }
 .pin.visited { opacity: 0.45; }
 .pin.guide { width: 14px; height: 14px; border-width: 2px; background: #6b7c93; }
@@ -569,7 +576,7 @@ html[dir='rtl'] .ja { text-align: right; }
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
 @media (prefers-contrast: more) {
-  :root { --line: #8a8378; --muted: #4a453d; }
+  :root { --line: #8e8e93; --muted: #3a3a3c; }
 }
 @media (prefers-color-scheme: dark) {
   .verdict.good { background: #16351f; color: #86dba8; }
@@ -578,10 +585,10 @@ html[dir='rtl'] .ja { text-align: right; }
   .verdict.aud-baby { background: #172554; color: #9cc5ff; }
   .verdict.aud-adults { background: #2e1065; color: #dcc0ff; }
   .verdict.local { background: #4c0519; color: #fda4af; }
-  .segmented button.on { background: #44403a; }
+  .segmented button.on { background: #636366; }
   .fab { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5); }
   .backdrop { background: rgba(0, 0, 0, 0.6); }
-  @media (prefers-contrast: more) { :root { --line: #8a8378; --muted: #d2cbbf; } }
+  @media (prefers-contrast: more) { :root { --line: #8e8e93; --muted: #d1d1d6; } }
 }
 .chip.add-chip { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
 .dishes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }

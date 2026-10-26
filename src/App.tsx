@@ -178,7 +178,6 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
   return (
     <div className="app">
       <header className="topbar">
-        <span className="dot" aria-hidden="true" />
         <div className="topbar-text">
           <h1>{TABS.find((t) => t.id === tab)?.label}</h1>
           <span className="small muted" dir="auto">
