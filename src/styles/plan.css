@@ -20,13 +20,13 @@
 .arrival li { display: flex; align-items: flex-start; gap: 10px; }
 .arrival li .ic { margin-top: 0.2em; color: var(--muted); }
 
-.next-card { border-radius: 22px; padding: 20px; box-shadow: var(--raised); }
+.next-card { border-radius: 26px; padding: 20px; box-shadow: var(--raised); }
 .next-label { font-size: 0.8125rem; font-weight: 600; color: var(--accent); }
-.next-time { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; margin-top: 8px; direction: ltr; text-align: start; font-variant-numeric: tabular-nums; }
-.next-title { font-size: 1.1875rem; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 4px; }
+.next-time { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; margin-top: 8px; direction: ltr; text-align: start; font-variant-numeric: tabular-nums; }
+.next-title { font-size: 1.375rem; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 4px; }
 .next-card .primary, .next-card .secondary { margin-top: 10px; text-decoration: none; }
 .item-title .ic, .next-title .ic { color: var(--muted); }
-.next-card .primary { min-height: 48px; font-size: 1rem; }
+.next-card .primary { min-height: 50px; }
 .today-row { display: flex; gap: 10px; align-items: baseline; padding: 10px 0; border-bottom: 0.5px solid var(--line); }
 .today-row:last-of-type { border-bottom: 0; }
 .today-row.past { color: var(--muted); }
@@ -35,11 +35,11 @@
 .todo-row:last-child { border-bottom: 0; }
 .todo-row > .ic { flex: none; color: var(--muted); }
 .todo-row b { display: block; font-weight: 600; }
-.todo-row b.count-chips { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-bottom: 2px; }
+.todo-row b.count-chips { font-weight: 400; display: flex; flex-wrap: wrap; gap: 4px 14px; margin-bottom: 2px; }
 .count-chip { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .shortcuts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 /* tiles: tinted icon on top, label under it, like the mockup's tonight/expenses tiles */
-.shortcuts .secondary { flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 6px; min-height: 0; padding: 12px 14px; text-align: start; }
+.shortcuts .secondary { flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 6px; min-height: 0; padding: 14px 16px; border-radius: 24px; text-align: start; }
 .shortcuts .secondary .ic { width: 22px; height: 22px; color: var(--accent); }
 /* iOS Settings-style icon squares */
 .tile { flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 7px; color: #fff; }
@@ -55,5 +55,5 @@
 /* .time is its own ltr box inside RTL text, so its end margin lands on the wrong side */
 .item-title .time, .next-label .time { margin-inline-end: 0; margin-inline-start: 8px; }
 .arrival summary .time { margin-inline: 0 0; }
-.count-chips { display: flex; flex-wrap: wrap; gap: 4px 12px; font-weight: 600; }
+.count-chips { display: flex; flex-wrap: wrap; gap: 4px 12px; font-weight: 400; }
 .count-chips span { white-space: nowrap; }
