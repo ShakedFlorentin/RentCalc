@@ -37,6 +37,8 @@
 .todo-row:last-child { border-bottom: 0; }
 .todo-row > .ic { flex: none; color: var(--muted); }
 .todo-row b { display: block; font-weight: 600; }
+.todo-row b.count-chips { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-bottom: 2px; }
+.count-chip { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .shortcuts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 /* .time is its own ltr box inside RTL text, so its end margin lands on the wrong side */
 .item-title .time, .next-label .time { margin-inline-end: 0; margin-inline-start: 8px; }

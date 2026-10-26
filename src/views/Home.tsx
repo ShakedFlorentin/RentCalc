@@ -358,8 +358,8 @@ function BeforeTrip(props: {
         <span>
           <b className="count-chips">
             {counts.map(({ k, n }) => (
-              <span key={k}>
-                <Icon as={BOOKING_ICON[k]} /> {BOOKING_TABS[k]} {n}
+              <span key={k} className="count-chip">
+                <Icon as={BOOKING_ICON[k]} /> {n} {BOOKING_TABS[k]}
               </span>
             ))}
           </b>
