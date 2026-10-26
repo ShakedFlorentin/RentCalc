@@ -22,16 +22,16 @@
 
 .next-card { border-radius: 22px; padding: 20px; box-shadow: var(--raised); }
 .next-label { font-size: 0.8125rem; font-weight: 600; color: var(--accent); }
-.next-time { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; margin-top: 8px; direction: ltr; text-align: start; font-variant-numeric: tabular-nums; }
-.next-title { font-size: 1.375rem; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 4px; }
+.next-time { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; margin-top: 8px; direction: ltr; text-align: start; font-variant-numeric: tabular-nums; }
+.next-title { font-size: 1.1875rem; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 4px; }
 .next-card .primary, .next-card .secondary { margin-top: 10px; text-decoration: none; }
 .item-title .ic, .next-title .ic { color: var(--muted); }
-.next-card .primary { min-height: 56px; font-size: 1.125rem; }
+.next-card .primary { min-height: 48px; font-size: 1rem; }
 .today-row { display: flex; gap: 10px; align-items: baseline; padding: 10px 0; border-bottom: 0.5px solid var(--line); }
 .today-row:last-of-type { border-bottom: 0; }
 .today-row.past { color: var(--muted); }
 .today-row .time { flex: none; }
-.todo-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 8px 0; text-align: start; border-bottom: 0.5px solid var(--line); }
+.todo-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 8px 0; text-align: start; border-bottom: 0.5px solid var(--line); }
 .todo-row:last-child { border-bottom: 0; }
 .todo-row > .ic { flex: none; color: var(--muted); }
 .todo-row b { display: block; font-weight: 600; }
@@ -39,11 +39,11 @@
 .count-chip { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .shortcuts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 /* tiles: tinted icon on top, label under it, like the mockup's tonight/expenses tiles */
-.shortcuts .secondary { flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 8px; min-height: 84px; padding: 14px 16px; text-align: start; }
-.shortcuts .secondary .ic { width: 24px; height: 24px; color: var(--accent); }
+.shortcuts .secondary { flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 6px; min-height: 0; padding: 12px 14px; text-align: start; }
+.shortcuts .secondary .ic { width: 22px; height: 22px; color: var(--accent); }
 /* iOS Settings-style icon squares */
-.tile { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; color: #fff; }
-.tile .ic { width: 19px; height: 19px; color: #fff; }
+.tile { flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 7px; color: #fff; }
+.tile .ic { width: 18px; height: 18px; color: #fff; }
 .tile.orange { background: #ff9500; }
 .tile.indigo { background: #5856d6; }
 .tile.red { background: var(--accent); }
