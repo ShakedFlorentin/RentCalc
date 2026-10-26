@@ -4,7 +4,7 @@
 .exp-big.plus, .exp-num.plus { color: var(--ok); }
 .exp-big.minus, .exp-num.minus { color: var(--nope); }
 .exp-cur { flex: none; width: 96px; }
-.exp-cur button, .exp-by button { min-height: 44px; }
+.exp-cur button { min-height: 44px; }
 .exp-link { min-height: 44px; padding: 4px 8px; }
 .exp-h { font-size: 1rem; margin: 0 0 4px; }
 
@@ -44,8 +44,6 @@
 .exp-amount .exp-cur { margin-bottom: 1px; }
 .exp-amount .exp-cur button { min-height: 44px; }
 
-/* settling up: by couples or person by person, above everything it changes */
-.exp-by button { flex: 1; }
 .exp-rate { margin-top: 2px; }
 .exp-transfer .link { flex: none; }
 /* everyone's balance, folded away: what to pay is already in the card above */

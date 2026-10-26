@@ -29,6 +29,12 @@ Offline: `public/sw.js` + localStorage cache in `useTripTable` (`src/lib.ts`).
 - Missing nights on Home: per couple from its own flights (`stayInJapan` in `src/views/planUtils.ts`).
 - `checklist_items`: `couple` (packing is per couple), `each` + `done_couples` (tasks each couple ticks separately,
   e.g. Visit Japan Web). Helper `itemDone()` in `src/types.ts`.
+- Expenses settle between couples (each couple one wallet; one transfer between them). `trips.settle_by`
+  ('couples' default | 'people') switches a trip to person-by-person settling. Backend-only on purpose: the app
+  reads it (select granted) but has no switch and no update grant. Change it with SQL:
+  `update trips set settle_by = 'people' where id = …`. Logic: `partiesOf`/`settleUp` in `src/money.ts`.
+- `trips` is granted column by column: a new column needs `grant select (col) on trips to anon, authenticated`
+  or the app's `select('*')` on trips fails.
 - Edge functions (`supabase/functions/*`, deploy via MCP): `suggest-place` (v13, link/name → up to 10 place cards
   with kosher fields) and `parse-booking` (v8). Model `claude-haiku-5-5`, key in Vault `anthropic_api_key`,
   30 calls/user/day. Both validate the body before charging quota and only pass http(s) links.

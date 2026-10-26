@@ -7,6 +7,8 @@ export type Trip = {
   match_threshold: number
   /** shekels per yen, for showing yen expenses in shekels */
   ils_per_jpy: number
+  /** how shared expenses are settled: between couples, or each person separately. Set in the backend only */
+  settle_by?: 'couples' | 'people'
 }
 
 export type Member = { trip_id: string; user_id: string; display_name: string; couple: string | null }

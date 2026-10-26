@@ -43,7 +43,6 @@ const roundFor = (n: number, currency: string) => (currency === 'JPY' ? Math.rou
 export default function Expenses({ trip, members, userId }: Props) {
   const { rows, loading, error, reload } = useTripTable<Expense>('expenses', trip.id, 'spent_on')
   const [cur, setCur] = useRemembered('expensesCurrency', 'ILS')
-  const [settleBy, setSettleBy] = useRemembered('expensesSettleBy', 'couples')
   const [edit, setEdit] = useState<Partial<Expense> | null>(null)
   const [settle, setSettle] = useState<{ t: Transfer; row?: Expense } | null>(null)
   const [editingRate, setEditingRate] = useState(false)
@@ -58,9 +57,9 @@ export default function Expenses({ trip, members, userId }: Props) {
   const ids = members.map((m) => m.user_id)
 
   const bal = balances(rows, ids, show, rate)
-  // two couples share expenses as two wallets, so by default the debts are settled between couples
-  const canByCouple = couples.length > 1
-  const byCouple = canByCouple && settleBy !== 'people'
+  // a couple is one wallet, so debts are settled between couples; a trip can be set to settle person by person
+  // (trips.settle_by, a backend setting). A trip row cached from before the column existed counts as couples.
+  const byCouple = couples.length > 1 && trip.settle_by !== 'people'
   const parties = partiesOf(members, byCouple)
   const partyOf = (id: string) => parties.find((p) => p.ids.includes(id))
   const mineKey = partyOf(userId)?.key
@@ -101,17 +100,6 @@ export default function Expenses({ trip, members, userId }: Props) {
 
   return (
     <div className="stack">
-      {canByCouple && (
-        <div className="segmented exp-by" role="group" aria-label="סוגרים חשבון">
-          <button className={byCouple ? 'on' : ''} aria-pressed={byCouple} onClick={() => setSettleBy('couples')}>
-            בין הזוגות
-          </button>
-          <button className={!byCouple ? 'on' : ''} aria-pressed={!byCouple} onClick={() => setSettleBy('people')}>
-            כל אחד לחוד
-          </button>
-        </div>
-      )}
-
       <div className="card exp-hero">
         <div className="row spread nowrap">
           <span className="muted small">{byCouple ? `היתרה של ${labelOf(mineKey ?? '')}` : 'היתרה שלך'}</span>
