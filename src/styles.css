@@ -171,8 +171,9 @@ form.card, .login .card { display: flex; flex-direction: column; gap: 12px; widt
   gap: 12px;
   min-height: calc(var(--top-h) + env(safe-area-inset-top));
   padding: calc(env(safe-area-inset-top) + 6px) 20px 6px;
-  background: var(--bar-bg);
-  -webkit-backdrop-filter: saturate(1.6) blur(20px);
+  /* the large title sits on the page itself; blur only shows once content scrolls under it */
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  -webkit-backdrop-filter: saturate(1.8) blur(20px);
   backdrop-filter: saturate(1.8) blur(20px);
 }
 .topbar h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.015em; line-height: 1.15; }
@@ -250,7 +251,7 @@ main.tab-swipe { padding-bottom: 0; }
   text-align: start;
 }
 .route-stop.together { background: color-mix(in srgb, var(--ok) 14%, var(--card)); }
-.route-stop.apart { background: var(--card); border: 1px dashed var(--muted); }
+.route-stop.apart { background: var(--fill); }
 .who-tag { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 0.875rem; font-weight: 600; color: var(--ok); }
 .who-tag.apart { color: var(--muted); }
 /* a day only one couple is in Japan */

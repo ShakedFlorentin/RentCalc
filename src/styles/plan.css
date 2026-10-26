@@ -37,7 +37,21 @@
 .todo-row b { display: block; font-weight: 600; }
 .todo-row b.count-chips { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-bottom: 2px; }
 .count-chip { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
-.shortcuts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.shortcuts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+/* tiles: tinted icon on top, label under it, like the mockup's tonight/expenses tiles */
+.shortcuts .secondary { flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 8px; min-height: 84px; padding: 14px 16px; text-align: start; }
+.shortcuts .secondary .ic { width: 24px; height: 24px; color: var(--accent); }
+/* iOS Settings-style icon squares */
+.tile { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; color: #fff; }
+.tile .ic { width: 19px; height: 19px; color: #fff; }
+.tile.orange { background: #ff9500; }
+.tile.indigo { background: #5856d6; }
+.tile.red { background: var(--accent); }
+@media (prefers-color-scheme: dark) {
+  .tile.orange { background: #ff9f0a; }
+  .tile.indigo { background: #5e5ce6; }
+  .tile.red { background: #ff453a; }
+}
 /* .time is its own ltr box inside RTL text, so its end margin lands on the wrong side */
 .item-title .time, .next-label .time { margin-inline-end: 0; margin-inline-start: 8px; }
 .arrival summary .time { margin-inline: 0 0; }

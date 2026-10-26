@@ -348,7 +348,7 @@ function BeforeTrip(props: {
       <h3>לפני הטיול</h3>
       {todo.length > 0 && (
         <button className="todo-row" onClick={props.open}>
-          <Icon as={ListChecks} size="1.4rem" />
+          <span className="tile orange"><Icon as={ListChecks} /></span>
           <span>
             <b>{left ? `${left} משימות לפני הטיסה` : 'כל המשימות הושלמו'}</b>
             <span className="muted small">
@@ -358,7 +358,7 @@ function BeforeTrip(props: {
         </button>
       )}
       <div className="todo-row">
-        <Icon as={Ticket} size="1.4rem" />
+        <span className="tile indigo"><Icon as={Ticket} /></span>
         <span>
           <b className="count-chips">
             {counts.map(({ k, n }) => (
@@ -372,7 +372,7 @@ function BeforeTrip(props: {
       </div>
       {props.swipesLeft > 0 && (
         <div className="todo-row">
-          <Icon as={Layers} size="1.4rem" />
+          <span className="tile red"><Icon as={Layers} /></span>
           <span>
             <b>עוד {props.swipesLeft} מקומות בגילוי</b>
             <span className="muted small">כל לייק או פאס משפיע על המאצ׳ים של הזוגות</span>
