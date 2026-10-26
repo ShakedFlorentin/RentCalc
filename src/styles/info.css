@@ -83,3 +83,26 @@ button.pill, .info-card .pill { min-height: 44px; }
 .couple-mark { display: inline-flex; align-items: center; gap: 3px; margin-inline-end: 12px; }
 .check-line { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .check-line input { width: 18px; height: 18px; min-height: 0; flex: none; margin: 0; accent-color: var(--accent); }
+/* voice-translation trial: tap to record, tap again to stop */
+.voice-test { display: flex; flex-direction: column; gap: 12px; }
+.rec-btn {
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  background: var(--accent-fill);
+  color: var(--on-accent);
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: transform 100ms ease-out;
+}
+.rec-btn:active { transform: scale(0.95); }
+.rec-btn.on { animation: rec-pulse 1.4s ease-in-out infinite; }
+@keyframes rec-pulse { 50% { box-shadow: 0 0 0 12px color-mix(in srgb, var(--accent-fill) 22%, transparent); } }
+.voice-out { min-height: 72px; padding: 12px 14px; border-radius: 14px; background: var(--bg); font-size: 1.25rem; line-height: 1.4; }
+.voice-report { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--fill); font: 0.75rem/1.5 ui-monospace, 'SF Mono', monospace; white-space: pre-wrap; direction: rtl; text-align: right; }
