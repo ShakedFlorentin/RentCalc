@@ -14,13 +14,13 @@
 .plan-booking { background: color-mix(in srgb, var(--ok) 9%, var(--card)); }
 .plan-booking .item-body { cursor: default; }
 .plan-icon { flex: none; display: grid; place-items: center; width: 28px; height: 28px; margin: 1px 0; color: var(--ok); }
-.action.nav-btn { margin-top: 8px; gap: 6px; background: var(--accent); color: var(--on-accent); font-weight: 600; }
+.action.nav-btn { margin-top: 8px; gap: 6px; background: var(--accent-fill); color: var(--on-accent); font-weight: 600; }
 .arrival summary { cursor: pointer; font-weight: 700; min-height: 32px; }
 .arrival ul { margin: 8px 0 0; padding-inline-start: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 0.9375rem; }
 .arrival li { display: flex; align-items: flex-start; gap: 10px; }
 .arrival li .ic { margin-top: 0.2em; color: var(--muted); }
 
-.next-card { border-radius: 26px; padding: 20px; box-shadow: var(--raised); }
+.next-card { border-radius: 20px; padding: 20px; box-shadow: var(--raised); }
 .next-label { font-size: 0.8125rem; font-weight: 600; color: var(--accent); }
 .next-time { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; margin-top: 8px; direction: ltr; text-align: start; font-variant-numeric: tabular-nums; }
 .next-title { font-size: 1.375rem; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 4px; }
@@ -40,13 +40,14 @@
 .shortcuts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 /* tiles: tinted icon on top, label under it, like the mockup's tonight/expenses tiles */
 .shortcuts .secondary { flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 6px; min-height: 0; padding: 14px 16px; border-radius: 24px; text-align: start; }
+.shortcuts .secondary { color: var(--text); }
 .shortcuts .secondary .ic { width: 22px; height: 22px; color: var(--accent); }
 /* iOS Settings-style icon squares */
 .tile { flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 7px; color: #fff; }
 .tile .ic { width: 18px; height: 18px; color: #fff; }
 .tile.orange { background: #ff9500; }
 .tile.indigo { background: #5856d6; }
-.tile.red { background: var(--accent); }
+.tile.red { background: var(--accent-fill); }
 @media (prefers-color-scheme: dark) {
   .tile.orange { background: #ff9f0a; }
   .tile.indigo { background: #5e5ce6; }

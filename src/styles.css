@@ -1,21 +1,23 @@
 /* Tokens: semantic, light + dark. Accent red is reserved for primary actions and state. */
-/* iOS grouped look: grey ground, flat white groups, one tint. Raised shadows only on what you act on now. */
+/* Apple Music look: content on a plain white/black page, soft grey tiles, one deep pink-red tint.
+   --accent is for text and icons; --accent-fill is for solid red surfaces with white text on them. */
 :root {
-  --bg: #f2f2f7;
-  --card: #ffffff;
+  --bg: #ffffff;
+  --card: #f2f2f7;
   --fill: rgba(118, 118, 128, 0.12);
   --text: #000000;
-  --muted: #6c6c70;
+  --muted: #636366;
   --line: #c6c6c8;
-  --accent: #c8322b;
+  --accent: #d41c35;
+  --accent-fill: #d41c35;
   --on-accent: #fff;
-  --accent-soft: #fbe9e8;
-  --ok: #1e7b34;
-  --like: #1e7b34;
+  --accent-soft: #fdf0f1;
+  --ok: #1a6f2e;
+  --like: #1a6f2e;
   --nope: #d70015;
   --shadow: none;
-  --raised: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.07);
-  --bar-bg: rgba(249, 249, 249, 0.78);
+  --raised: none;
+  --bar-bg: rgba(250, 250, 250, 0.8);
   --tabbar-h: 52px;
   --top-h: 66px;
   color-scheme: light;
@@ -28,14 +30,15 @@
     --text: #ffffff;
     --muted: #a1a1a8;
     --line: #38383a;
-    --accent: #ff6961;
-    --on-accent: #000000;
+    --accent: #ff4f6d;
+    --accent-fill: #d41c35;
+    --on-accent: #ffffff;
     --accent-soft: #3a1614;
     --ok: #30d158;
     --like: #30d158;
     --nope: #ff453a;
     --shadow: none;
-    --raised: 0 8px 24px rgba(0, 0, 0, 0.5);
+    --raised: none;
     --bar-bg: rgba(22, 22, 24, 0.78);
     color-scheme: dark;
   }
@@ -60,7 +63,7 @@ body {
 }
 h1, h2, h3 { margin: 0; line-height: 1.2; }
 h2 { font-size: 1.375rem; font-weight: 700; letter-spacing: -0.012em; }
-h3 { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 8px; }
+h3 { font-size: 1.375rem; font-weight: 700; letter-spacing: -0.015em; margin-bottom: 10px; }
 a { color: var(--accent); text-decoration: none; }
 bdi { unicode-bidi: isolate; }
 :focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 65%, transparent); outline-offset: 2px; }
@@ -91,11 +94,11 @@ button:disabled { cursor: default; }
   width: 100%;
   transition: transform 100ms ease-out, opacity 100ms ease-out;
 }
-.primary { background: var(--accent); color: var(--on-accent); }
+.primary { background: var(--accent-fill); color: var(--on-accent); }
 .primary:disabled { opacity: 0.45; }
-.secondary { background: var(--card); color: var(--text); }
+.secondary { background: var(--card); color: var(--accent); }
 /* inside a white group a white button vanishes: use the grey fill there */
-.card .secondary { background: var(--fill); }
+.card .secondary { background: var(--fill); color: var(--text); }
 .danger { color: var(--accent); min-height: 44px; }
 .primary:active, .secondary:active { transform: scale(0.97); opacity: 0.85; }
 .link { color: var(--accent); min-height: 44px; padding: 8px 4px; font-weight: 500; }
@@ -138,7 +141,7 @@ button:disabled { cursor: default; }
 
 .card {
   background: var(--card);
-  border-radius: 24px;
+  border-radius: 20px;
   padding: 16px;
   box-shadow: var(--shadow);
 }
@@ -157,7 +160,7 @@ form.card, .login .card { display: flex; flex-direction: column; gap: 12px; widt
   justify-content: center;
 }
 .login h1 { font-size: 1.75rem; }
-.hinomaru { width: 84px; height: 84px; border-radius: 50%; background: var(--accent); box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 35%, transparent); }
+.hinomaru { width: 84px; height: 84px; border-radius: 50%; background: var(--accent-fill); box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 35%, transparent); }
 
 /* App shell */
 .app { max-width: 640px; margin: 0 auto; min-height: 100dvh; }
@@ -178,7 +181,7 @@ form.card, .login .card { display: flex; flex-direction: column; gap: 12px; widt
 .topbar h1 { font-size: 2.125rem; font-weight: 700; letter-spacing: -0.022em; line-height: 1.2; }
 .topbar-text { display: flex; flex-direction: column; gap: 0; min-width: 0; }
 .topbar-text .small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.dot { width: 14px; height: 14px; border-radius: 50%; background: var(--accent); flex: none; }
+.dot { width: 14px; height: 14px; border-radius: 50%; background: var(--accent-fill); flex: none; }
 main { padding: 14px 16px calc(var(--tabbar-h) + 36px + env(safe-area-inset-bottom)); }
 main.tab-swipe { padding-bottom: 0; }
 
@@ -225,7 +228,7 @@ main.tab-swipe { padding-bottom: 0; }
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--on-accent);
   display: grid;
   place-items: center;
@@ -284,7 +287,7 @@ main.tab-swipe { padding-bottom: 0; }
 }
 .card .chip { background: var(--fill); }
 button.chip { min-height: 36px; }
-.chip.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
+.chip.on { background: var(--accent-fill); border-color: var(--accent-fill); color: var(--on-accent); font-weight: 600; }
 .chip.tiny { min-height: 0; font-size: 0.75rem; padding: 1px 8px; margin-inline-start: 6px; background: var(--fill); }
 .chip-sep { flex: none; width: 1px; height: 24px; align-self: center; background: var(--line); }
 
@@ -315,7 +318,7 @@ button.chip { min-height: 36px; }
   scroll-snap-align: center;
 }
 .day-chip b { font-size: 1.0625rem; }
-.day-chip.active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.day-chip.active { background: var(--accent-fill); border-color: var(--accent-fill); color: var(--on-accent); }
 .day-head { cursor: pointer; }
 
 .item { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; }
@@ -435,7 +438,7 @@ button.chip { min-height: 36px; }
 .player-body { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .rank { font-size: 1.5rem; }
 .bar { display: block; height: 7px; background: var(--fill); border-radius: 999px; overflow: hidden; }
-.bar > span { display: block; height: 100%; background: var(--accent); border-radius: 999px; transition: width 0.4s; }
+.bar > span { display: block; height: 100%; background: var(--accent-fill); border-radius: 999px; transition: width 0.4s; }
 .filters { flex: none; }
 
 .deck { position: relative; flex: 1; min-height: 300px; }
@@ -446,7 +449,7 @@ button.chip { min-height: 36px; }
   display: flex;
   flex-direction: column;
   background: var(--card);
-  border-radius: 28px;
+  border-radius: 20px;
   overflow: hidden;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04), 0 18px 40px rgba(0, 0, 0, 0.12);
   touch-action: pan-y;
@@ -555,7 +558,7 @@ html[dir='rtl'] .ja { text-align: right; }
 .pin.visited { opacity: 0.45; }
 .pin.guide { width: 14px; height: 14px; border-width: 2px; background: #6b7c93; }
 .place-row { align-items: flex-start; }
-.thumb { flex: none; width: 56px; height: 56px; border-radius: 12px; overflow: hidden; background: var(--fill); display: grid; place-items: center; font-size: 1.6rem; }
+.thumb { flex: none; width: 56px; height: 56px; border-radius: 8px; overflow: hidden; background: var(--fill); display: grid; place-items: center; font-size: 1.6rem; }
 .thumb img { width: 100%; height: 100%; object-fit: cover; }
 .meta bdi { color: inherit; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
@@ -594,7 +597,7 @@ html[dir='rtl'] .ja { text-align: right; }
   .backdrop { background: rgba(0, 0, 0, 0.6); }
   @media (prefers-contrast: more) { :root { --line: #8e8e93; --muted: #d1d1d6; } }
 }
-.chip.add-chip { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
+.chip.add-chip { background: var(--accent-fill); border-color: var(--accent-fill); color: var(--on-accent); font-weight: 600; }
 .dishes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 /* bookings: one tab per kind, pinned under the top bar */
 .tabs-bar {
