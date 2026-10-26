@@ -47,7 +47,10 @@ async function page(req) {
   const cache = await caches.open(SHELL)
   try {
     const res = await Promise.race([
-      fetch(req),
+      // past the HTTP cache: GitHub Pages lets it keep the page for 10 minutes, so a deploy could take that long
+      // to reach the phone. 'no-cache' revalidates, a tiny 304 when nothing changed. A navigation request can't
+      // take options, so fetch its URL
+      fetch(req.url, { cache: 'no-cache', credentials: 'same-origin' }),
       new Promise((_, no) => setTimeout(() => no(new Error('slow')), NAV_TIMEOUT)),
     ])
     if (res.ok) cache.put(url('./'), res.clone())
