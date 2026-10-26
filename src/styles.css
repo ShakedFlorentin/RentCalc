@@ -720,3 +720,5 @@ html[dir='rtl'] .ja { text-align: right; }
 h2 .ic, h3 .ic { margin-inline-end: 2px; }
 a.pill, button.pill { min-height: 36px; padding-inline: 12px; }
 .chip .ic, .pill .ic, .segmented .ic { vertical-align: 0; }
+/* trip settings: logging out sits apart at the bottom of the sheet */
+.signout { margin-top: 12px; }

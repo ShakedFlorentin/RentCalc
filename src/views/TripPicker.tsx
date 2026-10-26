@@ -60,7 +60,7 @@ export default function TripPicker({ onPick }: { onPick: (id: string) => void })
         </button>
       </form>
       {err && <p className="msg">{err}</p>}
-      <button className="link" onClick={() => supabase.auth.signOut()}>
+      <button className="link" onClick={() => supabase.auth.signOut({ scope: 'local' })}>
         התנתקות
       </button>
     </div>

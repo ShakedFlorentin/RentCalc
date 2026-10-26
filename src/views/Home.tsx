@@ -5,11 +5,10 @@ import {
   ChevronLeft,
   Clock,
   Layers,
+  LogOut as LogOutIcon,
   LifeBuoy,
   ListChecks,
-  LogOut,
   Navigation,
-  Settings as SettingsIcon,
   Share2,
   Ticket,
   Users,
@@ -261,15 +260,6 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
         </button>
       </section>
 
-      <div className="row">
-        <button className="secondary" onClick={() => setEditing(true)}>
-          <Icon as={SettingsIcon} /> הגדרות טיול
-        </button>
-        <button className="secondary" onClick={() => supabase.auth.signOut()}>
-          <Icon as={LogOut} /> התנתקות
-        </button>
-      </div>
-
       {editing && (
         <Settings trip={trip} me={me} userId={userId} onClose={() => setEditing(false)} onLeave={onLeave} />
       )}
@@ -465,11 +455,21 @@ function Settings(props: { trip: Trip; me: string; userId: string; onClose: () =
       <Field label="השם שלי">
         <input value={myName} onChange={(e) => setMyName(e.target.value)} />
       </Field>
+      <p className="muted small">זה השם שהאחרים רואים. ההתחברות נשארת עם השם המקורי שלך באנגלית או בעברית.</p>
       <button className="primary" onClick={save}>
         שמירה
       </button>
       <button className="link" onClick={props.onLeave}>
         מעבר לטיול אחר / הצטרפות בקוד
+      </button>
+      <button
+        className="secondary signout"
+        onClick={() => {
+          // this phone only: the others' devices, and this person's other devices, stay logged in
+          if (confirm('להתנתק מהטלפון הזה? כדי לחזור צריך שם וסיסמה.')) supabase.auth.signOut({ scope: 'local' })
+        }}
+      >
+        <Icon as={LogOutIcon} /> התנתקות
       </button>
     </Sheet>
   )
