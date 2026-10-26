@@ -6,7 +6,7 @@ import { couplesOf, mutate, useTripTable } from '../lib'
 import { Empty, Field, LoadNote, Sheet } from '../ui'
 import { PHRASES, type Phrase } from '../phrases'
 import { Icon, type LucideIcon } from '../icons'
-import { Baby, Car, Copy, Lightbulb, Luggage, MapPin, ExternalLink, FileText, Hotel, Languages, Phone, Pin, Plus, ReceiptText, ShieldAlert, ShieldCheck, StickyNote, Users, X, Check } from 'lucide-react'
+import { Baby, Car, Copy, Lightbulb, Luggage, MapPin, Snowflake, Utensils, ExternalLink, FileText, Hotel, Languages, Phone, Pin, Plus, ReceiptText, ShieldAlert, ShieldCheck, StickyNote, Users, X, Check } from 'lucide-react'
 import '../styles/info.css'
 
 type Props = { trip: Trip; members: Member[]; userId: string }
@@ -22,7 +22,7 @@ const KINDS: Record<Essential['kind'], { label: string; icon: LucideIcon }> = {
 const KIND_ORDER = Object.keys(KINDS) as Essential['kind'][]
 
 // what travellers in the Israeli Japan Facebook groups wish they had known (read October 2026)
-const TIPS: { title: string; icon: LucideIcon; items: string[] }[] = [
+const TIPS: { title: string; icon: LucideIcon; items: string[]; links?: { label: string; href: string }[] }[] = [
   {
     title: 'מזוודות ותחבורה',
     icon: Luggage,
@@ -55,6 +55,37 @@ const TIPS: { title: string; icon: LucideIcon; items: string[] }[] = [
       'קיבונה ואוג׳י יפים ושקטים בהרבה. אמאנוהשידטה ואינה בצפון המחוז כמעט בלי תיירים.',
       'גיון עם מדריך, אחרת מפספסים את רוב מה שמעניין.',
       'לא צריך לצאת מוקדם מדי: יציאה ב-10:00 הספיקה. שלושה ימים מספיקים כולל יום בנארה.',
+    ],
+  },
+  {
+    title: 'כשרות ובלי חזיר ופירות ים',
+    icon: Utensils,
+    items: [
+      'מי ששומר כשרות מלאה מסתדר עם דירה עם מטבח, אוכל מהארץ וחב״ד בשבת. מי שרק לא אוכל חזיר ופירות ים מסתדר טוב, בתנאי שבודקים מה יש בפנים.',
+      'שלוש מלכודות: לחם עם שומן חזיר, רוטב לסלט עם משחת שרימפס או צדפות, ומרק ראמן קלאסי שמבושל מעצמות חזיר. בראמן מחפשים ציר עוף (tori paitan) או מנה טבעונית.',
+      'מסעדות כמעט לא משנות מנות, חוץ ממקומות שמבקשים מהם מראש. ב-Isesueyoshi למשל מתאימים את כל הארוחה אם אומרים בהזמנה.',
+      'David\'s Deli בטוקיו היא המסעדה הכשרה היחידה בעיר לפי הקבוצה. ממוצעת ביחס למחיר.',
+      'בית חב״ד: שניים בטוקיו, אחד בקיוטו ואחד בקובה. ארוחות שבת נרשמים באתר שלהם. חב״ד טוקיו גם שולחים אוכל למלון ומשאילים פלטה.',
+      'רשימת מוצרים כשרים שנמכרים ביפן, כולל גלידות, עוגיות ולחם ב-7-Eleven, חלב, גבינות וסלמון מעושן. בודקים לפי הברקוד.',
+      'בקומביני: אוניגירי עם 鮭 (סלמון), ツナマヨ (טונה במיונז), 梅 (שזיף) או 昆布 (אצה). על התווית נזהרים מ-豚 (חזיר) ומ-エビ, イカ, タコ, 貝 (שרימפס, קלמרי, תמנון, צדפות). אין להם השגחה.',
+      'HappyCow מוצאת מקומות טבעוניים וצמחוניים בכל מקום, וזה גם פתרון בטוח בלי חזיר ופירות ים.',
+      'במסעדה מראים את הכרטיס "לא אוכל חזיר ופירות ים" בחלק של היפנית למטה.',
+    ],
+    links: [
+      { label: 'חב״ד יפן', href: 'https://www.chabad.jp/' },
+      { label: 'רשימת מוצרים כשרים', href: 'https://kosher.global/zekasher/' },
+      { label: 'HappyCow', href: 'https://www.happycow.net/' },
+    ],
+  },
+  {
+    title: 'דצמבר',
+    icon: Snowflake,
+    items: [
+      'קר אבל לא קיצוני בטוקיו, קיוטו ואוסקה: מעלות בודדות, כמעט לא מתחת לאפס, ומעט גשם. מתלבשים בשכבות.',
+      'גרביונים וחולצות תרמיות של Uniqlo זולים שם, אפשר לקנות במקום.',
+      'מתחילת דצמבר זו העונה הכי פחות עמוסה: מחירים נמוכים יותר ופחות תורים.',
+      'העיר מקושטת לחג המולד, יש שווקי כריסמס ומופעי אורות, חלקם בחינם. בערב ראש השנה יש טקסים בכל מקדש עד הלילה ויריד.',
+      'חלק מהעצים כבר בלי עלים, אבל יש פריחת נרקיסים ולפעמים פריחת שזיף ראשונה.',
     ],
   },
   {
@@ -186,6 +217,15 @@ export default function Essentials({ trip, members, userId }: Props) {
                 <li key={t}>{t}</li>
               ))}
             </ul>
+            {g.links && (
+              <div className="row">
+                {g.links.map((l) => (
+                  <a key={l.href} className="pill soft" href={l.href} target="_blank" rel="noreferrer">
+                    <Icon as={ExternalLink} /> {l.label}
+                  </a>
+                ))}
+              </div>
+            )}
           </details>
         ))}
       </section>
