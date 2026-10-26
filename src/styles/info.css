@@ -106,3 +106,5 @@ button.pill, .info-card .pill { min-height: 44px; }
 @keyframes rec-pulse { 50% { box-shadow: 0 0 0 12px color-mix(in srgb, var(--accent-fill) 22%, transparent); } }
 .voice-out { min-height: 72px; padding: 12px 14px; border-radius: 14px; background: var(--bg); font-size: 1.25rem; line-height: 1.4; }
 .voice-report { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--fill); font: 0.75rem/1.5 ui-monospace, 'SF Mono', monospace; white-space: pre-wrap; direction: rtl; text-align: right; }
+.rec-row { display: flex; justify-content: center; gap: 28px; }
+.rec-btn:disabled { opacity: 0.35; }

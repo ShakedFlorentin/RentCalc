@@ -65,20 +65,22 @@ export default function VoiceTest() {
     }
   }, [])
 
-  const toggle = () => {
+  // each language is its own button: a tap starts recording in it, a second tap on the same one stops
+  const toggle = (to: Lang) => {
     if (listening) {
       stopping.current = true
       rec.current?.stop()
       return
     }
     if (!Recognizer) return
+    setLang(to)
     setText('')
     setInterim('')
     setError('')
     setEndedAlone(false)
     stopping.current = false
     const r = new Recognizer()
-    r.lang = lang
+    r.lang = to
     r.continuous = true
     r.interimResults = true
     // every event carries the whole session's results, so rebuild both parts from the start each time;
@@ -143,27 +145,27 @@ export default function VoiceTest() {
       </h2>
       <div className="card voice-test">
         <p className="muted small">
-          לחיצה אחת מתחילה הקלטה, לחיצה שנייה עוצרת. בודקים שהטלפון מזהה עברית ויפנית כאן באפליקציה, לפני שבונים תרגום.
+          לוחצים על השפה שמדברים בה כדי להקליט, ולוחצים שוב כדי לעצור. בודקים שהטלפון מזהה עברית ויפנית כאן באפליקציה, לפני שבונים תרגום.
         </p>
-        <div className="segmented" role="radiogroup" aria-label="שפת הדיבור">
-          {LANGS.map((l) => (
-            <button
-              key={l.id}
-              role="radio"
-              aria-checked={lang === l.id}
-              className={lang === l.id ? 'on' : ''}
-              disabled={listening}
-              onClick={() => setLang(l.id)}
-            >
-              {l.label}
-            </button>
-          ))}
-        </div>
         {Recognizer ? (
-          <button className={'rec-btn' + (listening ? ' on' : '')} aria-pressed={listening} onClick={toggle}>
-            <Icon as={listening ? Square : Mic} size="1.75rem" />
-            <span>{listening ? 'עצירה' : 'התחלת הקלטה'}</span>
-          </button>
+          <div className="rec-row">
+            {LANGS.map((l) => {
+              const on = listening && lang === l.id
+              return (
+                <button
+                  key={l.id}
+                  className={'rec-btn' + (on ? ' on' : '')}
+                  aria-pressed={on}
+                  aria-label={on ? `עצירת הקלטה ב${l.label}` : `הקלטה ב${l.label}`}
+                  disabled={listening && !on}
+                  onClick={() => toggle(l.id)}
+                >
+                  <Icon as={on ? Square : Mic} size="1.5rem" />
+                  <span lang={l.id}>{on ? 'עצירה' : l.label}</span>
+                </button>
+              )
+            })}
+          </div>
         ) : (
           <p className="msg">זיהוי דיבור לא קיים בדפדפן הזה.</p>
         )}
