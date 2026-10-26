@@ -320,7 +320,7 @@ function BookingForm(props: {
     }
     const { error } = await (f.id ? supabase.from('bookings').update(row).eq('id', f.id) : supabase.from('bookings').insert(row))
     const ok = !error
-    if (error?.code === '23505') alert('ההזמנה הזו כבר קיימת: אותו סוג, אותה כותרת ואותה שעה.')
+    if (error?.code === '23505') alert('ההזמנה הזו כבר קיימת: אותו מספר אישור באותה שעה, או אותו שם, שעה וזוג.')
     else if (error) alert('שגיאה: ' + error.message)
     if (ok) {
       // the old attachment goes only once the row points at the new one
