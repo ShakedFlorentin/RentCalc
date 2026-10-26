@@ -10,8 +10,8 @@
   --accent: #c8322b;
   --on-accent: #fff;
   --accent-soft: #fbe9e8;
-  --ok: #248a3d;
-  --like: #248a3d;
+  --ok: #1e7b34;
+  --like: #1e7b34;
   --nope: #d70015;
   --shadow: none;
   --raised: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.07);
@@ -26,7 +26,7 @@
     --card: #1c1c1e;
     --fill: rgba(118, 118, 128, 0.24);
     --text: #ffffff;
-    --muted: #98989f;
+    --muted: #a1a1a8;
     --line: #38383a;
     --accent: #ff6961;
     --on-accent: #000000;
