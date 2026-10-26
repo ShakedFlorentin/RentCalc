@@ -156,6 +156,9 @@ export default function Translator() {
       return
     }
     if (!Recognizer) return
+    // wake the translate function while the person speaks, so it's running by the time they stop (a cold start
+    // cost ~1.8 s). An empty request is turned away before any check or Claude call, so it spends nothing
+    supabase.functions.invoke('translate', { body: {} }).catch(() => {})
     speechSynthesis?.cancel()
     setLang(from)
     setHeard('')
