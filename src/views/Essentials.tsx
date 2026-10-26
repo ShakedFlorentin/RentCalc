@@ -4,10 +4,9 @@ import type { Booking, Essential, Member, Trip } from '../types'
 import { TOGETHER } from '../types'
 import { couplesOf, mutate, useTripTable } from '../lib'
 import { Empty, Field, LoadNote, Sheet } from '../ui'
-import { PHRASES, type Phrase } from '../phrases'
+import type { Phrase } from '../phrases'
 import { Icon, type LucideIcon } from '../icons'
-import { Baby, Car, Copy, Lightbulb, Luggage, MapPin, Snowflake, Utensils, ExternalLink, FileText, Hotel, Languages, Phone, Pin, Plus, ReceiptText, ShieldAlert, ShieldCheck, StickyNote, Users, X, Check } from 'lucide-react'
-import Translator from './Translator'
+import { Baby, Car, Copy, Lightbulb, Luggage, MapPin, Snowflake, Utensils, ExternalLink, FileText, Hotel, Phone, Pin, Plus, ReceiptText, ShieldAlert, ShieldCheck, StickyNote, Users, X, Check } from 'lucide-react'
 import '../styles/info.css'
 
 type Props = { trip: Trip; members: Member[]; userId: string }
@@ -173,9 +172,12 @@ export default function Essentials({ trip, members, userId }: Props) {
 
       <section className="info-sec">
         <h2 className="info-h"><Icon as={ReceiptText} /> הפרטים שלנו</h2>
-        <div className="row">
+        <div className="info-actions">
+          <button className="secondary" onClick={() => setEdit({ kind: 'hotel', who: myCouple })}>
+            <Icon as={Plus} /> פרט חדש
+          </button>
           <button className="secondary" onClick={importHotels}>
-            <Icon as={Hotel} /> ייבוא מלונות מההזמנות
+            <Icon as={Hotel} /> ייבוא מלונות
           </button>
         </div>
         {note && (
@@ -231,18 +233,6 @@ export default function Essentials({ trip, members, userId }: Props) {
         ))}
       </section>
 
-      <Translator />
-
-      <section className="info-sec">
-        <h2 className="info-h"><Icon as={Languages} /> ביפנית</h2>
-        <p className="muted small info-note">לוחצים על כרטיס כדי להציג אותו במסך מלא למי שמולכם.</p>
-        <PhraseList phrases={PHRASES} />
-      </section>
-
-      <div className="info-end" aria-hidden="true" />
-      <button className="fab" aria-label="פרט חדש" onClick={() => setEdit({ kind: 'hotel', who: myCouple })}>
-        <Icon as={Plus} size="1.5em" />
-      </button>
       {edit && <EditSheet trip={trip} couples={couples} rows={rows} item={edit} onClose={() => setEdit(null)} />}
       {show && (
         <ShowFull

@@ -12,7 +12,7 @@ button.pill, .info-card .pill { min-height: 44px; }
 .area-title .ic { margin-inline-end: 2px; }
 
 /* sub-tabs of the "more" screen and the list switcher: icon beside text, 44px targets */
-.more-tabs button, .list-tabs button { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; white-space: nowrap; }
+.list-tabs button { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; white-space: nowrap; }
 .list-tabs button { padding-inline: 6px; }
 
 /* tap-to-call emergency numbers: big enough to hit in a panic */

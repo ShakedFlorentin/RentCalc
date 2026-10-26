@@ -724,3 +724,26 @@ a.pill, button.pill { min-height: 36px; padding-inline: 12px; }
 .chip .ic, .pill .ic, .segmented .ic { vertical-align: 0; }
 /* trip settings: logging out sits apart at the bottom of the sheet */
 .signout { margin-top: 12px; }
+/* the More tab's sections: icon over label, like a tab bar, so five fit at phone width with full-size targets */
+.more-tabs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; padding: 3px; background: var(--fill); border-radius: 18px; }
+.more-tabs button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 54px;
+  padding: 6px 2px;
+  border-radius: 15px;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  transition: background 0.15s, color 0.15s;
+}
+.more-tabs button.on { background: var(--bg); color: var(--text); box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12); }
+/* the accent only on the icon: as 13px text it would miss 4.5:1 on the dark selection */
+.more-tabs button.on .ic { color: var(--accent); }
+.more-tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (prefers-color-scheme: dark) { .more-tabs button.on { background: #3a3a3c; } }
+/* adding to "our details": two equal buttons side by side */
+.info-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
