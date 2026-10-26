@@ -12,6 +12,7 @@ import Places from './views/Places'
 import More, { type MoreTab } from './views/More'
 import { useRemembered } from './ui'
 import SwipeGame from './views/Swipe'
+import Search, { type SearchTarget } from './views/Search'
 
 const TABS = [
   { id: 'home', label: 'בית', d: 'M3 11.5 12 4l9 7.5M5.5 10v10h4.5v-6h4v6h4.5V10' },
@@ -117,8 +118,9 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
   const [trip, setTrip] = useState<Trip | null>(tripCache?.data ?? null)
   const [members, setMembers] = useState<Member[]>(() => readCache<Member[]>('members:' + tripId)?.data ?? [])
   const [tab, setTab] = useState<Tab>('home')
-  // the avatar asks Home to open trip settings; a counter so every tap reopens it
-  const [settingsAsk, setSettingsAsk] = useState(0)
+  // the avatar asks Home to open trip settings; Home clears the request once it has opened them
+  const [settingsAsk, setSettingsAsk] = useState(false)
+  const [searching, setSearching] = useState(false)
   const [day, setDay] = useState(1)
   const [moreSub, setMoreSub] = useRemembered('moreTab', 'money') as [MoreTab, (s: MoreTab) => void]
   const [failed, setFailed] = useState(false)
@@ -176,6 +178,12 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
     setMoreSub(s)
     setTab('more')
   }
+  const openResult = (to: SearchTarget) => {
+    setSearching(false)
+    if (to.tab === 'plan') openDay(to.day)
+    else if (to.tab === 'lists') openMore('lists')
+    else setTab(to.tab)
+  }
 
   return (
     <div className="app">
@@ -186,7 +194,7 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
           aria-label={`הגדרות טיול, ${me}`}
           onClick={() => {
             setTab('home')
-            setSettingsAsk((n) => n + 1)
+            setSettingsAsk(true)
           }}
         >
           {initials(me)}
@@ -202,8 +210,10 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
             userId={props.userId}
             onOpenDay={openDay}
             onOpenMore={openMore}
+            onOpenPlaces={() => setTab('places')}
             onLeave={props.onLeave}
             settingsAsk={settingsAsk}
+            onSettingsShown={() => setSettingsAsk(false)}
           />
         )}
         {tab === 'swipe' && <SwipeGame trip={trip} userId={props.userId} members={members} />}
@@ -212,7 +222,7 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
         {tab === 'places' && <Places trip={trip} me={me} userId={props.userId} members={members} />}
         {tab === 'more' && <More trip={trip} members={members} userId={props.userId} sub={moreSub} setSub={setMoreSub} />}
       </main>
-      <nav className="tabbar" aria-label="ניווט ראשי">
+      <nav className="tabbar glass" aria-label="ניווט ראשי">
         {TABS.map((t) => (
           <button key={t.id} className={tab === t.id ? 'active' : ''} aria-current={tab === t.id ? 'page' : undefined} onClick={() => setTab(t.id)}>
             <svg className="tab-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -222,6 +232,13 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
           </button>
         ))}
       </nav>
+      {/* Music keeps search as its own glass button beside the tab bar */}
+      <button className="search-fab glass" aria-label="חיפוש" onClick={() => setSearching(true)}>
+        <svg className="tab-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M10.5 18a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15ZM21 21l-5.2-5.2" />
+        </svg>
+      </button>
+      {searching && <Search tripId={trip.id} onClose={() => setSearching(false)} onPick={openResult} />}
     </div>
   )
 }

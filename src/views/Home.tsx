@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import {
   BedDouble,
   Check,
@@ -19,6 +19,7 @@ import { supabase } from '../supabase'
 import {
   BOOKING_TABS,
   itemDone,
+  CITY_HE,
   TOGETHER,
   type Booking,
   type Candidate,
@@ -31,6 +32,7 @@ import {
 } from '../types'
 import { couplesOf, currentDay, dayDate, fmtDay, mutate, useTripTable } from '../lib'
 import { Field, Sheet } from '../ui'
+import { cityPhoto } from '../cities'
 import { BOOKING_ICON, Icon } from '../icons'
 import type { MoreTab } from './More'
 import { dayEntries, fmtUntil, hotelFor, nightLines, stayInJapan, minutesOf, navUrl, ymd, type Entry, type PlanItem } from './planUtils'
@@ -44,12 +46,14 @@ type Props = {
   onOpenDay: (d: number) => void
   /** jump to a section of the "עוד" tab: money, lists, info or baby */
   onOpenMore: (sub: MoreTab) => void
+  onOpenPlaces: () => void
   onLeave: () => void
-  /** bumped by the top bar's avatar: open trip settings */
-  settingsAsk: number
+  /** the top bar's avatar asks for trip settings; Home opens them and clears the request */
+  settingsAsk: boolean
+  onSettingsShown: () => void
 }
 
-export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore, onLeave, settingsAsk }: Props) {
+export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore, onOpenPlaces, onLeave, settingsAsk, onSettingsShown }: Props) {
   const { rows: days } = useTripTable<DayInfo>('day_info', trip.id, 'day')
   const { rows: items } = useTripTable<PlanItem>('itinerary_items', trip.id, 'sort')
   const { rows: bookings } = useTripTable<Booking>('bookings', trip.id, 'starts_at')
@@ -58,7 +62,9 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
   const { rows: swipes } = useTripTable<Swipe>('swipes', trip.id)
   const [editing, setEditing] = useState(false)
   useEffect(() => {
-    if (settingsAsk) setEditing(true)
+    if (!settingsAsk) return
+    setEditing(true)
+    onSettingsShown()
   }, [settingsAsk])
   const now = useNow()
 
@@ -80,6 +86,9 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
     ? hotelFor(nightLines(todayInfo?.hotel ?? null, bookings, ymd(dayDate(trip.start_date, today)!), couples), myCouple)
     : []
   const cities = runs(days, 'city')
+  const destinations = Object.entries(
+    candidates.reduce<Record<string, number>>((acc, c) => ((acc[c.city] = (acc[c.city] ?? 0) + 1), acc), {}),
+  ).sort((a, b) => b[1] - a[1])
   const together = runs(days, 'who')
 
   return (
@@ -199,19 +208,32 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
         </section>
       )}
 
-      <section>
-        <h3 className="shelf-title">המסלול</h3>
-        <div className="city-grid">
-          {cities.map((c, i) => (
-            <button key={c.from} className={'city-tile c' + (i % 7)} onClick={() => onOpenDay(c.from)}>
-              <b>{c.value || '—'}</b>
-              <span className="small">
+      {cities.some((c) => c.value) ? (
+        <section>
+          <h3 className="shelf-title">המסלול</h3>
+          <div className="city-grid">
+            {cities.map((c, i) => (
+              <CityTile key={c.from} name={c.value || '—'} i={i} onClick={() => onOpenDay(c.from)}>
                 {c.from === c.to ? `יום ${c.from}` : <>ימים <bdi dir="ltr">{c.from}–{c.to}</bdi></>}
-              </span>
-            </button>
-          ))}
-        </div>
-      </section>
+              </CityTile>
+            ))}
+          </div>
+        </section>
+      ) : (
+        destinations.length > 0 && (
+          // no day has a city yet: show where the swipe deck's places are instead
+          <section>
+            <h3 className="shelf-title">היעדים</h3>
+            <div className="city-grid">
+              {destinations.map(([city, n], i) => (
+                <CityTile key={city} name={CITY_HE[city] ?? city} slug={city} i={i} onClick={onOpenPlaces}>
+                  {n} מקומות
+                </CityTile>
+              ))}
+            </div>
+          </section>
+        )
+      )}
 
       <section className="card">
         <h3>משתתפים</h3>
@@ -252,6 +274,18 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
         <Settings trip={trip} me={me} userId={userId} onClose={() => setEditing(false)} onLeave={onLeave} />
       )}
     </div>
+  )
+}
+
+/** A Music Search-style tile: the destination's photo washed in one colour, or plain colour until it has one. */
+function CityTile(props: { name: string; slug?: string; i: number; onClick: () => void; children: ReactNode }) {
+  const photo = cityPhoto(props.slug ?? props.name)
+  return (
+    <button className={'city-tile c' + (props.i % 7) + (photo ? ' has-photo' : '')} onClick={props.onClick}>
+      {photo && <img src={photo} alt="" loading="lazy" draggable={false} />}
+      <b dir="auto">{props.name}</b>
+      <span className="small">{props.children}</span>
+    </button>
   )
 }
 

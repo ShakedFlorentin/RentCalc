@@ -46,6 +46,9 @@
 .shelf-title { margin: 8px 0 10px; }
 .city-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
 .city-tile {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   aspect-ratio: 16 / 9;
   display: flex;
   flex-direction: column;
@@ -61,6 +64,12 @@
 .city-tile:active { transform: scale(0.97); }
 .city-tile b { font-size: 1.375rem; font-weight: 700; letter-spacing: -0.015em; line-height: 1.1; }
 .city-tile .small { opacity: 0.92; }
+/* Music's category look: a greyscale photo multiplied into the tile colour, darkened toward the label.
+   Multiply only darkens, so white text stays at least as readable as on the plain colour */
+.city-tile img { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; object-fit: cover; filter: grayscale(1) contrast(1.15) brightness(1.08); mix-blend-mode: multiply; pointer-events: none; }
+.city-tile.has-photo::after { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(transparent 45%, rgba(0, 0, 0, 0.35)); pointer-events: none; }
+.tile.neutral { background: var(--fill); }
+.tile.neutral .ic { color: var(--accent); }
 .city-tile.c0 { background: #c2253f; }
 .city-tile.c1 { background: #b4501a; }
 .city-tile.c2 { background: #1f7a73; }

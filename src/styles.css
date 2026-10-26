@@ -20,6 +20,12 @@
   --bar-bg: rgba(250, 250, 250, 0.8);
   --tabbar-h: 52px;
   --top-h: 60px;
+  /* Liquid Glass: a clear, bright material for the floating controls layer only (never content) */
+  --glass-bg: rgba(255, 255, 255, 0.6);
+  --glass-edge: rgba(255, 255, 255, 0.8);
+  --glass-spec: 0.9;
+  --glass-sheen: 0.55;
+  --glass-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08);
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -40,6 +46,11 @@
     --shadow: none;
     --raised: none;
     --bar-bg: rgba(22, 22, 24, 0.78);
+    --glass-bg: rgba(44, 44, 48, 0.5);
+    --glass-edge: rgba(255, 255, 255, 0.16);
+    --glass-spec: 0.28;
+    --glass-sheen: 0.14;
+    --glass-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.3);
     color-scheme: dark;
   }
 }
@@ -200,23 +211,60 @@ form.card, .login .card { display: flex; flex-direction: column; gap: 12px; widt
 main { padding: 14px 20px calc(var(--tabbar-h) + 36px + env(safe-area-inset-bottom)); }
 main.tab-swipe { padding-bottom: 0; }
 
-/* floating glass capsule, as in iOS 26 */
+/* Liquid Glass: blur and saturate what is behind, a bright rim where light catches the edge, a soft sheen
+   across the face and a lifted shadow. Real lensing can't be done in Safari, so this is the closest web form */
+.glass {
+  isolation: isolate;
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(14px) saturate(190%) brightness(1.04);
+  backdrop-filter: blur(14px) saturate(190%) brightness(1.04);
+  border: 0.5px solid var(--glass-edge);
+  box-shadow:
+    inset 0 1px 0.5px rgba(255, 255, 255, var(--glass-spec)),
+    inset 0 -0.5px 1px rgba(255, 255, 255, calc(var(--glass-spec) * 0.35)),
+    var(--glass-shadow);
+}
+.glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    160deg,
+    rgba(255, 255, 255, var(--glass-sheen)) 0%,
+    rgba(255, 255, 255, 0) 36%,
+    rgba(255, 255, 255, 0) 72%,
+    rgba(255, 255, 255, calc(var(--glass-sheen) * 0.45)) 100%
+  );
+}
+/* floating capsule, as in iOS 26; the round search button sits beside it, like Music */
 .tabbar {
   position: fixed;
   bottom: max(10px, calc(env(safe-area-inset-bottom) - 12px));
-  left: max(12px, calc(50% - 308px));
+  left: max(84px, calc(50% - 308px + 72px));
   right: max(12px, calc(50% - 308px));
   z-index: 5;
   display: flex;
   justify-content: center;
   padding: 4px;
   border-radius: 999px;
-  background: var(--bar-bg);
-  -webkit-backdrop-filter: saturate(1.8) blur(24px);
-  backdrop-filter: saturate(1.8) blur(24px);
-  border: 0.5px solid color-mix(in srgb, var(--line) 60%, transparent);
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14);
 }
+.search-fab {
+  position: fixed;
+  bottom: max(10px, calc(env(safe-area-inset-bottom) - 12px));
+  left: max(12px, calc(50% - 308px));
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  width: calc(var(--tabbar-h) + 8px);
+  height: calc(var(--tabbar-h) + 8px);
+  border-radius: 50%;
+  color: var(--text);
+  transition: transform 100ms ease-out;
+}
+.search-fab:active { transform: scale(0.94); }
 .tabbar button {
   flex: 1;
   max-width: 106px;
@@ -243,13 +291,29 @@ main.tab-swipe { padding-bottom: 0; }
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  background: var(--accent-fill);
+  /* tinted glass: the one prominent action, so it carries the tint */
+  isolation: isolate;
+  background: color-mix(in srgb, var(--accent-fill) 90%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(190%);
+  backdrop-filter: blur(14px) saturate(190%);
   color: var(--on-accent);
   display: grid;
   place-items: center;
-  box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 30%, transparent);
+  box-shadow:
+    inset 0 1px 0.5px rgba(255, 255, 255, 0.55),
+    inset 0 -0.5px 1px rgba(255, 255, 255, 0.2),
+    0 8px 22px color-mix(in srgb, var(--accent-fill) 35%, transparent);
   z-index: 4;
   transition: transform 100ms ease-out;
+}
+.fab::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0) 45%);
 }
 .fab:active { transform: scale(0.92); }
 
@@ -406,6 +470,17 @@ button.chip { min-height: 36px; }
 }
 .sheet-head h2 { font-size: 1.0625rem; text-align: center; max-width: 52vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; grid-column: 2; grid-row: 1; }
 .sheet-close { grid-column: 1; grid-row: 1; justify-self: start; min-height: 44px; min-width: 56px; padding: 0 12px; color: var(--accent); font-weight: 500; }
+/* Search sheet */
+.search-field { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border-radius: 999px; background: var(--card); color: var(--muted); }
+.search-field input { flex: 1; min-height: 44px; padding: 0; border: 0; background: none; }
+.search-field input:focus { outline: none; }
+.search-field:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+.search-group h3 { margin: 6px 4px 8px; }
+.list-card { padding: 2px 16px; }
+.search-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 58px; padding: 7px 0; text-align: start; border-bottom: 0.5px solid var(--line); }
+.search-row:last-child { border-bottom: 0; }
+.search-text { display: flex; flex-direction: column; min-width: 0; }
+.search-text b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .grabber { position: absolute; top: 6px; left: 50%; width: 38px; height: 5px; margin-left: -19px; border-radius: 3px; background: color-mix(in srgb, var(--muted) 45%, transparent); }
 .sheet-body {
   overflow-y: auto;
@@ -594,6 +669,11 @@ html[dir='rtl'] .ja { text-align: right; }
 .sheet-body .btn-link { text-decoration: none; }
 
 @media (max-height: 700px) { .card-hero { height: 130px; } }
+@media (prefers-reduced-transparency: reduce) {
+  .glass, .fab { background: var(--card); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .fab { background: var(--accent-fill); }
+  .glass::before, .fab::before { display: none; }
+}
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
