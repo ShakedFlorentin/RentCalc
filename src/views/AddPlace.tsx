@@ -218,7 +218,7 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
   const destination = (
     <div className="segmented" role="group" aria-label="לאן להוסיף">
       <button className={to === 'deck' ? 'on' : ''} onClick={() => setTo('deck')}>
-        <Icon as={Heart} /> למשחק, להצבעה
+        <Icon as={Heart} /> לגילוי, להצבעה
       </button>
       <button className={to === 'list' ? 'on' : ''} onClick={() => setTo('list')}>
         <Icon as={List} /> ישר לרשימה
@@ -231,7 +231,7 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
     return (
       <Sheet title="כבר קיים בטיול" onClose={onClose}>
         <p>
-          <b dir="auto">{found.name}</b> {found.where === 'deck' ? 'כבר במשחק.' : 'כבר ברשימת המקומות.'}
+          <b dir="auto">{found.name}</b> {found.where === 'deck' ? 'כבר בגילוי.' : 'כבר ברשימת המקומות.'}
           {!found.exact && ' נראה שזה אותו מקום.'}
         </p>
         <button className="primary" onClick={() => useExisting(found)} disabled={busy}>
@@ -260,7 +260,7 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
     const picked = many.filter((m) => m.on && m.found?.where !== 'list').length
     return (
       <Sheet title={`נמצאו ${many.length} מקומות`} onClose={onClose}>
-        <p className="muted small">מסמנים את המקומות להוסיף. מקום שכבר קיים בטיול לא יתווסף שוב; אם הוא במשחק, יסומן לך לייק.</p>
+        <p className="muted small">מסמנים את המקומות להוסיף. מקום שכבר קיים בטיול לא יתווסף שוב; אם הוא בגילוי, יסומן לך לייק.</p>
         <div className="stack">
           {many.map((m, i) => {
             const style = CARD_STYLE[m.d.category ?? ''] ?? CARD_STYLE.sight
@@ -285,7 +285,7 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
                   <span className="row">
                     {verdict && <span className={'verdict ' + verdict.tone}>{verdict.label}</span>}
                     {m.found && (
-                      <span className="verdict meh">{m.found.where === 'deck' ? 'כבר במשחק' : 'כבר ברשימה'}</span>
+                      <span className="verdict meh">{m.found.where === 'deck' ? 'כבר בגילוי' : 'כבר ברשימה'}</span>
                     )}
                   </span>
                 </span>

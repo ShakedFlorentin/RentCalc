@@ -374,7 +374,7 @@ function BeforeTrip(props: {
         <div className="todo-row">
           <Icon as={Layers} size="1.4rem" />
           <span>
-            <b>עוד {props.swipesLeft} מקומות במשחק</b>
+            <b>עוד {props.swipesLeft} מקומות בגילוי</b>
             <span className="muted small">כל לייק או פאס משפיע על המאצ׳ים של הזוגות</span>
           </span>
         </div>

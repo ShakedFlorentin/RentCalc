@@ -192,7 +192,7 @@ export default function SwipeGame({ trip, userId, members }: Props) {
         {!loading && deck.length === 0 && (
           <Empty>
             {!candidates.length
-              ? 'עדיין אין מקומות במשחק'
+              ? 'עדיין אין מקומות בגילוי'
               : candidates.some((c) => !mine.has(c.id))
                 ? 'אין מקומות בסינון הזה'
                 : 'עברתם על כל המקומות. אפשר לחכות לחברים או לבדוק את המאצ׳ים בלשונית מקומות'}

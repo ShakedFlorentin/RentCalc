@@ -203,7 +203,7 @@ export default function Places({ trip, me, userId, members }: Props) {
           </button>
           {error && <LoadNote onRetry={reload} />}
           {!loading && !error && shown.length === 0 && (
-            <Empty>{rows.length ? 'אין מקומות בסינון הזה' : 'אין עדיין מקומות. מקומות שמקבלים מאצ׳ במשחק מופיעים כאן'}</Empty>
+            <Empty>{rows.length ? 'אין מקומות בסינון הזה' : 'אין עדיין מקומות. מקומות שמקבלים מאצ׳ בגילוי מופיעים כאן'}</Empty>
           )}
           {[...groups].map(([c, areas]) => (
             <section key={c} className="stack">
@@ -549,12 +549,12 @@ function GuideCard({ g, tripId, userId, me, onClose }: { g: GuidePlace; tripId: 
           <Icon as={MapPin} /> גוגל מפות
         </a>
         {state === 'added' ? (
-          <span className="small">נוסף למשחק עם הלייק שלך</span>
+          <span className="small">נוסף לגילוי עם הלייק שלך</span>
         ) : state === 'there' ? (
-          <span className="small">כבר במשחק, עם הלייק שלך</span>
+          <span className="small">כבר בגילוי, עם הלייק שלך</span>
         ) : (
           <button className="chip" disabled={state === 'busy'} onClick={suggest}>
-            <Icon as={Heart} /> הצעה במשחק
+            <Icon as={Heart} /> הוספה לגילוי
           </button>
         )}
         <button className="link small" onClick={onClose}>סגירה</button>

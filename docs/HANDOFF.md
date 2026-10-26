@@ -23,7 +23,7 @@ Offline: `public/sw.js` + localStorage cache in `useTripTable` (`src/lib.ts`).
 - Card fields include serves/dishes/todo/special/highlights/time_needed and `kosher` ('friendly'|'options'|'hard') + `kosher_note`.
 - Sources added this round: 50 Ptitim blog picks (`sources` has ptitim.com/tokyoguide), 11 + 7 from the Israeli Japan
   Facebook groups (`sources` has facebook.com/groups/japanguideil…). All active.
-- `guide_places`: all 747 Ptitim map places (map layer "המפה של פתיתים" in Places, "הצעה במשחק" adds one to the game).
+- `guide_places`: all 747 Ptitim map places (map layer "המפה של פתיתים" in Places, "הוספה לגילוי" adds one to the swipe deck (tab "גילוי")).
 - Bookings uniqueness: `bookings_same_confirmation_uniq` (same code + time) and `bookings_same_no_code_uniq`
   (no code: title + time + who). Hotel nights in the plan are read live from bookings (`nightLines`/`stayLines`).
 - Missing nights on Home: per couple from its own flights (`stayInJapan` in `src/views/planUtils.ts`).
