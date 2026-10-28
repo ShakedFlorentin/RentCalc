@@ -103,6 +103,7 @@ If the post names several places (a list or roundup), identify each one (up to 1
 - honest verdict: hidden gem, worth it, overhyped, or tourist trap
 - opening hours, weekly closing days, closures between 12 and 31 December 2026 (year-end holidays), whether to book, how long a visit takes and the best time of day
 If you only have a link with no caption, search for the post itself (its URL, its code and the account) to find which places it shows.
+Write the notes as plain facts (what, where, when, how much), not as what blogs, reviewers or sites say, and state each fact once.
 Be concise. If you can't identify any specific place, say so.`
 
 const EXTRACT = `Turn the research notes into place cards, one per real place the notes identified, in the order the post lists them (at most 10). Return an empty list if no specific real place was identified. Rules for each card:
@@ -119,6 +120,7 @@ const EXTRACT = `Turn the research notes into place cards, one per real place th
 - best_time: morning, midday, afternoon, evening (dinner, sunset) or night (bars, night views) when it matters, else any. visit_mins: a typical visit in minutes including the usual queue. booking: required, recommended or no.
 - plan_line: ONE practical Hebrew tip, at most 70 characters, the single thing most worth knowing before going (book ahead, cash only, come before opening); not a description. baby_block: Hebrew, at most 60 characters, only if something blocks a visit with the baby (no strollers, stairs only, no children, smoking inside); otherwise "".
 - Any other text field with nothing to say is an empty string "".
+- Hebrew style for every Hebrew field: short, everyday spoken Israeli Hebrew, like a friend who has been there texting the useful bit ("כדאי להגיע מוקדם", "אין מקום לעגלה", "תור ארוך בצהריים"). Concrete (times, prices, what to eat or do) and each fact once across the card, never repeated in another field. Never talk about sources or who said it ("לפי…", "מבקרים מציינים", "בלוגרים", "מדווחים"): state the fact, or leave out what is too unsure. No translation-ese or marketing words (חוויה, מושלם, בלתי נשכח, פנינה, "לא רק X אלא גם Y", מציע, "ניתן ל"), no em dashes. Address readers in the plural or impersonally, never in a gendered singular.
 - Plain text only: no emoji, no exclamation marks.`
 
 const decode = (s: string) =>

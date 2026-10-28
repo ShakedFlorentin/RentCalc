@@ -145,7 +145,7 @@ export default function Expenses({ trip, members, userId }: Props) {
 
       {error && <LoadNote onRetry={reload} />}
       {!loading && !error && rows.length === 0 && (
-        <Empty>אין הוצאות עדיין. מוסיפים הוצאה, בוחרים מי שילם ובין מי מחלקים, ופה רואים מי חייב למי.</Empty>
+        <Empty>עוד אין הוצאות. מוסיפים הוצאה, בוחרים מי שילם ובין מי מחלקים, וכאן רואים מי חייב למי.</Empty>
       )}
 
       {others.length > 0 && (
@@ -301,7 +301,7 @@ function ExpenseForm(props: {
   const save = async () => {
     const n = roundFor(parseAmount(amount), currency)
     if (!(n > 0)) return setErr('צריך סכום גדול מאפס')
-    if (!split.length) return setErr('צריך לבחור לפחות אדם אחד')
+    if (!split.length) return setErr('בחרו לפחות אדם אחד')
     setErr('')
     setBusy(true)
     const row = {
@@ -329,7 +329,7 @@ function ExpenseForm(props: {
         .limit(1)
         .maybeSingle()
       const by = members.find((m) => m.user_id === twin?.created_by)?.display_name
-      if (twin && !confirm(`"${twin.title}" באותו סכום ובאותו יום כבר נרשמה${by ? ` על ידי ${by}` : ''}. לרשום שוב?`)) {
+      if (twin && !confirm(`כבר יש הוצאה "${twin.title}" באותו סכום וביום${by ? `, נרשמה על ידי ${by}` : ''}. לרשום שוב?`)) {
         setBusy(false)
         return
       }
@@ -501,7 +501,7 @@ function RateSheet(props: { tripId: string; rate: number; onSaved: (r: number) =
   const save = async () => {
     const n = parseAmount(v)
     // 100 yen has been worth between one and five shekels for decades; anything far outside is a typo
-    if (!(n >= 0.5 && n <= 20)) return setErr('השער נראה לא סביר. כמה שקלים שווים 100 ין? בערך 2.5')
+    if (!(n >= 0.5 && n <= 20)) return setErr('השער לא נראה הגיוני. 100 ין זה בערך 2.5 שקלים')
     const rate = Math.round((n / 100) * 1e6) / 1e6
     if (await mutate(supabase.from('trips').update({ ils_per_jpy: rate }).eq('id', props.tripId))) {
       props.onSaved(rate)
@@ -511,7 +511,7 @@ function RateSheet(props: { tripId: string; rate: number; onSaved: (r: number) =
 
   return (
     <Sheet title="שער החליפין" onClose={props.onClose}>
-      <p className="muted small">כמה שקלים שווים 100 ין. השער משותף לכולם ומשפיע על ההמרה בכל המסך.</p>
+      <p className="muted small">כמה שקלים שווים 100 ין. אותו שער לכולם, וכל ההמרות במסך לפיו.</p>
       <Field label="שקלים ל־100 ין">
         <input inputMode="decimal" value={v} onChange={(e) => setV(e.target.value)} dir="ltr" />
       </Field>

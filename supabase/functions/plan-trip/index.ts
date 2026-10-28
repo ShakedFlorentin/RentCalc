@@ -545,13 +545,13 @@ async function run(admin: SupabaseClient, tid: string, dry: boolean) {
     const d = days[i.day - 1]
     if (!f || !d) continue
     if ((f.closed_dates ?? []).some((x) => x.slice(0, 10) === d.date)) warnings.push({ item_id: i.id, text: 'סגור בתאריך הזה' })
-    else if ((f.closed_weekdays ?? []).includes(d.weekday)) warnings.push({ item_id: i.id, text: `סגור בימי ${WEEKDAY[d.weekday]}` })
+    else if ((f.closed_weekdays ?? []).includes(d.weekday)) warnings.push({ item_id: i.id, text: `סגור ב${WEEKDAY[d.weekday]}` })
     else {
       const t = mins(i.time)
       const o = mins(f.opens)
       let c = mins(f.closes)
       if (o != null && c != null && c <= o) c = 24 * 60
-      if (t != null && o != null && c != null && (t < o || t >= c)) warnings.push({ item_id: i.id, text: `פתוח ${f.opens}–${f.closes}` })
+      if (t != null && o != null && c != null && (t < o || t >= c)) warnings.push({ item_id: i.id, text: `פתוח רק ${f.opens}–${f.closes}` })
     }
   }
   for (const [id, why] of out.unplanned) {

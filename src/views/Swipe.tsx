@@ -139,7 +139,7 @@ export default function SwipeGame({ trip, userId, members }: Props) {
 
   return (
     <div className="swipe-screen">
-      <button className="hud" onClick={() => setBoardOpen(true)} aria-label="פתיחת טבלת השחקנים">
+      <button className="hud" onClick={() => setBoardOpen(true)} aria-label="פתיחת הדירוג">
         <span className="hud-level">
           <b>{meRow?.level.name ?? ''}</b>
           <span className="bar">
@@ -199,15 +199,15 @@ export default function SwipeGame({ trip, userId, members }: Props) {
                     <span style={{ width: `${candidates.length ? (b.done / candidates.length) * 100 : 0}%` }} />
                   </div>
                   {b.m.user_id !== userId && b.twin !== null && (
-                    <div className="small muted">התאמת טעם איתך: {b.twin}%</div>
+                    <div className="small muted">טעם משותף איתך: {b.twin}%</div>
                   )}
                 </div>
               </div>
             ))}
           </div>
           <p className="small muted">
-            כל זוג מצביע יחד: לייק של אחד מבני הזוג מספיק, אלא אם השני דילג. מקום נשאל רק אצל מי שישן לידו, ונכנס למסלול
-            ביום שכולם שם כשכל הזוגות האלה אהבו אותו. כל לייק או פאס שווה 10 XP, כל מאצ׳ 50 XP.
+            כל זוג מצביע ביחד: מספיק שאחד אוהב, אלא אם השני דילג. שואלים על מקום רק את מי שישן לידו, והוא נכנס למסלול
+            ביום שכולם בעיר, אם כל הזוגות האלה אהבו אותו. לייק או דילוג שווים 10 XP, מאצ׳ 50 XP.
           </p>
         </Sheet>
       )}
@@ -216,10 +216,10 @@ export default function SwipeGame({ trip, userId, members }: Props) {
         {!loading && deck.length === 0 && (
           <Empty>
             {!candidates.length
-              ? 'עדיין אין מקומות בגילוי'
+              ? 'עוד אין מקומות בגילוי'
               : candidates.some((c) => !mine.has(c.id) && forMe(c))
                 ? 'אין מקומות בסינון הזה'
-                : 'עברתם על כל המקומות. אפשר לחכות לחברים או לבדוק את המאצ׳ים בלשונית מקומות'}
+                : 'ראיתם את כל המקומות. אפשר לחכות לחברים או להציץ במאצ׳ים בלשונית מקומות'}
           </Empty>
         )}
         {deck
@@ -240,7 +240,7 @@ export default function SwipeGame({ trip, userId, members }: Props) {
           <button className="round like" onClick={() => deck[0] && swipe(deck[0], true)} disabled={!deck.length} aria-label="אהבתי">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path className="fill" d="M12 20.5s-7.5-4.6-9.2-9.4C1.6 7.7 4 4.5 7.2 4.5c1.9 0 3.4 1 4.8 2.8 1.4-1.8 2.9-2.8 4.8-2.8 3.2 0 5.6 3.2 4.4 6.6-1.7 4.8-9.2 9.4-9.2 9.4z" /></svg>
           </button>
-          {deck.length > 0 && <span className="left-count" aria-live="polite">נשארו {deck.length}</span>}
+          {deck.length > 0 && <span className="left-count" aria-live="polite">{deck.length === 1 ? 'נשאר אחד' : `נשארו ${deck.length}`}</span>}
         </div>
       )}
 
@@ -251,7 +251,7 @@ export default function SwipeGame({ trip, userId, members }: Props) {
             <p>
               <b dir="auto">{match.c.name}</b> נכנס {match.who ? `לרשימה של ${match.who}` : 'לרשימה של כולם'}
             </p>
-            <p className="muted small">הוא נכנס למסלול ביום פנוי בעיר שלו. טיול יום מחכה שתבחרו לו יום.</p>
+            <p className="muted small">נכנס למסלול ביום פנוי בעיר שלו. טיול יום יחכה עד שתבחרו לו יום.</p>
             <p className="muted">{match.names.join(' · ')} אהבו את המקום</p>
             <button className="primary" onClick={() => setMatch(null)}>
               המשך
@@ -513,7 +513,7 @@ function Card({ c, top, likedBy, onSwipe }: { c: Candidate; top: boolean; likedB
       </div>
       {top && (
         <button className="link more-btn" onClick={() => setMore(true)}>
-          <Icon as={ChevronUp} /> פרטים נוספים
+          <Icon as={ChevronUp} /> עוד פרטים
         </button>
       )}
       {more &&

@@ -41,7 +41,7 @@ const ERRORS: Record<string, string> = {
   network: 'אין חיבור. זיהוי הדיבור צריך אינטרנט.',
   'no-speech': 'לא נשמע דיבור. נסו שוב קרוב יותר לטלפון.',
   'audio-capture': 'לא נמצא מיקרופון.',
-  'language-not-supported': 'השפה הזאת לא נתמכת בזיהוי בטלפון הזה.',
+  'language-not-supported': 'הטלפון הזה לא מזהה דיבור בשפה הזאת.',
 }
 
 const standalone = () =>
@@ -65,9 +65,9 @@ async function translateError(error: unknown) {
   const res = (error as { context?: Response } | null)?.context
   const body = await res?.clone().json().catch(() => null)
   if (res?.status === 429)
-    return /daily limit/.test(body?.error ?? '') ? 'הגעתם למגבלה היומית (200 תרגומים ביום לכל אחד).' : 'השירות עמוס. נסו שוב בעוד דקה.'
+    return /daily limit/.test(body?.error ?? '') ? 'הגעתם למגבלה היומית: 200 תרגומים ביום לכל אחד.' : 'השירות עמוס. נסו שוב בעוד דקה.'
   if (!navigator.onLine) return 'אין חיבור לאינטרנט.'
-  return `התרגום לא הצליח${res?.status ? ` (${res.status}${body?.error ? `: ${body.error}` : ''})` : ''}.`
+  return `התרגום נכשל${res?.status ? ` (${res.status}${body?.error ? `: ${body.error}` : ''})` : ''}.`
 }
 
 export default function Translator() {
@@ -274,7 +274,7 @@ export default function Translator() {
         <Icon as={Languages} /> תרגום קולי
       </h2>
       <div className="card voice-test">
-        <p className="muted small">לוחצים על השפה שמדברים בה, מדברים, ולוחצים שוב. התרגום מופיע ומוקרא בשפה השנייה.</p>
+        <p className="muted small">לוחצים על השפה שמדברים בה, מדברים, ולוחצים שוב. התרגום מופיע ומושמע בשפה השנייה.</p>
         {Recognizer ? (
           <div className="rec-row">
             {LANGS.map((l) => {
@@ -295,7 +295,7 @@ export default function Translator() {
             })}
           </div>
         ) : (
-          <p className="msg">זיהוי דיבור לא קיים בדפדפן הזה.</p>
+          <p className="msg">הדפדפן הזה לא מזהה דיבור.</p>
         )}
         {(listening || busy || heard || interim) && (
           // the exchange in progress: what is being heard, then the wait for its translation

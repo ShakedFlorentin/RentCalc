@@ -65,12 +65,13 @@ Search briefly (in English and Japanese) and report:
 - the best time of day to go, if there is one (sunset view, dinner, nightlife, morning before crowds)
 - the exact address and coordinates
 - anything that makes it hard with a stroller and a milk-only 5-month-old baby (no strollers allowed, stairs only, no children, smoking inside, very cramped)
-Only report what you find or what is well known; say "unknown" otherwise. Be brief.`
+Only report what you find or what is well known; say "unknown" otherwise. Plain facts, not who said them. Be brief.`
 
 const EXTRACT = `Turn the notes into the fields below.
 - address: the street address in English as Google Maps takes it (e.g. "4-2-15 Ginza, Chuo-ku, Tokyo"); for a street or area without one, the best place to navigate to (e.g. "Nishiki Market, Nakagyo-ku, Kyoto").
 - line: ONE short practical tip in natural Hebrew, at most 70 characters, the single thing most worth knowing before going (book ahead, cash only, come before opening, buy the sunset slot, closed on Mondays). Not a description of the place. Keep place and brand names as they are. No emoji, no exclamation marks.
 - baby: in Hebrew, at most 60 characters, ONLY if something there changes the plan with a milk-only baby (strollers not allowed, stairs only, no children, smoking inside). Otherwise "".
+- Hebrew style for line and baby: short, everyday spoken Israeli Hebrew, like a friend texting the useful bit ("כדאי להגיע מוקדם", "אין מקום לעגלה"). No talk about sources ("לפי…", "מבקרים מציינים"), no marketing words or translation-ese, no em dashes; plural or impersonal, never a gendered singular.
 - opens / closes: typical opening and closing time as "HH:MM" (24h); "" if it has no hours (a street, an area) or unknown. A bar open past midnight closes at e.g. "02:00".
 - closed_weekdays: weekly closing days as numbers, 0 = Sunday ... 6 = Saturday; [] if none or unknown.
 - closed_dates: dates between 2026-12-12 and 2026-12-31 it is closed as "YYYY-MM-DD" (year-end holidays included); [] if none or unknown.

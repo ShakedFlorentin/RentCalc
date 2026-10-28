@@ -437,7 +437,7 @@ function BeforeTrip(props: {
           <span className="tile red"><Icon as={Layers} /></span>
           <span>
             <b>{props.swipesLeft === 1 ? 'עוד מקום אחד בגילוי' : `עוד ${props.swipesLeft} מקומות בגילוי`}</b>
-            <span className="muted small">כל לייק או פאס משנה את המאצ׳ים</span>
+            <span className="muted small">כל לייק או דילוג משנה את המאצ׳ים</span>
           </span>
         </div>
       )}

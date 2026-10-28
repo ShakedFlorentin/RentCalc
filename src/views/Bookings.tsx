@@ -59,7 +59,7 @@ export default function Bookings({ trip, members, userId }: Props) {
       {!loading && !error && items.length === 0 && (
         <Empty>
           אין {BOOKING_TABS[current]}
-          {whose && ' בסינון הזה'}. אפשר להוסיף מאישור הזמנה או עם כפתור ההוספה.
+          {whose && ' בסינון הזה'}. אפשר להוסיף מאישור הזמנה או ידנית.
         </Empty>
       )}
       <div className="stack">
@@ -167,7 +167,7 @@ async function openFile(path: string) {
   const { data, error } = await supabase.storage.from('docs').createSignedUrl(path, 600)
   if (error || !data) {
     win?.close()
-    alert(navigator.onLine ? 'לא ניתן לפתוח את הקובץ' : 'אין חיבור, והמסמך לא נשמר לאופליין')
+    alert(navigator.onLine ? 'אי אפשר לפתוח את הקובץ' : 'אין חיבור, והמסמך לא שמור לאופליין')
   } else go(data.signedUrl)
 }
 
@@ -284,7 +284,7 @@ function BookingForm(props: {
     }))
     setReadNote(
       found.length > 1
-        ? `מילאתי את ההזמנה הראשונה מתוך ${found.length} שבקובץ. בדקו ושמרו, או הוסיפו את כולן בבת אחת עם "הוספה מאישור הזמנה".`
+        ? `מילאתי את הראשונה מתוך ${found.length} ההזמנות בקובץ. בדקו ושמרו, או הוסיפו את כולן דרך "הוספה מאישור הזמנה".`
         : 'מילאתי את הפרטים מהקובץ. בדקו ושמרו.',
     )
   }
@@ -320,7 +320,7 @@ function BookingForm(props: {
     }
     const { error } = await (f.id ? supabase.from('bookings').update(row).eq('id', f.id) : supabase.from('bookings').insert(row))
     const ok = !error
-    if (error?.code === '23505') alert('ההזמנה הזו כבר קיימת: אותו מספר אישור באותה שעה, או אותו שם, שעה וזוג.')
+    if (error?.code === '23505') alert('כבר יש הזמנה כזו: אותו מספר אישור באותה שעה, או אותו שם, שעה וזוג.')
     else if (error) alert('שגיאה: ' + error.message)
     if (ok) {
       // the old attachment goes only once the row points at the new one
@@ -345,7 +345,7 @@ function BookingForm(props: {
     <Sheet title={f.id ? 'עריכת הזמנה' : 'הזמנה חדשה'} onClose={props.onClose}>
       {!f.id && (
         <button className="secondary" onClick={props.onImport}>
-          <Icon as={Mail} /> יש אישור הזמנה? הוספה אוטומטית מקובץ או מייל
+          <Icon as={Mail} /> יש אישור הזמנה? מוסיפים אוטומטית מקובץ או ממייל
         </button>
       )}
       <Field label="סוג">
@@ -532,9 +532,9 @@ function ImportSheet(props: { trip: Trip; couples: string[]; myCouple: string | 
             <Icon as={BOOKING_ICON[d.kind] ?? BOOKING_ICON.other} /> {d.title}
           </div>
         ))}
-        {docLost && <p className="msg">הקובץ המצורף לא נשמר, ההזמנות נוספו בלי המסמך. אפשר לצרף אותו ידנית בעריכת ההזמנה.</p>}
+        {docLost && <p className="msg">המסמך לא נשמר וההזמנות נוספו בלעדיו. אפשר לצרף אותו בעריכת ההזמנה.</p>}
         {skipped > 0 && <p className="small">{skipped === 1 ? 'הזמנה אחת כבר הייתה קיימת ולא נוספה שוב.' : `${skipped} הזמנות כבר היו קיימות ולא נוספו שוב.`}</p>}
-        <p className="muted small">אפשר ללחוץ על הזמנה כדי לתקן פרטים. מלונות נכתבו גם בלילות שלהם במסלול.</p>
+        <p className="muted small">לחיצה על הזמנה פותחת אותה לעריכה. מלונות מופיעים גם בלילות שלהם במסלול.</p>
         <button className="primary" onClick={onClose}>
           סגירה
         </button>
@@ -545,8 +545,7 @@ function ImportSheet(props: { trip: Trip; couples: string[]; myCouple: string | 
   return (
     <Sheet title="הוספה מאישור הזמנה" onClose={onClose}>
       <p className="muted small">
-        מדביקים את המייל של האישור (Booking, Agoda, חברת תעופה…) או מצרפים PDF / צילום מסך. Claude קורא את הפרטים
-        וההזמנה נוספת אוטומטית.
+        מדביקים את מייל האישור (Booking, Agoda, חברת תעופה…) או מצרפים PDF / צילום מסך, וההזמנה נוספת לבד.
       </p>
       {props.couples.length > 1 && <WhoField value={who} couples={props.couples} onChange={setWho} />}
       <Field label="טקסט האישור">
