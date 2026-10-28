@@ -1,15 +1,16 @@
 import { FormEvent, useState } from 'react'
 import { supabase } from '../supabase'
+import { t } from '../i18n'
 
 // Accounts are created for the group up front; each logs in with just their name, in Hebrew or English.
 const ACCOUNTS: Record<string, string> = {
-  שקד: 'shaked',
+  שקד: 'shaked', // he-only
   shaked: 'shaked',
-  מאור: 'maor',
+  מאור: 'maor', // he-only
   maor: 'maor',
-  אלמוג: 'almog',
+  אלמוג: 'almog', // he-only
   almog: 'almog',
-  שניר: 'snir',
+  שניר: 'snir', // he-only
   snir: 'snir',
 }
 
@@ -20,7 +21,7 @@ const ACCOUNTS: Record<string, string> = {
 export function toEmail(typed: string) {
   const n = typed.trim().toLowerCase()
   if (n.includes('@')) return n
-  const first = n.normalize('NFKD').replace(/[֑-ׇ]/g, '').split(/\s+/)[0]
+  const first = n.normalize('NFKD').replace(/[֑-ׇ]/g, '').split(/\s+/)[0] // he-only
   return ACCOUNTS[first] ? `${ACCOUNTS[first]}@japantrip.app` : null
 }
 
@@ -35,7 +36,7 @@ export default function Login() {
     setMsg('')
     const email = toEmail(name)
     if (!email) {
-      setMsg('לא מכירים את השם. אפשר שקד, מאור, אלמוג או שניר.')
+      setMsg(t('לא מכירים את השם. אפשר שקד, מאור, אלמוג או שניר.'))
       return
     }
     setBusy(true)
@@ -43,21 +44,21 @@ export default function Login() {
     setBusy(false)
     if (!error) return
     // tell apart the cases a person can act on: no signal, too many tries, and a wrong password
-    if (error.name === 'AuthRetryableFetchError' || !navigator.onLine) setMsg('אין אינטרנט. נסו שוב כשיש קליטה.')
-    else if (error.status === 429) setMsg('יותר מדי ניסיונות. חכו דקה ונסו שוב.')
-    else if (email.endsWith('@japantrip.app')) setMsg('הסיסמה לא נכונה.')
-    else setMsg('אימייל או סיסמה לא נכונים.')
+    if (error.name === 'AuthRetryableFetchError' || !navigator.onLine) setMsg(t('אין אינטרנט. נסו שוב כשיש קליטה.'))
+    else if (error.status === 429) setMsg(t('יותר מדי ניסיונות. חכו דקה ונסו שוב.'))
+    else if (email.endsWith('@japantrip.app')) setMsg(t('הסיסמה לא נכונה.'))
+    else setMsg(t('אימייל או סיסמה לא נכונים.'))
   }
 
   return (
     <div className="login">
       <div className="hinomaru" />
-      <h1>הטיול ליפן</h1>
-      <p className="muted">מסלול, הזמנות והוצאות במקום אחד</p>
+      <h1>{t('הטיול ליפן')}</h1>
+      <p className="muted">{t('מסלול, הזמנות והוצאות במקום אחד')}</p>
       <form onSubmit={submit} className="card">
         <input
-          placeholder="שם (שקד / מאור / אלמוג / שניר)"
-          aria-label="שם"
+          placeholder={t('שם (שקד / מאור / אלמוג / שניר)')}
+          aria-label={t('שם')}
           value={name}
           onChange={(e) => setName(e.target.value)}
           autoComplete="username"
@@ -66,8 +67,8 @@ export default function Login() {
         />
         <input
           type="password"
-          placeholder="סיסמה"
-          aria-label="סיסמה"
+          placeholder={t('סיסמה')}
+          aria-label={t('סיסמה')}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           autoComplete="current-password"
@@ -75,7 +76,7 @@ export default function Login() {
           dir="ltr"
         />
         <button className="primary" disabled={busy}>
-          {busy ? 'מתחברים…' : 'התחברות'}
+          {busy ? t('מתחברים…') : t('התחברות')}
         </button>
         {msg && (
           <p className="msg" role="alert">

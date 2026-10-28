@@ -114,8 +114,8 @@ export const keepRanges = (s: string) =>
 /** A save failed: say so in plain Hebrew, and say it's the connection when there's no network. */
 export function errorText(message: string) {
   return !navigator.onLine || /failed to fetch|network|load failed/i.test(message)
-    ? 'אין אינטרנט, לא נשמר. נסו שוב כשיש קליטה.'
-    : 'שגיאה: ' + message
+    ? t('אין אינטרנט, לא נשמר. נסו שוב כשיש קליטה.')
+    : t('שגיאה: {message}', { message })
 }
 
 export async function mutate(promise: PromiseLike<{ error: { message: string } | null }>) {
@@ -152,7 +152,7 @@ export function fmtDayLong(d: Date | null) {
 
 /** A day as a picker option names it: "יום שלישי, 15.12", or "יום 3" for a trip without a start date. */
 export function dayOption(start: string | null, day: number) {
-  return start ? fmtDayLong(dayDate(start, day)) : `יום ${day}`
+  return start ? fmtDayLong(dayDate(start, day)) : t('יום {day}', { day })
 }
 
 /** A day chip's two lines: the weekday ("ג׳") and the date ("15.12"). */
@@ -276,11 +276,11 @@ export async function aiError(error: unknown, fallback: string) {
     // the same status means either today's cap or Claude being busy for a minute
     const body = await res?.clone().json().catch(() => null)
     return /daily limit/.test(body?.error ?? '')
-      ? 'נגמרו 30 הבדיקות להיום (לכל אחד). נסו שוב מחר.'
-      : 'השירות עמוס כרגע. נסו שוב בעוד דקה.'
+      ? t('נגמרו 30 הבדיקות להיום (לכל אחד). נסו שוב מחר.')
+      : t('השירות עמוס כרגע. נסו שוב בעוד דקה.')
   }
-  if (status === 413) return 'הטקסט או הקובץ ארוכים מדי.'
-  if (!navigator.onLine) return 'אין חיבור לאינטרנט.'
+  if (status === 413) return t('הטקסט או הקובץ ארוכים מדי.')
+  if (!navigator.onLine) return t('אין חיבור לאינטרנט.')
   return fallback
 }
 

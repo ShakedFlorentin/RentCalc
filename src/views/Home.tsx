@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../supabase'
 import {
+  BOOKING_KINDS,
   BOOKING_TABS,
   itemDone,
   CITY_HE,
@@ -34,8 +35,8 @@ import {
   type Swipe,
   type Trip,
 } from '../types'
-import { couplesOf, currentDay, dayDate, dayParts, fmtDay, fmtDayLong, mutate, useTripTable } from '../lib'
-import { lang, locale, setLang } from '../i18n'
+import { cityLabel, couplesOf, currentDay, dayDate, dayParts, fmtDay, fmtDayLong, mutate, useTripTable } from '../lib'
+import { lang, locale, setLang, t } from '../i18n'
 import { Field, Sheet } from '../ui'
 import { cityPhoto } from '../cities'
 import { BOOKING_ICON, Icon } from '../icons'
@@ -105,29 +106,29 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
       <section className={'hero card' + (today ? ' trip-line' : '')}>
         {today ? (
           <>
-            <div className="muted hero-date">היום</div>
+            <div className="muted hero-date">{t('היום')}</div>
             <div className="big">
               {fmtDayLong(dayDate(trip.start_date, today))}
-              {todayInfo?.city && ` · ${todayInfo.city}`}
+              {todayInfo?.city && ` · ${cityLabel(todayInfo.city)}`}
             </div>
           </>
         ) : daysLeft !== null && daysLeft > 0 ? (
           <>
             <div className="big">{daysLabel(daysLeft)}</div>
-            <div className="muted">להמראה</div>
+            <div className="muted">{t('להמראה')}</div>
           </>
         ) : daysLeft !== null ? (
-          <div className="big">הטיול הסתיים</div>
+          <div className="big">{t('הטיול הסתיים')}</div>
         ) : (
           <>
-            <div className="muted">עוד אין תאריך יציאה</div>
+            <div className="muted">{t('עוד אין תאריך יציאה')}</div>
             <button className="link" onClick={() => setEditing(true)}>
-              קבעו תאריך התחלה
+              {t('קבעו תאריך התחלה')}
             </button>
           </>
         )}
         <div className="clock">
-          <Icon as={Clock} /> עכשיו ביפן: {tokyoTime}
+          <Icon as={Clock} /> {t('עכשיו ביפן: {time}', { time: tokyoTime })}
         </div>
       </section>
 
@@ -138,7 +139,7 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
           {tonight.length > 0 && (
             <section className="card">
               <h3>
-                <Icon as={BedDouble} /> הלילה במלון
+                <Icon as={BedDouble} /> {t('הלילה במלון')}
               </h3>
               {tonight.map((t) => (
                 <div key={t}>{t}</div>
@@ -148,7 +149,7 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
 
           {todayBookings.length > 0 && (
             <section className="card">
-              <h3>ההזמנות להיום</h3>
+              <h3>{t('ההזמנות להיום')}</h3>
               {todayBookings.map((e) => (
                 <TodayRow key={e.key} e={e} past={!!e.time && e.time < nowHM} />
               ))}
@@ -157,12 +158,12 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
 
           {rest.length > 0 && (
             <section className="card">
-              <h3>שאר היום</h3>
+              <h3>{t('שאר היום')}</h3>
               {rest.map((e) => (
                 <TodayRow key={e.key} e={e} past={!!e.time && e.time < nowHM} />
               ))}
               <button className="link" onClick={() => onOpenDay(today)}>
-                לתוכנית המלאה <Icon as={ChevronLeft} className="flip-ltr" />
+                {t('לתוכנית המלאה')} <Icon as={ChevronLeft} className="flip-ltr" />
               </button>
             </section>
           )}
@@ -185,34 +186,34 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
 
       <div className="shortcuts">
         <button className="secondary" onClick={() => onOpenMore('info')}>
-          <Icon as={ShieldAlert} /> חירום
+          <Icon as={ShieldAlert} /> {t('חירום')}
         </button>
         <button className="secondary" onClick={() => onOpenMore('say')}>
-          <Icon as={Languages} /> תרגום
+          <Icon as={Languages} /> {t('תרגום')}
         </button>
         <button className="secondary" onClick={() => onOpenMore('money')}>
-          <Icon as={Wallet} /> הוצאות
+          <Icon as={Wallet} /> {t('הוצאות')}
         </button>
       </div>
 
-      {together.some((t) => t.value) && (
+      {together.some((run) => run.value) && (
         <section className="card">
-          <h3>ביחד ולחוד</h3>
+          <h3>{t('ביחד ולחוד')}</h3>
           <div className="route">
-            {together.map((t) => (
-              <button key={t.from} className={'route-stop' + (t.value ? ' apart' : ' together')} onClick={() => onOpenDay(t.from)}>
+            {together.map((run) => (
+              <button key={run.from} className={'route-stop' + (run.value ? ' apart' : ' together')} onClick={() => onOpenDay(run.from)}>
                 <b>
-                  {t.value ? (
-                    `רק ${t.value}`
+                  {run.value ? (
+                    t('רק {who}', { who: t(run.value) })
                   ) : (
                     <>
-                      <Icon as={Users} /> {TOGETHER}
+                      <Icon as={Users} /> {t(TOGETHER)}
                     </>
                   )}
                 </b>
                 <span className="muted small">
-                  {fmtDay(dayDate(trip.start_date, t.from))}
-                  {t.to !== t.from && ` – ${fmtDay(dayDate(trip.start_date, t.to))}`} · {daysLabel(t.to - t.from + 1)}
+                  {fmtDay(dayDate(trip.start_date, run.from))}
+                  {run.to !== run.from && ` – ${fmtDay(dayDate(trip.start_date, run.to))}`} · {daysLabel(run.to - run.from + 1)}
                 </span>
               </button>
             ))}
@@ -222,19 +223,19 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
 
       {cities.some((c) => c.value) ? (
         <section>
-          <h3 className="shelf-title">המסלול</h3>
+          <h3 className="shelf-title">{t('המסלול')}</h3>
           <div className="city-grid">
             {cities.map((c, i) => (
-              <CityTile key={c.from} name={c.value || '—'} i={i} onClick={() => onOpenDay(c.from)}>
+              <CityTile key={c.from} name={cityLabel(c.value) || '—'} slug={c.value} i={i} onClick={() => onOpenDay(c.from)}>
                 {c.from === c.to ? (
-                  fmtDay(dayDate(trip.start_date, c.from)) || `יום ${c.from}`
+                  fmtDay(dayDate(trip.start_date, c.from)) || t('יום {day}', { day: c.from })
                 ) : trip.start_date ? (
                   <bdi dir="ltr">
                     {dayParts(dayDate(trip.start_date, c.from))!.date}–{dayParts(dayDate(trip.start_date, c.to))!.date}
                   </bdi>
                 ) : (
                   <>
-                    ימים <bdi dir="ltr">{c.from}–{c.to}</bdi>
+                    {t('ימים')} <bdi dir="ltr">{c.from}–{c.to}</bdi>
                   </>
                 )}
               </CityTile>
@@ -245,11 +246,11 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
         destinations.length > 0 && (
           // no day has a city yet: show where the swipe deck's places are instead
           <section>
-            <h3 className="shelf-title">היעדים</h3>
+            <h3 className="shelf-title">{t('היעדים')}</h3>
             <div className="city-grid">
               {destinations.map(([city, n], i) => (
-                <CityTile key={city} name={CITY_HE[city] ?? city} slug={city} i={i} onClick={onOpenPlaces}>
-                  {n === 1 ? 'מקום אחד' : `${n} מקומות`}
+                <CityTile key={city} name={cityLabel(CITY_HE[city] ?? city)} slug={city} i={i} onClick={onOpenPlaces}>
+                  {n === 1 ? t('מקום אחד') : t('{n} מקומות', { n })}
                 </CityTile>
               ))}
             </div>
@@ -258,28 +259,28 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
       )}
 
       <section className="card">
-        <h3>משתתפים</h3>
+        <h3>{t('משתתפים')}</h3>
         <div className="chips">
           {members.map((m) => (
             <span key={m.user_id} className="chip">
               {m.display_name}
-              {m.user_id === userId && ' (אני)'}
+              {m.user_id === userId && ` ${t('(אני)')}`}
             </span>
           ))}
         </div>
         <p className="muted small">
-          להצטרפות: שלחו את הקישור וקוד הטיול{' '}
+          {t('להצטרפות: שלחו את הקישור וקוד הטיול')}{' '}
           <b className="code" dir="ltr">{trip.join_code}</b>
         </p>
         <button
           className="secondary"
           onClick={() => {
-            const text = `הצטרפו לתכנון הטיול ליפן\n${location.href}\nקוד טיול: ${trip.join_code}`
+            const text = `${t('הצטרפו לתכנון הטיול ליפן')}\n${location.href}\n${t('קוד טיול: {code}', { code: trip.join_code })}`
             if (navigator.share) navigator.share({ text }).catch(() => {})
-            else navigator.clipboard.writeText(text).then(() => alert('הועתק'))
+            else navigator.clipboard.writeText(text).then(() => alert(t('הועתק')))
           }}
         >
-          <Icon as={Share2} /> שיתוף הזמנה
+          <Icon as={Share2} /> {t('שיתוף הזמנה')}
         </button>
       </section>
 
@@ -319,23 +320,23 @@ function NextCard(props: { next?: Entry; nowHM: string; hasPlan: boolean; leftCo
   if (!next)
     return (
       <section className="card">
-        <h3>{!props.hasPlan ? 'אין עדיין תוכנית להיום' : props.leftCount ? 'אין עוד פעילויות עם שעה' : 'סיימתם להיום'}</h3>
+        <h3>{!props.hasPlan ? t('אין עדיין תוכנית להיום') : props.leftCount ? t('אין עוד פעילויות עם שעה') : t('סיימתם להיום')}</h3>
         <p className="muted">
           {props.hasPlan
             ? props.leftCount
-              ? (props.leftCount === 1 ? 'נשארה פעילות אחת שלא סומנה.' : `נשארו ${props.leftCount} פעילויות שלא סומנו.`)
-              : 'אין עוד פעילויות להיום.'
-            : 'אפשר להוסיף מקום מלשונית מקומות, או לכתוב פעילות בתוכנית.'}
+              ? (props.leftCount === 1 ? t('נשארה פעילות אחת שלא סומנה.') : t('נשארו {n} פעילויות שלא סומנו.', { n: props.leftCount }))
+              : t('אין עוד פעילויות להיום.')
+            : t('אפשר להוסיף מקום מלשונית מקומות, או לכתוב פעילות בתוכנית.')}
         </p>
         <button className="link" onClick={props.onOpenDay}>
-          לתוכנית של היום <Icon as={ChevronLeft} className="flip-ltr" />
+          {t('לתוכנית של היום')} <Icon as={ChevronLeft} className="flip-ltr" />
         </button>
       </section>
     )
   const i = next.item
   return (
     <section className="card next-card">
-      <div className="next-label">הבא{next.time && ` · ${fmtUntil(minutesOf(next.time) - minutesOf(nowHM))}`}</div>
+      <div className="next-label">{t('הבא')}{next.time && ` · ${fmtUntil(minutesOf(next.time) - minutesOf(nowHM))}`}</div>
       {next.time && <div className="next-time">{next.time}</div>}
       <div className="next-title">
         <Icon as={next.icon} /> {next.title}
@@ -343,12 +344,12 @@ function NextCard(props: { next?: Entry; nowHM: string; hasPlan: boolean; leftCo
       {next.sub && <div className="muted">{next.sub}</div>}
       {next.location && (
         <a className="primary" href={navUrl(next.location)} target="_blank" rel="noreferrer">
-          <Icon as={Navigation} /> ניווט
+          <Icon as={Navigation} /> {t('ניווט')}
         </a>
       )}
       {i && (
         <button className="secondary" onClick={() => mutate(supabase.from('itinerary_items').update({ done: true }).eq('id', i.id))}>
-          <Icon as={Check} /> בוצע
+          <Icon as={Check} /> {t('בוצע')}
         </button>
       )}
     </section>
@@ -401,21 +402,21 @@ function BeforeTrip(props: {
     .filter((m) => m.n > 0)
   const noFlight = couples.filter((c) => !bookings.some((b) => b.kind === 'flight' && (!b.who || b.who === c)))
   const gaps = [
-    ...noFlight.map((c) => `אין טיסה ל${c}`),
-    ...(missing.length ? [`חסרה לינה: ${missing.map((m) => `${m.c} ${m.n} מתוך ${m.of} לילות`).join(' · ')}`] : []),
+    ...noFlight.map((c) => t('אין טיסה ל{who}', { who: t(c) })),
+    ...(missing.length ? [t('חסרה לינה: {list}', { list: missing.map((m) => t('{who} {n} מתוך {of} לילות', { who: t(m.c), n: m.n, of: m.of })).join(' · ') })] : []),
   ]
 
   if (!todo.length && !bookings.length && !gaps.length && !props.swipesLeft) return null
   return (
     <section className="card">
-      <h3>לפני הטיול</h3>
+      <h3>{t('לפני הטיול')}</h3>
       {todo.length > 0 && (
         <button className="todo-row" onClick={props.open}>
           <span className="tile orange"><Icon as={ListChecks} /></span>
           <span>
-            <b>{left ? (left === 1 ? 'משימה אחת לפני הטיסה' : `${left} משימות לפני הטיסה`) : 'כל המשימות הושלמו'}</b>
+            <b>{left ? (left === 1 ? t('משימה אחת לפני הטיסה') : t('{n} משימות לפני הטיסה', { n: left })) : t('כל המשימות הושלמו')}</b>
             <span className="muted small">
-              {todo.length - left}/{todo.length} הושלמו
+              {t('{done}/{total} הושלמו', { done: todo.length - left, total: todo.length })}
             </span>
           </span>
         </button>
@@ -426,19 +427,19 @@ function BeforeTrip(props: {
           <b className="count-chips">
             {counts.map(({ k, n }) => (
               <span key={k} className="count-chip">
-                <Icon as={BOOKING_ICON[k]} /> {n} {BOOKING_TABS[k]}
+                <Icon as={BOOKING_ICON[k]} /> {n} {n === 1 ? (k === 'activity' ? t('אטרקציה') : BOOKING_KINDS[k]) : BOOKING_TABS[k]}
               </span>
             ))}
           </b>
-          <span className="muted small">{gaps.length ? gaps.join(' · ') : 'טיסות ולינה סגורות'}</span>
+          <span className="muted small">{gaps.length ? gaps.join(' · ') : t('טיסות ולינה סגורות')}</span>
         </span>
       </div>
       {props.swipesLeft > 0 && (
         <div className="todo-row">
           <span className="tile red"><Icon as={Layers} /></span>
           <span>
-            <b>{props.swipesLeft === 1 ? 'עוד מקום אחד בגילוי' : `עוד ${props.swipesLeft} מקומות בגילוי`}</b>
-            <span className="muted small">כל לייק או דילוג משנה את המאצ׳ים</span>
+            <b>{props.swipesLeft === 1 ? t('עוד מקום אחד בגילוי') : t('עוד {n} מקומות בגילוי', { n: props.swipesLeft })}</b>
+            <span className="muted small">{t('כל לייק או דילוג משנה את המאצ׳ים')}</span>
           </span>
         </div>
       )}
@@ -454,7 +455,7 @@ function Settings(props: { trip: Trip; me: string; userId: string; onClose: () =
 
   const save = async () => {
     if (!Number.isInteger(numDays) || numDays < 1 || numDays > 60) {
-      alert('בחרו בין 1 ל-60 ימים')
+      alert(t('בחרו בין 1 ל-60 ימים'))
       return
     }
     const ok = await mutate(
@@ -473,52 +474,51 @@ function Settings(props: { trip: Trip; me: string; userId: string; onClose: () =
   }
 
   return (
-    <Sheet title="הגדרות טיול" onClose={props.onClose}>
-      <Field label="שם הטיול">
+    <Sheet title={t('הגדרות טיול')} onClose={props.onClose}>
+      <Field label={t('שם הטיול')}>
         <input value={name} onChange={(e) => setName(e.target.value)} />
       </Field>
-      <Field label="תאריך יום 1">
+      <Field label={t('תאריך יום 1')}>
         <input type="date" value={start} onChange={(e) => setStart(e.target.value)} />
       </Field>
-      <Field label="מספר ימים">
+      <Field label={t('מספר ימים')}>
         <input type="number" min={1} max={60} value={numDays} onChange={(e) => setNumDays(+e.target.value)} />
       </Field>
       <p className="muted small">
-        מאצ׳: כל זוג מצביע ביחד, ומספיק שאחד אוהב אם השני לא דילג. שואלים על מקום רק את הזוגות שישנים לידו, והוא נכנס
-        למסלול כשכולם אהבו.
+        {t('מאצ׳: כל זוג מצביע ביחד, ומספיק שאחד אוהב אם השני לא דילג. שואלים על מקום רק את הזוגות שישנים לידו, והוא נכנס למסלול כשכולם אהבו.')}
       </p>
-      <Field label="השם שלי">
+      <Field label={t('השם שלי')}>
         <input value={myName} onChange={(e) => setMyName(e.target.value)} />
       </Field>
-      <p className="muted small">זה השם שהאחרים רואים. ההתחברות נשארת עם השם המקורי.</p>
+      <p className="muted small">{t('זה השם שהאחרים רואים. ההתחברות נשארת עם השם המקורי.')}</p>
       <button className="primary" onClick={save}>
-        שמירה
+        {t('שמירה')}
       </button>
       <LangPicker />
       <ThemePicker />
       <button className="secondary" onClick={props.onReport}>
-        <Icon as={MessageSquareWarning} /> דיווח על בעיה או טעות
+        <Icon as={MessageSquareWarning} /> {t('דיווח על בעיה או טעות')}
       </button>
       <button className="link" onClick={props.onLeave}>
-        מעבר לטיול אחר / הצטרפות בקוד
+        {t('מעבר לטיול אחר / הצטרפות בקוד')}
       </button>
       <button
         className="secondary signout"
         onClick={() => {
           // this phone only: the others' devices, and this person's other devices, stay logged in
-          if (confirm('להתנתק מהטלפון הזה? כדי לחזור צריך שם וסיסמה.')) supabase.auth.signOut({ scope: 'local' })
+          if (confirm(t('להתנתק מהטלפון הזה? כדי לחזור צריך שם וסיסמה.'))) supabase.auth.signOut({ scope: 'local' })
         }}
       >
-        <Icon as={LogOutIcon} /> התנתקות
+        <Icon as={LogOutIcon} /> {t('התנתקות')}
       </button>
     </Sheet>
   )
 }
 
 const THEMES = [
-  { id: 'auto', label: 'כמו בטלפון', icon: SunMoon },
-  { id: 'light', label: 'בהיר', icon: Sun },
-  { id: 'dark', label: 'כהה', icon: Moon },
+  { id: 'auto', label: t('כמו בטלפון'), icon: SunMoon },
+  { id: 'light', label: t('בהיר'), icon: Sun },
+  { id: 'dark', label: t('כהה'), icon: Moon },
 ] as const
 
 /**
@@ -546,7 +546,7 @@ function ThemePicker() {
   }
   return (
     <div className="field">
-      <span id="theme-label">מראה</span>
+      <span id="theme-label">{t('מראה')}</span>
       <div className="segmented theme-picker" role="radiogroup" aria-labelledby="theme-label">
         {THEMES.map((t) => (
           <button key={t.id} role="radio" aria-checked={theme === t.id} className={theme === t.id ? 'on' : ''} onClick={() => pick(t.id)}>
@@ -562,7 +562,7 @@ function ThemePicker() {
 function LangPicker() {
   return (
     <div className="field">
-      <span id="lang-label">שפה · Language</span>
+      <span id="lang-label">שפה · Language</span> {/* he-only: each language names itself */}
       <div className="segmented" role="radiogroup" aria-labelledby="lang-label">
         {LANGS.map((l) => (
           <button key={l.id} role="radio" lang={l.id} aria-checked={lang === l.id} className={lang === l.id ? 'on' : ''} onClick={() => l.id !== lang && setLang(l.id)}>
@@ -580,7 +580,7 @@ const LANGS = [
 
 /** "יום אחד" / "יומיים" / "5 ימים" */
 function daysLabel(n: number) {
-  return n === 1 ? 'יום אחד' : n === 2 ? 'יומיים' : `${n} ימים`
+  return n === 1 ? t('יום אחד') : n === 2 ? t('יומיים') : t('{n} ימים', { n })
 }
 
 function useNow() {

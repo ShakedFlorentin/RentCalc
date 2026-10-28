@@ -6,14 +6,15 @@ import Essentials from './Essentials'
 import Baby from './Baby'
 import Say from './Say'
 import { Icon, type LucideIcon } from '../icons'
+import { isEn, t } from '../i18n'
 import { Baby as BabyIcon, Languages, ListChecks, ShieldAlert, Wallet } from 'lucide-react'
 
 export const MORE_TABS = [
-  { id: 'money', label: 'כסף', icon: Wallet },
-  { id: 'lists', label: 'רשימות', icon: ListChecks },
-  { id: 'info', label: 'חירום', icon: ShieldAlert },
-  { id: 'say', label: 'תרגום', icon: Languages },
-  { id: 'baby', label: 'תינוק', icon: BabyIcon },
+  { id: 'money', label: t('כסף'), icon: Wallet },
+  { id: 'lists', label: t('רשימות'), icon: ListChecks },
+  { id: 'info', label: t('חירום'), icon: ShieldAlert },
+  { id: 'say', label: t('תרגום'), icon: Languages },
+  { id: 'baby', label: t('תינוק'), icon: BabyIcon },
 ] as const satisfies readonly { id: string; label: string; icon: LucideIcon }[]
 export type MoreTab = (typeof MORE_TABS)[number]['id']
 
@@ -21,9 +22,11 @@ type Props = { trip: Trip; members: Member[]; userId: string; sub: MoreTab; setS
 
 /** The fourth-row tools: shared expenses, checklists, emergency info, talking in Japanese and the baby corner. */
 export default function More({ trip, members, userId, sub, setSub }: Props) {
-  // the tab pattern: one tab stop, arrows move between sections (in RTL the left arrow goes to the next one)
+  // the tab pattern: one tab stop, arrows move between sections (in RTL the left arrow goes to the next one, in LTR the right)
   const arrows = (e: KeyboardEvent<HTMLDivElement>) => {
-    const step = { ArrowLeft: 1, ArrowRight: -1, Home: -99, End: 99 }[e.key]
+    const fwd = isEn ? 'ArrowRight' : 'ArrowLeft'
+    const back = isEn ? 'ArrowLeft' : 'ArrowRight'
+    const step = { [fwd]: 1, [back]: -1, Home: -99, End: 99 }[e.key]
     if (!step) return
     e.preventDefault()
     const i = Math.min(MORE_TABS.length - 1, Math.max(0, MORE_TABS.findIndex((t) => t.id === sub) + step))
@@ -32,7 +35,7 @@ export default function More({ trip, members, userId, sub, setSub }: Props) {
   }
   return (
     <div className="stack">
-      <div className="more-tabs" role="tablist" aria-label="עוד" onKeyDown={arrows}>
+      <div className="more-tabs" role="tablist" aria-label={t('עוד')} onKeyDown={arrows}>
         {MORE_TABS.map((t) => (
           <button
             key={t.id}

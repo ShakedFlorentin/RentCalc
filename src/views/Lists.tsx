@@ -4,12 +4,13 @@ import { itemDone, type ChecklistItem, type Member } from '../types'
 import { couplesOf, mutate, useTripTable } from '../lib'
 import { Empty } from '../ui'
 import { Icon, type LucideIcon } from '../icons'
+import { t } from '../i18n'
 import { Check, ClipboardList, Luggage, Plus, ShoppingCart, Trash2 } from 'lucide-react'
 
 const LISTS: { id: string; label: string; icon: LucideIcon }[] = [
-  { id: 'todo', label: 'לפני הטיסה', icon: ClipboardList },
-  { id: 'packing', label: 'ציוד', icon: Luggage },
-  { id: 'shopping', label: 'לקנות ביפן', icon: ShoppingCart },
+  { id: 'todo', label: t('לפני הטיסה'), icon: ClipboardList },
+  { id: 'packing', label: t('ציוד'), icon: Luggage },
+  { id: 'shopping', label: t('לקנות ביפן'), icon: ShoppingCart },
 ]
 
 export default function Lists({ tripId, members, userId }: { tripId: string; members: Member[]; userId: string }) {
@@ -62,7 +63,7 @@ export default function Lists({ tripId, members, userId }: { tripId: string; mem
           </button>
         ))}
       </div>
-      {perCouple && myCouple && <p className="muted small">הציוד של {myCouple}. לכל זוג רשימה משלו.</p>}
+      {perCouple && myCouple && <p className="muted small">{t('הציוד של {who}. לכל זוג רשימה משלו.', { who: t(myCouple) })}</p>}
       {items.length > 0 && (
         <div className="progress">
           <div style={{ width: `${(doneCount / items.length) * 100}%` }} />
@@ -73,9 +74,9 @@ export default function Lists({ tripId, members, userId }: { tripId: string; mem
       )}
 
       <form className="add-row" onSubmit={add}>
-        <input value={text} onChange={(e) => setText(e.target.value)} placeholder="להוסיף…" />
-        <select value={assignee} onChange={(e) => setAssignee(e.target.value)} aria-label="אחראי">
-          <option value="">{perCouple ? 'שנינו' : 'כולם'}</option>
+        <input value={text} onChange={(e) => setText(e.target.value)} placeholder={t('להוסיף…')} />
+        <select value={assignee} onChange={(e) => setAssignee(e.target.value)} aria-label={t('אחראי')}>
+          <option value="">{perCouple ? t('שנינו') : t('כולם')}</option>
           {members
             .filter((m) => !perCouple || m.couple === myCouple)
             .map((m) => (
@@ -84,22 +85,22 @@ export default function Lists({ tripId, members, userId }: { tripId: string; mem
               </option>
             ))}
         </select>
-        <button className="primary" aria-label="הוספה"><Icon as={Plus} size="1.25em" /></button>
+        <button className="primary" aria-label={t('הוספה')}><Icon as={Plus} size="1.25em" /></button>
       </form>
       {!perCouple && couples.length > 1 && (
         <label className="small check-line">
-          <input type="checkbox" checked={each} onChange={(e) => setEach(e.target.checked)} /> כל זוג מסמן בנפרד (למשל טופס כניסה, ביטוח)
+          <input type="checkbox" checked={each} onChange={(e) => setEach(e.target.checked)} /> {t('כל זוג מסמן בנפרד (למשל טופס כניסה, ביטוח)')}
         </label>
       )}
 
-      {items.length === 0 && <Empty>הרשימה ריקה</Empty>}
+      {items.length === 0 && <Empty>{t('הרשימה ריקה')}</Empty>}
       {items.map((i) => {
         const isDone = done(i)
         return (
           <div key={i.id} className={'item card slim' + (isDone ? ' done' : '')}>
             <button
               className="check"
-              aria-label={isDone ? 'לבטל סימון' : 'לסמן כבוצע'}
+              aria-label={isDone ? t('לבטל סימון') : t('לסמן כבוצע')}
               aria-pressed={isDone}
               onClick={() => toggle(i)}
             >
@@ -112,8 +113,8 @@ export default function Lists({ tripId, members, userId }: { tripId: string; mem
                 <div className="muted small">
                   {couples.map((c) => (
                     <span key={c} className="couple-mark">
-                      {(i.done_couples ?? []).includes(c) && <Icon as={Check} />} {c === myCouple ? 'אנחנו' : c}
-                      {(i.done_couples ?? []).includes(c) ? '' : ': עוד לא'}
+                      {(i.done_couples ?? []).includes(c) && <Icon as={Check} />} {c === myCouple ? t('אנחנו') : t(c)}
+                      {(i.done_couples ?? []).includes(c) ? '' : t(': עוד לא')}
                     </span>
                   ))}
                 </div>
@@ -121,8 +122,8 @@ export default function Lists({ tripId, members, userId }: { tripId: string; mem
             </div>
             <button
               className="icon faint"
-              aria-label="מחיקה"
-              onClick={() => confirm(`למחוק את "${i.text}"?`) && mutate(supabase.from('checklist_items').delete().eq('id', i.id))}
+              aria-label={t('מחיקה')}
+              onClick={() => confirm(t('למחוק את "{text}"?', { text: i.text })) && mutate(supabase.from('checklist_items').delete().eq('id', i.id))}
             >
               <Icon as={Trash2} size="1.25em" />
             </button>

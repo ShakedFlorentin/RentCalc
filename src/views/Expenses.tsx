@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { supabase } from '../supabase'
 import type { Expense, Member, Trip } from '../types'
 import { couplesOf, fmtDay, mutate, useTripTable } from '../lib'
+import { t } from '../i18n'
 import { balances, convert, coupleTotals, fmtMoney, partiesOf, settleUp, toMinor, SYMBOL, type Cur, type Transfer } from '../money'
 import { Empty, Field, LoadNote, Sheet, useRemembered } from '../ui'
 import { Icon, type LucideIcon } from '../icons'
@@ -11,22 +12,21 @@ import '../styles/expenses.css'
 type Props = { trip: Trip; members: Member[]; userId: string }
 
 const CATS: Record<string, { label: string; icon: LucideIcon }> = {
-  food: { label: 'אוכל', icon: Utensils },
-  transport: { label: 'תחבורה', icon: TrainFront },
-  lodging: { label: 'לינה', icon: BedDouble },
-  sights: { label: 'אטרקציות', icon: Ticket },
-  shopping: { label: 'קניות', icon: ShoppingBag },
-  other: { label: 'אחר', icon: Package },
+  food: { label: t('אוכל'), icon: Utensils },
+  transport: { label: t('תחבורה'), icon: TrainFront },
+  lodging: { label: t('לינה'), icon: BedDouble },
+  sights: { label: t('אטרקציות'), icon: Ticket },
+  shopping: { label: t('קניות'), icon: ShoppingBag },
+  other: { label: t('אחר'), icon: Package },
 }
 const flip = (c: Cur): Cur => (c === 'JPY' ? 'ILS' : 'JPY')
 const iconOf = (e: Expense): LucideIcon => (e.kind === 'settlement' ? Handshake : (CATS[e.category ?? '']?.icon ?? Package))
 
+/** A name set apart from the text around it, so a Hebrew name inside an English line (or the reverse) keeps its order. */
+const iso = (name: string) => `\u2068${name}\u2069`
+
 /** Who paid whom, as it is said: "from Almog to Maor". */
-const FromTo = ({ from, to }: { from: string; to: string }) => (
-  <>
-    מ<bdi>{from}</bdi> ל<bdi>{to}</bdi>
-  </>
-)
+const FromTo = ({ from, to }: { from: string; to: string }) => <>{t('מ{from} ל{to}', { from: iso(from), to: iso(to) })}</>
 
 /** Today by the date in Japan, whatever timezone the phone is still set to. */
 const japanToday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tokyo' })
@@ -52,7 +52,10 @@ export default function Expenses({ trip, members, userId }: Props) {
   const rate = savedRate ?? (Number(trip.ils_per_jpy) || 0.025)
   const show: Cur = cur === 'JPY' ? 'JPY' : 'ILS'
 
-  const nameOf = (id: string) => members.find((m) => m.user_id === id)?.display_name ?? 'מישהו'
+  const nameOf = (id: string) => {
+    const name = members.find((m) => m.user_id === id)?.display_name
+    return name ? t(name) : t('מישהו')
+  }
   const couples = couplesOf(members)
   const ids = members.map((m) => m.user_id)
 
@@ -63,7 +66,10 @@ export default function Expenses({ trip, members, userId }: Props) {
   const parties = partiesOf(members, byCouple)
   const partyOf = (id: string) => parties.find((p) => p.ids.includes(id))
   const mineKey = partyOf(userId)?.key
-  const labelOf = (key: string) => parties.find((p) => p.key === key)?.label ?? 'מישהו'
+  const labelOf = (key: string) => {
+    const label = parties.find((p) => p.key === key)?.label
+    return label ? t(label) : t('מישהו')
+  }
   const transfers = settleUp(bal, parties, show)
   const toPay = transfers.filter((t) => t.from === mineKey)
   const toGet = transfers.filter((t) => t.to === mineKey)
@@ -81,13 +87,13 @@ export default function Expenses({ trip, members, userId }: Props) {
   /** Who a split is among, as people would say it. */
   const splitLabel = (split: string[]) => {
     const has = (list: string[]) => list.length === split.length && list.every((id) => split.includes(id))
-    if (has(ids)) return 'כולם'
+    if (has(ids)) return t('כולם')
     const couple = couples.find((c) => has(members.filter((m) => m.couple === c).map((m) => m.user_id)))
-    return couple ?? split.map(nameOf).join(', ')
+    return couple ? t(couple) : split.map(nameOf).join(', ')
   }
 
   // a repayment between couples is the couple's, whichever of the two handed over the money
-  const whoOf = (id: string) => (byCouple ? (partyOf(id)?.label ?? nameOf(id)) : nameOf(id))
+  const whoOf = (id: string) => (byCouple ? t(partyOf(id)?.label ?? nameOf(id)) : nameOf(id))
   const money = (minor: number, c: Cur = show) => <bdi dir="ltr">{fmtMoney(minor, c)}</bdi>
   /** A transfer between parties, recorded as one person paying another: someone from each side, preferably me. */
   const asPeople = (t: Transfer): Transfer => {
@@ -102,8 +108,8 @@ export default function Expenses({ trip, members, userId }: Props) {
     <div className="stack">
       <div className="card exp-hero">
         <div className="row spread nowrap">
-          <span className="muted small">{byCouple ? `היתרה של ${labelOf(mineKey ?? '')}` : 'היתרה שלך'}</span>
-          <div className="segmented exp-cur" role="group" aria-label="מטבע להצגה">
+          <span className="muted small">{byCouple ? t('היתרה של {name}', { name: iso(labelOf(mineKey ?? '')) }) : t('היתרה שלך')}</span>
+          <div className="segmented exp-cur" role="group" aria-label={t('מטבע להצגה')}>
             {(['JPY', 'ILS'] as const).map((c) => (
               <button key={c} className={show === c ? 'on' : ''} aria-pressed={show === c} onClick={() => setCur(c)}>
                 {SYMBOL[c]}
@@ -113,54 +119,56 @@ export default function Expenses({ trip, members, userId }: Props) {
         </div>
         <div className={'exp-big' + (owe ? ' minus' : owed ? ' plus' : '')}>
           {owe ? (
-            <>{we ? 'עליכם להחזיר' : 'עליך להחזיר'} {money(owe)}</>
+            <>{we ? t('עליכם להחזיר') : t('עליך להחזיר')} {money(owe)}</>
           ) : owed ? (
-            <>{we ? 'מגיע לכם' : 'מגיע לך'} {money(owed)}</>
+            <>{we ? t('מגיע לכם') : t('מגיע לך')} {money(owed)}</>
           ) : (
-            'הכול מאוזן'
+            t('הכול מאוזן')
           )}
         </div>
         {/* my own payments, each with its button: the one thing this screen is for */}
-        {[...toPay, ...toGet].map((t) => {
-          const paying = t.from === mineKey
+        {[...toPay, ...toGet].map((tr) => {
+          const paying = tr.from === mineKey
+          const other = iso(labelOf(paying ? tr.to : tr.from))
           return (
-            <div key={t.from + t.to} className="exp-transfer">
+            <div key={tr.from + tr.to} className="exp-transfer">
               <span className="exp-transfer-who">
-                <span>{paying ? 'ל' : 'מ'}<bdi>{labelOf(paying ? t.to : t.from)}</bdi></span>
-                <b className="exp-num">{money(t.amount)}</b>
+                <span>{paying ? t('ל{name}', { name: other }) : t('מ{name}', { name: other })}</span>
+                <b className="exp-num">{money(tr.amount)}</b>
               </span>
-              <button className="pill" onClick={() => setSettle({ t: asPeople(t) })}>
-                <Icon as={Check} /> {paying ? (we ? 'החזרנו' : 'החזרתי') : (we ? 'קיבלנו' : 'קיבלתי')}
+              <button className="pill" onClick={() => setSettle({ t: asPeople(tr) })}>
+                <Icon as={Check} />{' '}
+                {paying ? (we ? t('החזרנו') : t('החזרתי')) : (we ? t('קיבלנו') : t('קיבלתי'))}
               </button>
             </div>
           )
         })}
         <div className="muted small exp-rate">
-          שער: 100 ין = <bdi dir="ltr">₪{Number((rate * 100).toFixed(3))}</bdi>{' '}
+          {t('שער: 100 ין =')} <bdi dir="ltr">₪{Number((rate * 100).toFixed(3))}</bdi>{' '}
           <button className="link exp-link" onClick={() => setEditingRate(true)}>
-            עריכה
+            {t('עריכה')}
           </button>
         </div>
       </div>
 
       {error && <LoadNote onRetry={reload} />}
       {!loading && !error && rows.length === 0 && (
-        <Empty>עוד אין הוצאות. מוסיפים הוצאה, בוחרים מי שילם ובין מי מחלקים, וכאן רואים מי חייב למי.</Empty>
+        <Empty>{t('עוד אין הוצאות. מוסיפים הוצאה, בוחרים מי שילם ובין מי מחלקים, וכאן רואים מי חייב למי.')}</Empty>
       )}
 
       {others.length > 0 && (
         <div className="card">
-          <h3 className="exp-h">החזרים בין האחרים</h3>
-          {others.map((t) => (
-            <div key={t.from + t.to} className="exp-transfer">
+          <h3 className="exp-h">{t('החזרים בין האחרים')}</h3>
+          {others.map((tr) => (
+            <div key={tr.from + tr.to} className="exp-transfer">
               <span className="exp-transfer-who">
                 <span>
-                  מ<bdi>{labelOf(t.from)}</bdi> ל<bdi>{labelOf(t.to)}</bdi>
+                  <FromTo from={labelOf(tr.from)} to={labelOf(tr.to)} />
                 </span>
-                <b className="exp-num">{money(t.amount)}</b>
+                <b className="exp-num">{money(tr.amount)}</b>
               </span>
-              <button className="link exp-link" onClick={() => setSettle({ t: asPeople(t) })}>
-                הוחזר
+              <button className="link exp-link" onClick={() => setSettle({ t: asPeople(tr) })}>
+                {t('הוחזר')}
               </button>
             </div>
           ))}
@@ -170,14 +178,14 @@ export default function Expenses({ trip, members, userId }: Props) {
       {rows.length > 0 && (
         <details className="card tip exp-details">
           <summary>
-            <span>{byCouple ? 'כמה כל זוג שילם' : 'היתרה של כל אחד'}</span>
+            <span>{byCouple ? t('כמה כל זוג שילם') : t('היתרה של כל אחד')}</span>
           </summary>
           <div className="exp-details-body">
             {byCouple
               ? couples.map((c) => (
-                  <Balance key={c} name={c} net={totals[c]?.net ?? 0} note={`שילמו ${fmtMoney(totals[c]?.paid ?? 0, show)}`} cur={show} />
+                  <Balance key={c} name={t(c)} net={totals[c]?.net ?? 0} note={t('שילמו {amount}', { amount: fmtMoney(totals[c]?.paid ?? 0, show) })} cur={show} />
                 ))
-              : members.map((m) => <Balance key={m.user_id} name={m.display_name} net={bal[m.user_id] ?? 0} cur={show} />)}
+              : members.map((m) => <Balance key={m.user_id} name={t(m.display_name)} net={bal[m.user_id] ?? 0} cur={show} />)}
           </div>
         </details>
       )}
@@ -199,14 +207,12 @@ export default function Expenses({ trip, members, userId }: Props) {
                     <Icon as={iconOf(e)} size="1.25em" />
                   </span>
                   <span className="exp-main">
-                    <b>{settlement ? 'החזר' : e.title}</b>
+                    <b>{settlement ? t('החזר') : e.title}</b>
                     <span className="muted small">
                       {settlement ? (
                         <FromTo from={whoOf(e.paid_by)} to={whoOf(e.split_among[0])} />
                       ) : (
-                        <>
-                          שולם ע״י {nameOf(e.paid_by)} · בין: {splitLabel(e.split_among)}
-                        </>
+                        <>{t('שולם ע״י {name} · בין: {split}', { name: nameOf(e.paid_by), split: splitLabel(e.split_among) })}</>
                       )}
                     </span>
                   </span>
@@ -224,7 +230,7 @@ export default function Expenses({ trip, members, userId }: Props) {
         </div>
       ))}
 
-      <button className="fab" aria-label="הוצאה חדשה" onClick={() => setEdit({})}>
+      <button className="fab" aria-label={t('הוצאה חדשה')} onClick={() => setEdit({})}>
         <Icon as={Plus} size="1.5em" />
       </button>
       {edit && <ExpenseForm trip={trip} members={members} couples={couples} userId={userId} expense={edit} onClose={() => setEdit(null)} />}
@@ -290,18 +296,18 @@ function ExpenseForm(props: {
   const all = members.map((m) => m.user_id)
   const same = (a: string[], b: string[]) => a.length === b.length && a.every((id) => b.includes(id))
   const quick = [
-    { label: 'כולם', couple: false, ids: all },
+    { label: t('כולם'), couple: false, ids: all },
     ...(couples.length > 1
-      ? couples.map((c) => ({ label: c, couple: true, ids: members.filter((m) => m.couple === c).map((m) => m.user_id) }))
+      ? couples.map((c) => ({ label: t(c), couple: true, ids: members.filter((m) => m.couple === c).map((m) => m.user_id) }))
       : []),
-    { label: 'רק אני', couple: false, ids: [userId] },
+    { label: t('רק אני'), couple: false, ids: [userId] },
   ]
   const toggle = (id: string) => setSplit(split.includes(id) ? split.filter((s) => s !== id) : [...split, id])
 
   const save = async () => {
     const n = roundFor(parseAmount(amount), currency)
-    if (!(n > 0)) return setErr('צריך סכום גדול מאפס')
-    if (!split.length) return setErr('בחרו לפחות אדם אחד')
+    if (!(n > 0)) return setErr(t('צריך סכום גדול מאפס'))
+    if (!split.length) return setErr(t('בחרו לפחות אדם אחד'))
     setErr('')
     setBusy(true)
     const row = {
@@ -328,8 +334,11 @@ function ExpenseForm(props: {
         .eq('spent_on', row.spent_on)
         .limit(1)
         .maybeSingle()
-      const by = members.find((m) => m.user_id === twin?.created_by)?.display_name
-      if (twin && !confirm(`כבר יש הוצאה "${twin.title}" באותו סכום וביום${by ? `, נרשמה על ידי ${by}` : ''}. לרשום שוב?`)) {
+      const by = t(members.find((m) => m.user_id === twin?.created_by)?.display_name ?? '')
+      const ask = by
+        ? t('כבר יש הוצאה "{title}" באותו סכום וביום, נרשמה על ידי {by}. לרשום שוב?', { title: twin?.title ?? '', by })
+        : t('כבר יש הוצאה "{title}" באותו סכום וביום. לרשום שוב?', { title: twin?.title ?? '' })
+      if (twin && !confirm(ask)) {
         setBusy(false)
         return
       }
@@ -344,14 +353,14 @@ function ExpenseForm(props: {
   }
 
   const remove = async () => {
-    if (!x.id || !confirm(`למחוק את "${x.title}"?`)) return
+    if (!x.id || !confirm(t('למחוק את "{title}"?', { title: x.title ?? '' }))) return
     if (await mutate(supabase.from('expenses').delete().eq('id', x.id))) props.onClose()
   }
 
   return (
-    <Sheet title={x.id ? 'עריכת הוצאה' : 'הוצאה חדשה'} onClose={props.onClose}>
+    <Sheet title={x.id ? t('עריכת הוצאה') : t('הוצאה חדשה')} onClose={props.onClose}>
       <div className="exp-amount">
-        <Field label="סכום">
+        <Field label={t('סכום')}>
           <input
             inputMode="decimal"
             value={amount}
@@ -361,7 +370,7 @@ function ExpenseForm(props: {
             autoFocus={!x.id}
           />
         </Field>
-        <div className="segmented exp-cur" role="group" aria-label="מטבע">
+        <div className="segmented exp-cur" role="group" aria-label={t('מטבע')}>
           {(['JPY', 'ILS'] as const).map((c) => (
             <button key={c} className={currency === c ? 'on' : ''} aria-pressed={currency === c} onClick={() => setCurrency(c)}>
               {SYMBOL[c]}
@@ -369,8 +378,8 @@ function ExpenseForm(props: {
           ))}
         </div>
       </div>
-      <Field label="על מה">
-        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="למשל: ראמן בשינג׳וקו" />
+      <Field label={t('על מה')}>
+        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('למשל: ראמן בשינג׳וקו')} />
       </Field>
       <div className="chips">
         {Object.entries(CATS).map(([k, v]) => (
@@ -379,18 +388,18 @@ function ExpenseForm(props: {
           </button>
         ))}
       </div>
-      <Field label="מי שילם">
+      <Field label={t('מי שילם')}>
         <select value={paidBy} onChange={(e) => setPaidBy(e.target.value)}>
           {members.map((m) => (
             <option key={m.user_id} value={m.user_id}>
               {m.display_name}
-              {m.user_id === userId ? ' (אני)' : ''}
+              {m.user_id === userId ? ` ${t('(אני)')}` : ''}
             </option>
           ))}
         </select>
       </Field>
       <div className="field">
-        <span>מחלקים בין</span>
+        <span>{t('מחלקים בין')}</span>
         <div className="chips">
           {quick.map((q) => (
             <button key={q.label} className={'chip' + (same(split, q.ids) ? ' on' : '')} onClick={() => setSplit(q.ids)}>
@@ -411,16 +420,16 @@ function ExpenseForm(props: {
           ))}
         </div>
       </div>
-      <Field label="תאריך">
+      <Field label={t('תאריך')}>
         <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
       </Field>
       {err && <p className="msg" role="alert">{err}</p>}
       <button className="primary" onClick={save} disabled={busy}>
-        {busy ? 'שומר…' : 'שמירה'}
+        {busy ? t('שומר…') : t('שמירה')}
       </button>
       {x.id && (
         <button className="danger" onClick={remove}>
-          מחיקה
+          {t('מחיקה')}
         </button>
       )}
     </Sheet>
@@ -437,14 +446,14 @@ function SettleSheet(props: {
   cur: Cur
   onClose: () => void
 }) {
-  const { t, row, cur } = props
-  const [amount, setAmount] = useState(String(t.amount / (cur === 'JPY' ? 1 : 100)))
+  const { t: tr, row, cur } = props
+  const [amount, setAmount] = useState(String(tr.amount / (cur === 'JPY' ? 1 : 100)))
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
 
   const save = async () => {
     const n = roundFor(parseAmount(amount), cur)
-    if (!(n > 0)) return setErr('צריך סכום גדול מאפס')
+    if (!(n > 0)) return setErr(t('צריך סכום גדול מאפס'))
     setBusy(true)
     const fields = { amount: n }
     const ok = await mutate(
@@ -454,10 +463,10 @@ function SettleSheet(props: {
             ...fields,
             trip_id: props.trip.id,
             kind: 'settlement',
-            title: 'החזר',
+            title: 'החזר', // he-only
             currency: cur,
-            paid_by: t.from,
-            split_among: [t.to],
+            paid_by: tr.from,
+            split_among: [tr.to],
             spent_on: japanToday(),
             created_by: props.userId,
           }),
@@ -467,26 +476,26 @@ function SettleSheet(props: {
   }
 
   const remove = async () => {
-    if (row && confirm('למחוק את ההחזר?') && (await mutate(supabase.from('expenses').delete().eq('id', row.id)))) props.onClose()
+    if (row && confirm(t('למחוק את ההחזר?')) && (await mutate(supabase.from('expenses').delete().eq('id', row.id)))) props.onClose()
   }
 
   return (
-    <Sheet title={row ? 'עריכת החזר' : 'רישום החזר'} onClose={props.onClose}>
+    <Sheet title={row ? t('עריכת החזר') : t('רישום החזר')} onClose={props.onClose}>
       <p className="exp-settle-who">
         <b>
-          <FromTo from={props.nameOf(t.from)} to={props.nameOf(t.to)} />
+          <FromTo from={props.nameOf(tr.from)} to={props.nameOf(tr.to)} />
         </b>
       </p>
-      <Field label={`כמה הוחזר (${SYMBOL[cur]})`}>
+      <Field label={t('כמה הוחזר ({cur})', { cur: SYMBOL[cur] })}>
         <input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} dir="ltr" />
       </Field>
       {err && <p className="msg" role="alert">{err}</p>}
       <button className="primary" onClick={save} disabled={busy}>
-        {busy ? 'שומר…' : row ? 'שמירה' : 'רישום ההחזר'}
+        {busy ? t('שומר…') : row ? t('שמירה') : t('רישום ההחזר')}
       </button>
       {row && (
         <button className="danger" onClick={remove}>
-          מחיקה
+          {t('מחיקה')}
         </button>
       )}
     </Sheet>
@@ -501,7 +510,7 @@ function RateSheet(props: { tripId: string; rate: number; onSaved: (r: number) =
   const save = async () => {
     const n = parseAmount(v)
     // 100 yen has been worth between one and five shekels for decades; anything far outside is a typo
-    if (!(n >= 0.5 && n <= 20)) return setErr('השער לא נראה הגיוני. 100 ין זה בערך 2.5 שקלים')
+    if (!(n >= 0.5 && n <= 20)) return setErr(t('השער לא נראה הגיוני. 100 ין זה בערך 2.5 שקלים'))
     const rate = Math.round((n / 100) * 1e6) / 1e6
     if (await mutate(supabase.from('trips').update({ ils_per_jpy: rate }).eq('id', props.tripId))) {
       props.onSaved(rate)
@@ -510,14 +519,14 @@ function RateSheet(props: { tripId: string; rate: number; onSaved: (r: number) =
   }
 
   return (
-    <Sheet title="שער החליפין" onClose={props.onClose}>
-      <p className="muted small">כמה שקלים שווים 100 ין. אותו שער לכולם, וכל ההמרות במסך לפיו.</p>
-      <Field label="שקלים ל־100 ין">
+    <Sheet title={t('שער החליפין')} onClose={props.onClose}>
+      <p className="muted small">{t('כמה שקלים שווים 100 ין. אותו שער לכולם, וכל ההמרות במסך לפיו.')}</p>
+      <Field label={t('שקלים ל־100 ין')}>
         <input inputMode="decimal" value={v} onChange={(e) => setV(e.target.value)} dir="ltr" />
       </Field>
       {err && <p className="msg" role="alert">{err}</p>}
       <button className="primary" onClick={save}>
-        שמירה
+        {t('שמירה')}
       </button>
     </Sheet>
   )

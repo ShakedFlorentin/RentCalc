@@ -18,3 +18,6 @@ html[dir='ltr'] .left-count { direction: ltr; }
 html[dir='ltr'] :is(h2, h3, p, div, b, span)[dir="auto"]:not(.show-sub, .show-small, .turn-heard, .turn-text, .turn-back) { text-align: left; }
 html[dir='ltr'] .phrase-ja, html[dir='ltr'] .phrase-ro { text-align: left; }
 html[dir='ltr'] .voice-report { direction: ltr; text-align: left; }
+
+/* a time before the title: the gap goes after it (the Hebrew layout puts it before, see plan.css) */
+html[dir='ltr'] :is(.item-title, .next-label) .time { margin-inline-start: 0; margin-inline-end: 8px; }

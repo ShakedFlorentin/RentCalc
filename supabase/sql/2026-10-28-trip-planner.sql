@@ -194,3 +194,10 @@ $$;
 revoke execute on function public.item_address() from public, anon, authenticated;
 create trigger itinerary_item_address before insert or update of place_id on public.itinerary_items
   for each row execute function public.item_address();
+
+-- ---- card_english (same day, last) ----
+-- en jsonb on place_library and candidates (the card's English text), notes_en on itinerary_items (the planner's
+-- English note). sync_library inserts en with a new copy and refreshes it on old ones
+-- (update candidates set en = l.en ... where c.library_id = l.id and l.en is not null and c.en is distinct from l.en);
+-- fill_plan_facts also sets new.en := coalesce(new.en, l.en). Loaded from data/card-text-en-2026-10.json
+-- ([{t, id, en}]) with the same http_get + jsonb_to_recordset recipe as the facts.

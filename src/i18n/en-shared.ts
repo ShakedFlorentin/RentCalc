@@ -1,5 +1,5 @@
 // English for words the database keeps in Hebrew and several screens show: city names (day_info.city,
-// places.city, CITY_HE), shown through cityLabel() / t().
+// places.city, CITY_HE), shown through cityLabel() / t(), and the group's first names (display names, added_by).
 export const EN_SHARED: Record<string, string> = {
   'טוקיו': 'Tokyo',
   'קיוטו': 'Kyoto',
@@ -14,4 +14,9 @@ export const EN_SHARED: Record<string, string> = {
   'טיול יום': 'Day trip',
   'טיולי יום': 'Day trips',
   'אחר': 'Other',
+  'שקד': 'Shaked',
+  'מאור': 'Maor',
+  'אלמוג': 'Almog',
+  'שניר': 'Snir',
+  'אטרקציה': 'Attraction',
 }

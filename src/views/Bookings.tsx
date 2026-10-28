@@ -5,6 +5,7 @@ import { BOOKING_KINDS, BOOKING_TABS, TOGETHER, type Booking, type Member, type 
 import { aiError, couplesOf, errorText, normName, fmtDateTime, fromInputDateTime, mapsUrl, mutate, replan, safeUrl, toInputDateTime, useTripTable } from '../lib'
 import { Empty, Field, LoadNote, Sheet, Tabs, useRemembered } from '../ui'
 import { BOOKING_ICON, Icon } from '../icons'
+import { isEn, t } from '../i18n'
 
 type Props = { trip: Trip; members: Member[]; userId: string }
 
@@ -31,35 +32,37 @@ export default function Bookings({ trip, members, userId }: Props) {
   return (
     <div className="stack">
       <Tabs
-        label="סוג הזמנה"
+        label={t('סוג הזמנה')}
         tabs={Object.fromEntries(tabs.map((k) => [k, { label: BOOKING_TABS[k], icon: BOOKING_ICON[k] }]))}
         current={current}
         counts={Object.fromEntries(tabs.map((k) => [k, count(k)]))}
         onPick={pick}
       />
       <button className="secondary" onClick={() => setImporting(true)}>
-        <Icon as={Mail} /> הוספה מאישור הזמנה
+        <Icon as={Mail} /> {t('הוספה מאישור הזמנה')}
       </button>
       {couples.length > 1 && (
         <div className="chips scroll">
           <button className={'chip' + (!whose ? ' on' : '')} onClick={() => setWhose('')}>
-            הכל
+            {t('הכל')}
           </button>
           {couples.map((c) => (
             <button key={c} className={'chip' + (whose === c ? ' on' : '')} onClick={() => setWhose(c)}>
-              {c}
+              {t(c)}
             </button>
           ))}
           <button className={'chip' + (whose === 'group' ? ' on' : '')} onClick={() => setWhose('group')}>
-            <Icon as={Users} /> של כולם
+            <Icon as={Users} /> {t('של כולם')}
           </button>
         </div>
       )}
       {error && <LoadNote onRetry={reload} />}
       {!loading && !error && items.length === 0 && (
         <Empty>
-          אין {BOOKING_TABS[current]}
-          {whose && ' בסינון הזה'}. אפשר להוסיף מאישור הזמנה או ידנית.
+          {isEn && current === 'other'
+            ? t('אין הזמנות אחרות')
+            : t('אין {kind}', { kind: isEn ? BOOKING_TABS[current].toLowerCase() : BOOKING_TABS[current] })}
+          {whose && ' ' + t('בסינון הזה')}. {t('אפשר להוסיף מאישור הזמנה או ידנית.')}
         </Empty>
       )}
       <div className="stack">
@@ -76,29 +79,29 @@ export default function Bookings({ trip, members, userId }: Props) {
                   </span>
                 </div>
                 {couples.length > 1 && (
-                  <div className={'who-tag' + (b.who ? ' apart' : '')}>{b.who ?? <WhoAll />}</div>
+                  <div className={'who-tag' + (b.who ? ' apart' : '')}>{b.who ? t(b.who) : <WhoAll />}</div>
                 )}
                 {b.starts_at && (
                   <div className="muted small">
                     {fmtDateTime(b.starts_at)}
-                    {b.ends_at && ` ← ${fmtDateTime(b.ends_at)}`}
+                    {b.ends_at && ` ${isEn ? '→' : '←'} ${fmtDateTime(b.ends_at)}`}
                   </div>
                 )}
                 {b.confirmation && (
                   <div className="small">
-                    אישור: <b className="code" dir="ltr">{b.confirmation}</b>
+                    {t('אישור:')} <b className="code" dir="ltr">{b.confirmation}</b>
                   </div>
                 )}
                 {(b.location || safeUrl(b.url) || b.file_path) && (
                 <div className="row" onClick={(e) => e.stopPropagation()}>
                   {b.location && (
                     <a className="pill" href={mapsUrl(b.location)} target="_blank" rel="noreferrer">
-                      <Icon as={MapIcon} /> מפה
+                      <Icon as={MapIcon} /> {t('מפה')}
                     </a>
                   )}
                   {safeUrl(b.url) && (
                     <a className="pill" href={safeUrl(b.url)} target="_blank" rel="noreferrer">
-                      <Icon as={LinkIcon} /> קישור
+                      <Icon as={LinkIcon} /> {t('קישור')}
                     </a>
                   )}
                   {b.file_path && <DocButtons path={b.file_path} />}
@@ -108,7 +111,7 @@ export default function Bookings({ trip, members, userId }: Props) {
           </Fragment>
         ))}
       </div>
-      <button className="fab" aria-label="הזמנה חדשה" onClick={() => setEdit({ kind: current, who: myCouple })}>
+      <button className="fab" aria-label={t('הזמנה חדשה')} onClick={() => setEdit({ kind: current, who: myCouple })}>
         <Plus size={28} strokeWidth={2} aria-hidden="true" />
       </button>
       {edit && (
@@ -167,7 +170,7 @@ async function openFile(path: string) {
   const { data, error } = await supabase.storage.from('docs').createSignedUrl(path, 600)
   if (error || !data) {
     win?.close()
-    alert(navigator.onLine ? 'אי אפשר לפתוח את הקובץ' : 'אין חיבור, והמסמך לא שמור לאופליין')
+    alert(navigator.onLine ? t('אי אפשר לפתוח את הקובץ') : t('אין חיבור, והמסמך לא שמור לאופליין'))
   } else go(data.signedUrl)
 }
 
@@ -200,18 +203,18 @@ function DocButtons({ path }: { path: string }) {
   return (
     <>
       <button className="pill" onClick={() => openFile(path)}>
-        <Icon as={Paperclip} /> מסמך
+        <Icon as={Paperclip} /> {t('מסמך')}
         {/* saved on the phone: a tick inside the button rather than a line of its own that pushed the row onto two lines */}
-        {saved && <Icon as={Check} label="שמור בטלפון, נפתח גם בלי אינטרנט" />}
+        {saved && <Icon as={Check} label={t('שמור בטלפון, נפתח גם בלי אינטרנט')} />}
       </button>
       {saved ? null : (
         saved === false && (
           <button className="pill" disabled={busy} onClick={save}>
             {busy ? (
-              'שומר…'
+              t('שומר…')
             ) : (
               <>
-                <Icon as={Download} /> שמירה לאופליין
+                <Icon as={Download} /> {t('שמירה לאופליין')}
               </>
             )}
           </button>
@@ -259,15 +262,15 @@ function BookingForm(props: {
       const res = await supabase.functions.invoke('parse-booking', {
         body: { text: '', file: { data: await toBase64(file), media_type: file.type } },
       })
-      if (res.error) setReadNote(await aiError(res.error, 'לא הצלחתי לקרוא את הקובץ. אפשר למלא ידנית.'))
+      if (res.error) setReadNote(await aiError(res.error, t('לא הצלחתי לקרוא את הקובץ. אפשר למלא ידנית.')))
       data = res.data
     } catch {
-      setReadNote('לא הצלחתי לקרוא את הקובץ. אפשר למלא ידנית.')
+      setReadNote(t('לא הצלחתי לקרוא את הקובץ. אפשר למלא ידנית.'))
     }
     setReading(false)
     const found = data?.bookings ?? []
     if (!found.length) {
-      if (data) setReadNote('לא מצאתי הזמנה בקובץ הזה. אפשר למלא ידנית.')
+      if (data) setReadNote(t('לא מצאתי הזמנה בקובץ הזה. אפשר למלא ידנית.'))
       return
     }
     const b = found[0]
@@ -284,8 +287,8 @@ function BookingForm(props: {
     }))
     setReadNote(
       found.length > 1
-        ? `מילאתי את הראשונה מתוך ${found.length} ההזמנות בקובץ. בדקו ושמרו, או הוסיפו את כולן דרך "הוספה מאישור הזמנה".`
-        : 'מילאתי את הפרטים מהקובץ. בדקו ושמרו.',
+        ? t('מילאתי את הראשונה מתוך {n} ההזמנות בקובץ. בדקו ושמרו, או הוסיפו את כולן דרך "הוספה מאישור הזמנה".', { n: found.length })
+        : t('מילאתי את הפרטים מהקובץ. בדקו ושמרו.'),
     )
   }
   const set = (k: keyof Booking) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value })
@@ -299,7 +302,7 @@ function BookingForm(props: {
       const path = `${tripId}/${crypto.randomUUID()}.${ext}`
       const { error } = await supabase.storage.from('docs').upload(path, file, { contentType: file.type })
       if (error) {
-        alert('העלאת הקובץ נכשלה: ' + error.message)
+        alert(t('העלאת הקובץ נכשלה: {msg}', { msg: error.message }))
         setBusy(false)
         return
       }
@@ -320,8 +323,8 @@ function BookingForm(props: {
     }
     const { error } = await (f.id ? supabase.from('bookings').update(row).eq('id', f.id) : supabase.from('bookings').insert(row))
     const ok = !error
-    if (error?.code === '23505') alert('כבר יש הזמנה כזו: אותו מספר אישור באותה שעה, או אותו שם, שעה וזוג.')
-    else if (error) alert('שגיאה: ' + error.message)
+    if (error?.code === '23505') alert(t('כבר יש הזמנה כזו: אותו מספר אישור באותה שעה, או אותו שם, שעה וזוג.'))
+    else if (error) alert(t('שגיאה: {msg}', { msg: error.message }))
     if (ok) {
       // the old attachment goes only once the row points at the new one
       if (file && f.file_path && f.id) await removeDocIfUnused(tripId, f.file_path, f.id)
@@ -333,7 +336,7 @@ function BookingForm(props: {
   }
 
   const remove = async () => {
-    if (!f.id || !confirm('למחוק את ההזמנה?')) return
+    if (!f.id || !confirm(t('למחוק את ההזמנה?'))) return
     if (!(await mutate(supabase.from('bookings').delete().eq('id', f.id)))) return
     // the database announces new and changed bookings to the planner, not deleted ones
     replan(tripId)
@@ -342,13 +345,13 @@ function BookingForm(props: {
   }
 
   return (
-    <Sheet title={f.id ? 'עריכת הזמנה' : 'הזמנה חדשה'} onClose={props.onClose}>
+    <Sheet title={f.id ? t('עריכת הזמנה') : t('הזמנה חדשה')} onClose={props.onClose}>
       {!f.id && (
         <button className="secondary" onClick={props.onImport}>
-          <Icon as={Mail} /> יש אישור הזמנה? מוסיפים אוטומטית מקובץ או ממייל
+          <Icon as={Mail} /> {t('יש אישור הזמנה? מוסיפים אוטומטית מקובץ או ממייל')}
         </button>
       )}
-      <Field label="סוג">
+      <Field label={t('סוג')}>
         <select value={f.kind} onChange={set('kind')}>
           {Object.entries(BOOKING_KINDS).map(([k, v]) => (
             <option key={k} value={k}>
@@ -358,41 +361,41 @@ function BookingForm(props: {
         </select>
       </Field>
       {props.couples.length > 1 && <WhoField value={f.who ?? ''} couples={props.couples} onChange={(who) => setF({ ...f, who })} />}
-      <Field label="כותרת">
-        <input value={f.title ?? ''} onChange={set('title')} placeholder="למשל: אל על TLV → NRT" />
+      <Field label={t('כותרת')}>
+        <input value={f.title ?? ''} onChange={set('title')} placeholder={t('למשל: אל על TLV → NRT')} />
       </Field>
-      <Field label="התחלה / צ׳ק-אין / המראה">
+      <Field label={t('התחלה / צ׳ק-אין / המראה')}>
         <input
           type="datetime-local"
           value={toInputDateTime(f.starts_at ?? null)}
           onChange={(e) => setF({ ...f, starts_at: fromInputDateTime(e.target.value) })}
         />
       </Field>
-      <Field label="סיום / צ׳ק-אאוט / נחיתה">
+      <Field label={t('סיום / צ׳ק-אאוט / נחיתה')}>
         <input
           type="datetime-local"
           value={toInputDateTime(f.ends_at ?? null)}
           onChange={(e) => setF({ ...f, ends_at: fromInputDateTime(e.target.value) })}
         />
       </Field>
-      <Field label="מספר אישור">
+      <Field label={t('מספר אישור')}>
         <input value={f.confirmation ?? ''} onChange={set('confirmation')} dir="ltr" />
       </Field>
-      <Field label="כתובת / מיקום">
+      <Field label={t('כתובת / מיקום')}>
         <input value={f.location ?? ''} onChange={set('location')} dir="auto" />
       </Field>
-      <Field label="קישור">
+      <Field label={t('קישור')}>
         <input type="url" value={f.url ?? ''} onChange={set('url')} dir="ltr" />
       </Field>
-      <Field label="הערות">
+      <Field label={t('הערות')}>
         <textarea value={f.notes ?? ''} onChange={set('notes')} rows={3} />
       </Field>
-      <Field label={f.file_path ? 'החלפת מסמך (PDF / תמונה)' : 'מסמך מצורף (PDF / תמונה)'}>
+      <Field label={f.file_path ? t('החלפת מסמך (PDF / תמונה)') : t('מסמך מצורף (PDF / תמונה)')}>
         <input type="file" accept="application/pdf,image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
       </Field>
       {file && (
         <button className="secondary" onClick={readFile} disabled={reading}>
-          <Icon as={Wand2} /> {reading ? 'קורא את הקובץ…' : 'קריאת הקובץ ומילוי הפרטים'}
+          <Icon as={Wand2} /> {reading ? t('קורא את הקובץ…') : t('קריאת הקובץ ומילוי הפרטים')}
         </button>
       )}
       {readNote && (
@@ -401,11 +404,11 @@ function BookingForm(props: {
         </p>
       )}
       <button className="primary" onClick={save} disabled={busy || !f.title?.trim()}>
-        {busy ? 'שומר…' : 'שמירה'}
+        {busy ? t('שומר…') : t('שמירה')}
       </button>
       {f.id && (
         <button className="danger" onClick={remove}>
-          מחיקה
+          {t('מחיקה')}
         </button>
       )}
     </Sheet>
@@ -447,13 +450,13 @@ function ImportSheet(props: { trip: Trip; couples: string[]; myCouple: string | 
     try {
       if (file) payload.file = { data: await toBase64(file), media_type: file.type }
     } catch {
-      setErr('לא הצלחתי לקרוא את הקובץ. אפשר לנסות קובץ אחר או להדביק את הטקסט.')
+      setErr(t('לא הצלחתי לקרוא את הקובץ. אפשר לנסות קובץ אחר או להדביק את הטקסט.'))
       setBusy(false)
       return
     }
     const { data, error } = await supabase.functions.invoke('parse-booking', { body: payload })
     if (error || !data?.bookings) {
-      setErr(await aiError(error, 'לא הצלחתי לקרוא את האישור. אפשר לנסות שוב או להוסיף ידנית.'))
+      setErr(await aiError(error, t('לא הצלחתי לקרוא את האישור. אפשר לנסות שוב או להוסיף ידנית.')))
       setBusy(false)
       return
     }
@@ -465,7 +468,7 @@ function ImportSheet(props: { trip: Trip; couples: string[]; myCouple: string | 
       who: who || null,
     }))
     if (!bookings.length) {
-      setErr('לא מצאתי הזמנה בטקסט הזה.')
+      setErr(t('לא מצאתי הזמנה בטקסט הזה.'))
       setBusy(false)
       return
     }
@@ -494,7 +497,7 @@ function ImportSheet(props: { trip: Trip; couples: string[]; myCouple: string | 
     for (const b of bookings) if (!isDup(b, have ?? []) && !isDup(b, fresh)) fresh.push(b)
     const skipped = bookings.length - fresh.length
     if (!fresh.length) {
-      setErr(skipped > 1 ? 'כל ההזמנות באישור הזה כבר קיימות.' : 'ההזמנה הזו כבר קיימת.')
+      setErr(skipped > 1 ? t('כל ההזמנות באישור הזה כבר קיימות.') : t('ההזמנה הזו כבר קיימת.'))
       setBusy(false)
       return
     }
@@ -526,37 +529,37 @@ function ImportSheet(props: { trip: Trip; couples: string[]; myCouple: string | 
 
   if (done) {
     return (
-      <Sheet title={done.length > 1 ? `נוספו ${done.length} הזמנות` : 'ההזמנה נוספה'} onClose={onClose}>
+      <Sheet title={done.length > 1 ? t('נוספו {n} הזמנות', { n: done.length }) : t('ההזמנה נוספה')} onClose={onClose}>
         {done.map((d, n) => (
           <div key={n} dir="auto">
             <Icon as={BOOKING_ICON[d.kind] ?? BOOKING_ICON.other} /> {d.title}
           </div>
         ))}
-        {docLost && <p className="msg">המסמך לא נשמר וההזמנות נוספו בלעדיו. אפשר לצרף אותו בעריכת ההזמנה.</p>}
-        {skipped > 0 && <p className="small">{skipped === 1 ? 'הזמנה אחת כבר הייתה קיימת ולא נוספה שוב.' : `${skipped} הזמנות כבר היו קיימות ולא נוספו שוב.`}</p>}
-        <p className="muted small">לחיצה על הזמנה פותחת אותה לעריכה. מלונות מופיעים גם בלילות שלהם במסלול.</p>
+        {docLost && <p className="msg">{t('המסמך לא נשמר וההזמנות נוספו בלעדיו. אפשר לצרף אותו בעריכת ההזמנה.')}</p>}
+        {skipped > 0 && <p className="small">{skipped === 1 ? t('הזמנה אחת כבר הייתה קיימת ולא נוספה שוב.') : t('{n} הזמנות כבר היו קיימות ולא נוספו שוב.', { n: skipped })}</p>}
+        <p className="muted small">{t('לחיצה על הזמנה פותחת אותה לעריכה. מלונות מופיעים גם בלילות שלהם במסלול.')}</p>
         <button className="primary" onClick={onClose}>
-          סגירה
+          {t('סגירה')}
         </button>
       </Sheet>
     )
   }
 
   return (
-    <Sheet title="הוספה מאישור הזמנה" onClose={onClose}>
+    <Sheet title={t('הוספה מאישור הזמנה')} onClose={onClose}>
       <p className="muted small">
-        מדביקים את מייל האישור (Booking, Agoda, חברת תעופה…) או מצרפים PDF / צילום מסך, וההזמנה נוספת לבד.
+        {t('מדביקים את מייל האישור (Booking, Agoda, חברת תעופה…) או מצרפים PDF / צילום מסך, וההזמנה נוספת לבד.')}
       </p>
       {props.couples.length > 1 && <WhoField value={who} couples={props.couples} onChange={setWho} />}
-      <Field label="טקסט האישור">
-        <textarea value={text} onChange={(e) => setText(e.target.value)} rows={7} dir="auto" placeholder="להדביק כאן…" />
+      <Field label={t('טקסט האישור')}>
+        <textarea value={text} onChange={(e) => setText(e.target.value)} rows={7} dir="auto" placeholder={t('להדביק כאן…')} />
       </Field>
-      <Field label="או קובץ">
+      <Field label={t('או קובץ')}>
         <input type="file" accept="application/pdf,image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
       </Field>
       {err && <p className="msg">{err}</p>}
       <button className="primary" onClick={run} disabled={busy || (!text.trim() && !file)}>
-        {busy ? 'קורא את האישור…' : 'קריאה והוספה'}
+        {busy ? t('קורא את האישור…') : t('קריאה והוספה')}
       </button>
     </Sheet>
   )
@@ -565,19 +568,19 @@ function ImportSheet(props: { trip: Trip; couples: string[]; myCouple: string | 
 function WhoAll() {
   return (
     <>
-      <Icon as={Users} /> {TOGETHER}
+      <Icon as={Users} /> {t(TOGETHER)}
     </>
   )
 }
 
 function WhoField(props: { value: string; couples: string[]; onChange: (who: string) => void }) {
   return (
-    <Field label="של מי">
+    <Field label={t('של מי')}>
       <select value={props.value} onChange={(e) => props.onChange(e.target.value)}>
-        <option value="">של כולם</option>
+        <option value="">{t('של כולם')}</option>
         {props.couples.map((c) => (
           <option key={c} value={c}>
-            {c}
+            {t(c)}
           </option>
         ))}
       </select>

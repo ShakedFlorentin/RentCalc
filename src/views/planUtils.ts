@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import { CATEGORY_ICON, BOOKING_ICON, type LucideIcon } from '../icons'
 import { WHO_OPTIONS, type Booking, type ItineraryItem } from '../types'
-import { isEn } from '../i18n'
+import { isEn, t } from '../i18n'
 
 /** itinerary_items.who is a new column (couple, or null for everyone); types.ts doesn't have it yet. */
 // ItineraryItem carries `who` now; the alias keeps the plan code's name for it
@@ -47,7 +47,7 @@ export function navUrl(destination: string) {
   return 'https://www.google.com/maps/dir/?api=1&travelmode=transit&destination=' + encodeURIComponent(destination)
 }
 
-const JAPAN = /\b(HND|NRT|KIX|ITM|NGO|CTS|FUK)\b|Haneda|Narita|Kansai|הנדה|נריטה|קנסאי|טוקיו|יפן/i
+const JAPAN = /\b(HND|NRT|KIX|ITM|NGO|CTS|FUK)\b|Haneda|Narita|Kansai|הנדה|נריטה|קנסאי|טוקיו|יפן/i // he-only
 
 /** Which side of "A → B" a flight title puts Japan on; null when it can't tell. */
 // besides the arrows and dashes, a plain hyphen counts when spaced or between two airport codes ("NRT-TLV")
@@ -67,12 +67,12 @@ export type Airport = 'HND' | 'NRT'
 export function arrivalAirport(b: Booking): Airport | null {
   const dest = b.title.split(ROUTE_SEP).slice(1).join(' ') || b.title
   const text = `${dest} ${b.notes ?? ''}`
-  if (/\bHND\b|Haneda|הנדה/i.test(text)) return 'HND'
-  if (/\bNRT\b|Narita|נריטה/i.test(text)) return 'NRT'
+  if (/\bHND\b|Haneda|הנדה/i.test(text)) return 'HND' // he-only
+  if (/\bNRT\b|Narita|נריטה/i.test(text)) return 'NRT' // he-only
   return null
 }
 
-const OTHER_AIRPORT = /\b(KIX|ITM|NGO|FUK|CTS|OKA|UKB)\b|Kansai|Osaka|Itami|Nagoya|Fukuoka|Sapporo|Okinawa|קנסאי|אוסקה|נגויה|פוקואוקה|סאפורו|אוקינאווה/i
+const OTHER_AIRPORT = /\b(KIX|ITM|NGO|FUK|CTS|OKA|UKB)\b|Kansai|Osaka|Itami|Nagoya|Fukuoka|Sapporo|Okinawa|קנסאי|אוסקה|נגויה|פוקואוקה|סאפורו|אוקינאווה/i // he-only
 
 /**
  * The Tokyo airport to show an arrival card for: the one the booking names, else the couple's known airport.
@@ -95,8 +95,8 @@ export function bookingEntries(bookings: Booking[], date: string): Entry[] {
       key: `${b.id}:${tag}`,
       time: at.slice(11, 16),
       icon,
-      title: `${tagLabel[tag] ?? ''}${b.title}`,
-      sub: b.confirmation ? `אישור ${b.confirmation}` : null,
+      title: `${tagLabel[tag] ? tagLabel[tag] + ' · ' : ''}${b.title}`,
+      sub: b.confirmation ? t('אישור {code}', { code: b.confirmation }) : null,
       location,
       who: b.who,
       done: false,
@@ -119,7 +119,7 @@ export function bookingEntries(bookings: Booking[], date: string): Entry[] {
   }
   return out
 }
-const tagLabel: Record<string, string> = { dep: 'המראה · ', arr: 'נחיתה · ', in: 'צ׳ק-אין · ', out: 'צ׳ק-אאוט · ' }
+const tagLabel: Record<string, string> = { dep: t('המראה'), arr: t('נחיתה'), in: t('צ׳ק-אין'), out: t('צ׳ק-אאוט') }
 
 export function itemEntry(i: PlanItem): Entry {
   return {
@@ -128,7 +128,7 @@ export function itemEntry(i: PlanItem): Entry {
     icon: CATEGORY_ICON[i.category] ?? CATEGORY_ICON.other,
     title: i.title,
     // the planner's note in English when the app is in English (people's own notes stay as written)
-    sub: (isEn && i.notes_en) || i.notes,
+    sub: isEn && (i.notes_en || i.auto) ? (i.notes_en ?? null) : i.notes,
     location: i.location,
     who: i.who ?? null,
     done: i.done,
@@ -214,49 +214,49 @@ export function hotelFor(lines: { who: string | null; text: string }[], mine: st
 
 /** "בעוד 45 דק׳" / "בעוד שעה ו-10 דק׳" for a number of minutes. */
 export function fmtUntil(min: number) {
-  if (min <= 0) return 'עכשיו'
-  if (min < 60) return `בעוד ${min} דק׳`
+  if (min <= 0) return t('עכשיו')
+  if (min < 60) return t('בעוד {min} דק׳', { min })
   const h = Math.floor(min / 60)
   const r = min % 60
-  const hs = h === 1 ? 'שעה' : h === 2 ? 'שעתיים' : `${h} שעות`
-  return `בעוד ${hs}${r ? ` ו-${r} דק׳` : ''}`
+  if (!r) return h === 1 ? t('בעוד שעה') : h === 2 ? t('בעוד שעתיים') : t('בעוד {h} שעות', { h })
+  return h === 1 ? t('בעוד שעה ו-{r} דק׳', { r }) : h === 2 ? t('בעוד שעתיים ו-{r} דק׳', { r }) : t('בעוד {h} שעות ו-{r} דק׳', { h, r })
 }
 
 export const minutesOf = (hhmm: string) => +hhmm.slice(0, 2) * 60 + +hhmm.slice(3, 5)
 
 export type ArrivalStep = { icon: LucideIcon; text: string }
 
-const BORDER: ArrivalStep = { icon: BadgeCheck, text: 'ביקורת גבולות: Visit Japan Web (קודי QR) פתוח בטלפון.' }
-const CARD: ArrivalStep = { icon: CreditCard, text: 'Suica או PASMO בארנק הטלפון (iPhone), או כרטיס Welcome Suica מהמכונות בטרמינל.' }
-const CASH: ArrivalStep = { icon: Banknote, text: 'מזומן: למשוך ין בכספומט בשדה או בחנות נוחות (7-Eleven, Lawson).' }
-const CHECKIN: ArrivalStep = { icon: BedDouble, text: 'צ׳ק-אין בדרך כלל מ-15:00. אפשר להשאיר מזוודות במלון.' }
+const BORDER: ArrivalStep = { icon: BadgeCheck, text: t('ביקורת גבולות: Visit Japan Web (קודי QR) פתוח בטלפון.') }
+const CARD: ArrivalStep = { icon: CreditCard, text: t('Suica או PASMO בארנק הטלפון (iPhone), או כרטיס Welcome Suica מהמכונות בטרמינל.') }
+const CASH: ArrivalStep = { icon: Banknote, text: t('מזומן: למשוך ין בכספומט בשדה או בחנות נוחות (7-Eleven, Lawson).') }
+const CHECKIN: ArrivalStep = { icon: BedDouble, text: t('צ׳ק-אין בדרך כלל מ-15:00. אפשר להשאיר מזוודות במלון.') }
 
 /** First steps after landing, written per airport: Narita is far from Tokyo, Haneda is close. */
 export const ARRIVAL: Record<Airport, { name: string; steps: ArrivalStep[] }> = {
   HND: {
-    name: 'הנדה (HND)',
+    name: t('הנדה (HND)'),
     steps: [
       BORDER,
       CARD,
       CASH,
-      { icon: TrainFront, text: 'הנדה קרוב, כחצי שעה למרכז. רכבת קייקיו או המונורייל, ומשם ברכבת למלון.' },
+      { icon: TrainFront, text: t('הנדה קרוב, כחצי שעה למרכז. רכבת קייקיו או המונורייל, ומשם ברכבת למלון.') },
       CHECKIN,
     ],
   },
   NRT: {
-    name: 'נריטה (NRT)',
+    name: t('נריטה (NRT)'),
     steps: [
       BORDER,
       CARD,
       CASH,
-      { icon: Train, text: 'נריטה רחוקה, שעה ויותר עד טוקיו. הכי נוח ב-Narita Express או ב-Keisei Skyliner, ומשם ברכבת למלון.' },
+      { icon: Train, text: t('נריטה רחוקה, שעה ויותר עד טוקיו. הכי נוח ב-Narita Express או ב-Keisei Skyliner, ומשם ברכבת למלון.') },
       CHECKIN,
     ],
   },
 }
 
 /** Fallback when the booking doesn't name its airport: where each couple is known to land. */
-export const COUPLE_AIRPORT: Record<string, Airport> = { 'שקד ומאור': 'HND', 'אלמוג ושניר': 'NRT' }
+export const COUPLE_AIRPORT: Record<string, Airport> = { 'שקד ומאור': 'HND', 'אלמוג ושניר': 'NRT' } // he-only
 
 /**
  * A couple's time in Japan from its flights: the date it lands to the date it flies out (YYYY-MM-DD), or null when

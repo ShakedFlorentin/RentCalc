@@ -6,12 +6,12 @@ const PHOTOS = new Set<string>(['tokyo', 'yokohama', 'kyoto', 'osaka', 'nara', '
 
 // names as they are written in day_info / places (Hebrew, free text) and in the swipe deck (English keys)
 const SLUGS: [RegExp, string][] = [
-  [/tokyo|טוקיו|שינג׳?ו?קו|שיבויה|אסאקוסה|גינזה/i, 'tokyo'],
-  [/yokohama|יוקוהמה/i, 'yokohama'],
-  [/kyoto|קיוטו/i, 'kyoto'],
-  [/osaka|או?סקה|אוסאקה/i, 'osaka'],
-  [/nara|נארה/i, 'nara'],
-  [/daytrip|טיולי יום|פוג׳?י|הקונה|קוואגוצ׳?יקו|hakone|fuji/i, 'fuji'],
+  [/tokyo|טוקיו|שינג׳?ו?קו|שיבויה|אסאקוסה|גינזה/i, 'tokyo'], // he-only
+  [/yokohama|יוקוהמה/i, 'yokohama'], // he-only
+  [/kyoto|קיוטו/i, 'kyoto'], // he-only
+  [/osaka|או?סקה|אוסאקה/i, 'osaka'], // he-only
+  [/nara|נארה/i, 'nara'], // he-only
+  [/daytrip|טיולי יום|פוג׳?י|הקונה|קוואגוצ׳?יקו|hakone|fuji/i, 'fuji'], // he-only
 ]
 
 export function citySlug(name: string | null | undefined) {

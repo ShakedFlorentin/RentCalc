@@ -3,6 +3,7 @@ import { supabase } from '../supabase'
 import type { Booking, Essential, Member, Trip } from '../types'
 import { TOGETHER } from '../types'
 import { couplesOf, mutate, useTripTable } from '../lib'
+import { isEn, t } from '../i18n'
 import { Empty, Field, LoadNote, Sheet } from '../ui'
 import { PHRASES, type Phrase } from '../phrases'
 import { Icon, type LucideIcon } from '../icons'
@@ -12,89 +13,89 @@ import '../styles/info.css'
 type Props = { trip: Trip; members: Member[]; userId: string }
 
 const KINDS: Record<Essential['kind'], { label: string; icon: LucideIcon }> = {
-  hotel: { label: 'מלונות', icon: Hotel },
-  phone: { label: 'טלפונים', icon: Phone },
-  insurance: { label: 'ביטוח', icon: ShieldCheck },
-  document: { label: 'מסמכים', icon: FileText },
-  note: { label: 'הערות', icon: StickyNote },
-  other: { label: 'אחר', icon: Pin },
+  hotel: { label: t('מלונות'), icon: Hotel },
+  phone: { label: t('טלפונים'), icon: Phone },
+  insurance: { label: t('ביטוח'), icon: ShieldCheck },
+  document: { label: t('מסמכים'), icon: FileText },
+  note: { label: t('הערות'), icon: StickyNote },
+  other: { label: t('אחר'), icon: Pin },
 }
 const KIND_ORDER = Object.keys(KINDS) as Essential['kind'][]
 
 // what travellers in the Israeli Japan Facebook groups wish they had known (read October 2026)
 const TIPS: { title: string; icon: LucideIcon; items: string[]; links?: { label: string; href: string }[] }[] = [
   {
-    title: 'מזוודות ותחבורה',
+    title: t('מזוודות ותחבורה'),
     icon: Luggage,
     items: [
-      'שולחים את המזוודה הגדולה בין המלונות ב-takkyubin (בכל מלון ובכל קומביני) ונוסעים עם טרולי קטן. זה לוקח בערך יומיים, אז שולחים לפחות יום מראש.',
-      'Airporter לוקח מזוודות מהמלון לשדה התעופה באותו יום, אז אפשר לטייל ביום הטיסה בלי לסחוב.',
-      'סואיקה באפל ווטש, והשעון על יד ימין: בשערים הקורא בצד ימין. זה נוח הרבה יותר.',
-      'גוגל מפות טוב לתחבורה ציבורית, אבל שווה גם לשאול אנשים. לא פעם יפנים פשוט הולכים איתכם עד המקום.',
-      'מונית לשדה התעופה, הלוך וחזור, אפשר להזמין מראש דרך Booking. עבד טוב.',
-      'ב-Sushiro ורשתות דומות השלטים רק ביפנית, אז בודקים מראש בגוגל מפות איך נראית החזית ובאיזו קומה.',
+      t('שולחים את המזוודה הגדולה בין המלונות ב-takkyubin (בכל מלון ובכל קומביני) ונוסעים עם טרולי קטן. זה לוקח בערך יומיים, אז שולחים לפחות יום מראש.'),
+      t('Airporter לוקח מזוודות מהמלון לשדה התעופה באותו יום, אז אפשר לטייל ביום הטיסה בלי לסחוב.'),
+      t('סואיקה באפל ווטש, והשעון על יד ימין: בשערים הקורא בצד ימין. זה נוח הרבה יותר.'),
+      t('גוגל מפות טוב לתחבורה ציבורית, אבל שווה גם לשאול אנשים. לא פעם יפנים פשוט הולכים איתכם עד המקום.'),
+      t('מונית לשדה התעופה, הלוך וחזור, אפשר להזמין מראש דרך Booking. עבד טוב.'),
+      t('ב-Sushiro ורשתות דומות השלטים רק ביפנית, אז בודקים מראש בגוגל מפות איך נראית החזית ובאיזו קומה.'),
     ],
   },
   {
-    title: 'טוקיו',
+    title: t('טוקיו'),
     icon: MapPin,
     items: [
-      'מתחילים ומסיימים בטוקיו. כדאי גינזה בהתחלה ואסקוסה בסוף.',
-      'שווה סיור מודרך כבר ביום הראשון, כדי להכיר את העיר מהר.',
-      'החדרים בטוקיו קטנים יותר מאלה שבקיוטו ובאוסקה. לא להיבהל.',
-      'באים עם מזוודה חצי ריקה, כי הקניות זולות ומפתות.',
-      'רואים משהו שרוצים לקנות או לעשות? עושים את זה מיד, כמעט אף פעם לא חוזרים.',
+      t('מתחילים ומסיימים בטוקיו. כדאי גינזה בהתחלה ואסקוסה בסוף.'),
+      t('שווה סיור מודרך כבר ביום הראשון, כדי להכיר את העיר מהר.'),
+      t('החדרים בטוקיו קטנים יותר מאלה שבקיוטו ובאוסקה. לא להיבהל.'),
+      t('באים עם מזוודה חצי ריקה, כי הקניות זולות ומפתות.'),
+      t('רואים משהו שרוצים לקנות או לעשות? עושים את זה מיד, כמעט אף פעם לא חוזרים.'),
     ],
   },
   {
-    title: 'קיוטו',
+    title: t('קיוטו'),
     icon: MapPin,
     items: [
-      'פושימי אינארי: העלייה עד הפסגה היא בעיקר הישג, אבל שווה. גם הילדים נהנו.',
-      'יער הבמבוק בארשיימה לבד קטן ומאכזב. עדיף להתחיל במקדשים שבצפון ולרדת ברגל דרך הכפר השמור עד היער.',
-      'קיבונה ואוג׳י יפים ושקטים הרבה יותר. אמאנוהשידטה ואינה, בצפון המחוז, כמעט בלי תיירים.',
-      'גיון עם מדריך, אחרת מפספסים את רוב מה שיש שם.',
-      'אין צורך לצאת מוקדם, 10:00 מספיק. שלושה ימים מספיקים, כולל יום בנארה.',
+      t('פושימי אינארי: העלייה עד הפסגה היא בעיקר הישג, אבל שווה. גם הילדים נהנו.'),
+      t('יער הבמבוק בארשיימה לבד קטן ומאכזב. עדיף להתחיל במקדשים שבצפון ולרדת ברגל דרך הכפר השמור עד היער.'),
+      t('קיבונה ואוג׳י יפים ושקטים הרבה יותר. אמאנוהשידטה ואינה, בצפון המחוז, כמעט בלי תיירים.'),
+      t('גיון עם מדריך, אחרת מפספסים את רוב מה שיש שם.'),
+      t('אין צורך לצאת מוקדם, 10:00 מספיק. שלושה ימים מספיקים, כולל יום בנארה.'),
     ],
   },
   {
-    title: 'כשרות ובלי חזיר ופירות ים',
+    title: t('כשרות ובלי חזיר ופירות ים'),
     icon: Utensils,
     items: [
-      'מי ששומר כשרות מלאה מסתדר בדירה עם מטבח, עם אוכל מהארץ ועם חב״ד בשבת. מי שרק לא אוכל חזיר ופירות ים מסתדר טוב, אם בודקים מה יש בפנים.',
-      'שלוש מלכודות: לחם עם שומן חזיר, רוטב לסלט עם משחת שרימפס או צדפות, ומרק ראמן קלאסי שמבושל מעצמות חזיר. בראמן מחפשים ציר עוף (tori paitan) או מנה טבעונית.',
-      'מסעדות כמעט לא משנות מנות, אלא אם מבקשים מראש. ב-Isesueyoshi למשל מתאימים את כל הארוחה אם אומרים בהזמנה.',
-      'David\'s Deli בטוקיו היא המסעדה הכשרה היחידה בעיר. בינונית ביחס למחיר.',
-      'בתי חב״ד: שניים בטוקיו, אחד בקיוטו ואחד בקובה. נרשמים לארוחות שבת באתר שלהם. חב״ד טוקיו גם שולחים אוכל למלון ומשאילים פלטה.',
-      'יש רשימת מוצרים כשרים שנמכרים ביפן: גלידות, עוגיות ולחם ב-7-Eleven, חלב, גבינות וסלמון מעושן. בודקים לפי הברקוד.',
-      'בקומביני: אוניגירי עם 鮭 (סלמון), ツナマヨ (טונה במיונז), 梅 (שזיף) או 昆布 (אצה). על התווית נזהרים מ-豚 (חזיר) ומ-エビ, イカ, タコ, 貝 (שרימפס, קלמרי, תמנון, צדפות). אין להם השגחה.',
-      'HappyCow מוצאת מקומות טבעוניים וצמחוניים בכל מקום, וזה גם פתרון בטוח בלי חזיר ופירות ים.',
-      'במסעדה מראים את הכרטיס "לא אוכל חזיר ופירות ים" בכרטיסי המשפטים ביפנית למטה.',
+      t('מי ששומר כשרות מלאה מסתדר בדירה עם מטבח, עם אוכל מהארץ ועם חב״ד בשבת. מי שרק לא אוכל חזיר ופירות ים מסתדר טוב, אם בודקים מה יש בפנים.'),
+      t('שלוש מלכודות: לחם עם שומן חזיר, רוטב לסלט עם משחת שרימפס או צדפות, ומרק ראמן קלאסי שמבושל מעצמות חזיר. בראמן מחפשים ציר עוף (tori paitan) או מנה טבעונית.'),
+      t('מסעדות כמעט לא משנות מנות, אלא אם מבקשים מראש. ב-Isesueyoshi למשל מתאימים את כל הארוחה אם אומרים בהזמנה.'),
+      t('David\'s Deli בטוקיו היא המסעדה הכשרה היחידה בעיר. בינונית ביחס למחיר.'),
+      t('בתי חב״ד: שניים בטוקיו, אחד בקיוטו ואחד בקובה. נרשמים לארוחות שבת באתר שלהם. חב״ד טוקיו גם שולחים אוכל למלון ומשאילים פלטה.'),
+      t('יש רשימת מוצרים כשרים שנמכרים ביפן: גלידות, עוגיות ולחם ב-7-Eleven, חלב, גבינות וסלמון מעושן. בודקים לפי הברקוד.'),
+      t('בקומביני: אוניגירי עם 鮭 (סלמון), ツナマヨ (טונה במיונז), 梅 (שזיף) או 昆布 (אצה). על התווית נזהרים מ-豚 (חזיר) ומ-エビ, イカ, タコ, 貝 (שרימפס, קלמרי, תמנון, צדפות). אין להם השגחה.'),
+      t('HappyCow מוצאת מקומות טבעוניים וצמחוניים בכל מקום, וזה גם פתרון בטוח בלי חזיר ופירות ים.'),
+      t('במסעדה מראים את הכרטיס "לא אוכל חזיר ופירות ים" בכרטיסי המשפטים ביפנית למטה.'),
     ],
     links: [
-      { label: 'חב״ד יפן', href: 'https://www.chabad.jp/' },
-      { label: 'רשימת מוצרים כשרים', href: 'https://kosher.global/zekasher/' },
+      { label: t('חב״ד יפן'), href: 'https://www.chabad.jp/' },
+      { label: t('רשימת מוצרים כשרים'), href: 'https://kosher.global/zekasher/' },
       { label: 'HappyCow', href: 'https://www.happycow.net/' },
     ],
   },
   {
-    title: 'דצמבר',
+    title: t('דצמבר'),
     icon: Snowflake,
     items: [
-      'קר אבל לא קיצוני בטוקיו, קיוטו ואוסקה: כמה מעלות, כמעט לא מתחת לאפס, ומעט גשם. מתלבשים בשכבות.',
-      'גרביונים וחולצות תרמיות של Uniqlo זולים, אפשר לקנות שם.',
-      'מתחילת דצמבר העונה שקטה: מחירים נמוכים יותר ופחות תורים.',
-      'הערים מקושטות לחג המולד, עם שווקי כריסמס ומופעי אורות, חלקם בחינם. בערב ראש השנה יש טקסים בכל מקדש עד הלילה, ויריד.',
-      'חלק מהעצים כבר בלי עלים, אבל יש פריחת נרקיסים ולפעמים פריחת שזיף ראשונה.',
+      t('קר אבל לא קיצוני בטוקיו, קיוטו ואוסקה: כמה מעלות, כמעט לא מתחת לאפס, ומעט גשם. מתלבשים בשכבות.'),
+      t('גרביונים וחולצות תרמיות של Uniqlo זולים, אפשר לקנות שם.'),
+      t('מתחילת דצמבר העונה שקטה: מחירים נמוכים יותר ופחות תורים.'),
+      t('הערים מקושטות לחג המולד, עם שווקי כריסמס ומופעי אורות, חלקם בחינם. בערב ראש השנה יש טקסים בכל מקדש עד הלילה, ויריד.'),
+      t('חלק מהעצים כבר בלי עלים, אבל יש פריחת נרקיסים ולפעמים פריחת שזיף ראשונה.'),
     ],
   },
   {
-    title: 'עם תינוק',
+    title: t('עם תינוק'),
     icon: Baby,
     items: [
-      'עגלה קלה, כי הרבה פעמים צריך לסחוב אותה במדרגות. בגיל הזה לוקחים עגלה שהתינוק כבר רגיל לישון בה.',
-      'עגלה עם סל אחסון, כי סוחבים מנשא, תיק החתלה וקניות.',
-      'קשה למצוא אוכל לתינוקות. מה שאפשר, מביאים מהארץ.',
+      t('עגלה קלה, כי הרבה פעמים צריך לסחוב אותה במדרגות. בגיל הזה לוקחים עגלה שהתינוק כבר רגיל לישון בה.'),
+      t('עגלה עם סל אחסון, כי סוחבים מנשא, תיק החתלה וקניות.'),
+      t('קשה למצוא אוכל לתינוקות. מה שאפשר, מביאים מהארץ.'),
     ],
   },
 ]
@@ -114,71 +115,71 @@ export default function Essentials({ trip, members, userId }: Props) {
   const importHotels = async () => {
     setNote('')
     const { data, error } = await supabase.from('bookings').select('*').eq('trip_id', trip.id).eq('kind', 'hotel')
-    if (error) return setNote('אי אפשר לקרוא את ההזמנות: ' + error.message)
+    if (error) return setNote(t('אי אפשר לקרוא את ההזמנות: {msg}', { msg: error.message }))
     const have = new Set(rows.filter((r) => r.kind === 'hotel').map((r) => r.title.trim().toLowerCase()))
     let sort = Math.max(0, ...rows.map((r) => r.sort)) + 1
     const fresh = (data as Booking[])
       .filter((b) => !have.has(b.title.trim().toLowerCase()))
       .map((b) => ({ trip_id: trip.id, kind: 'hotel', title: b.title.trim(), value: b.location, who: b.who, sort: sort++ }))
-    if (!fresh.length) return setNote('אין מלונות חדשים בהזמנות.')
-    if (await mutate(supabase.from('essentials').insert(fresh))) setNote(fresh.length === 1 ? 'נוסף מלון אחד' : `נוספו ${fresh.length} מלונות`)
+    if (!fresh.length) return setNote(t('אין מלונות חדשים בהזמנות.'))
+    if (await mutate(supabase.from('essentials').insert(fresh))) setNote(fresh.length === 1 ? t('נוסף מלון אחד') : t('נוספו {n} מלונות', { n: fresh.length }))
   }
 
   return (
     <div className="stack">
       <section className="info-sec">
-        <h2 className="info-h"><Icon as={ShieldAlert} /> חירום ביפן</h2>
+        <h2 className="info-h"><Icon as={ShieldAlert} /> {t('חירום ביפן')}</h2>
         <div className="sos-row">
           <a className="sos police" href="tel:110">
             <b>110</b>
-            <span>משטרה</span>
+            <span>{t('משטרה')}</span>
           </a>
           <a className="sos ambulance" href="tel:119">
             <b>119</b>
-            <span>אמבולנס / כבאים</span>
+            <span>{t('אמבולנס / כבאים')}</span>
           </a>
         </div>
-        <p className="muted small info-note">השיחה חינם. בחירום אמיתי מתקשרים קודם לכאן. בהרבה ערים 119 מחברים מתורגמן לאנגלית, אז לא מנתקים.</p>
+        <p className="muted small info-note">{t('השיחה חינם. בחירום אמיתי מתקשרים קודם לכאן. בהרבה ערים 119 מחברים מתורגמן לאנגלית, אז לא מנתקים.')}</p>
         <PhraseList phrases={PHRASES.filter((p) => p.id === 'help')} />
 
         <div className="card info-card">
           <div className="info-title">Japan Visitor Hotline (JNTO)</div>
-          <div className="muted small">24 שעות, כל השנה, באנגלית (גם סינית וקוריאנית). עוזרים בתאונה, מחלה ואסון טבע, ואפשר לשאול לאן לפנות.</div>
+          <div className="muted small">{t('24 שעות, כל השנה, באנגלית (גם סינית וקוריאנית). עוזרים בתאונה, מחלה ואסון טבע, ואפשר לשאול לאן לפנות.')}</div>
           <div className="row">
             <a className="pill" href="tel:+815038162787" dir="ltr">
               <Icon as={Phone} /> 050-3816-2787
             </a>
             <a className="pill soft" href="https://www.japan.travel/en/plan/hotline/" target="_blank" rel="noreferrer">
-              האתר
+              {t('האתר')}
             </a>
           </div>
         </div>
 
         <div className="card info-card">
-          <div className="info-title">שגרירות ישראל בטוקיו</div>
+          <div className="info-title">{t('שגרירות ישראל בטוקיו')}</div>
           <div className="small" dir="ltr" lang="en">
             3 Niban-cho, Chiyoda-ku, Tokyo 102-0084
           </div>
-          <div className="muted small">מרכזייה. קבלת קהל קונסולרית בימים ב׳–ו׳ <bdi dir="ltr">10:00–13:00</bdi> (שעון יפן), סגור בחגי ישראל. אין מספר חירום ידוע אחרי שעות העבודה, אז בלילה פונים קודם ל-110/119.</div>
+          <div className="muted small">{t('מרכזייה. קבלת קהל קונסולרית בימים ב׳–ו׳')} <bdi dir="ltr">10:00–13:00</bdi> {t('(שעון יפן), סגור בחגי ישראל. אין מספר חירום ידוע אחרי שעות העבודה, אז בלילה פונים קודם ל-110/119.')}</div>
           <div className="row">
             <a className="pill" href="tel:+81332640911" dir="ltr">
               <Icon as={Phone} /> 03-3264-0911
             </a>
             <a className="pill soft" href="https://new.embassies.gov.il/japan/en/contacts" target="_blank" rel="noreferrer">
-              האתר
+              {t('האתר')}
             </a>
           </div>
         </div>
       </section>
 
       <section className="info-sec">
-        <h2 className="info-h"><Icon as={ReceiptText} /> הפרטים שלנו</h2>
+        <h2 className="info-h"><Icon as={ReceiptText} /> {t('הפרטים שלנו')}</h2>
         <div className="info-actions">
           <button className="secondary" onClick={() => setEdit({ kind: 'hotel', who: myCouple })}>
-            <Icon as={Plus} /> פרט חדש
+            <Icon as={Plus} /> {t('פרט חדש')}
           </button>
           <button className="secondary" onClick={importHotels}>
-            <Icon as={Hotel} /> ייבוא מלונות
+            <Icon as={Hotel} /> {t('ייבוא מלונות')}
           </button>
         </div>
         {note && (
@@ -189,7 +190,7 @@ export default function Essentials({ trip, members, userId }: Props) {
         {error && <LoadNote onRetry={reload} />}
         {!loading && !error && rows.length === 0 && (
           <Empty>
-            כאן שומרים כתובות מלונות ביפנית, מספרי פוליסה, טלפונים ומסמכים. מוסיפים ידנית או מייבאים את המלונות מההזמנות.
+            {t('כאן שומרים כתובות מלונות ביפנית, מספרי פוליסה, טלפונים ומסמכים. מוסיפים ידנית או מייבאים את המלונות מההזמנות.')}
           </Empty>
         )}
         {KIND_ORDER.map((k) => {
@@ -209,8 +210,8 @@ export default function Essentials({ trip, members, userId }: Props) {
       </section>
 
       <section className="info-sec">
-        <h2 className="info-h"><Icon as={Lightbulb} /> טיפים מהקבוצות</h2>
-        <p className="muted small info-note">ממטיילים שחזרו, מקבוצות היפן בפייסבוק.</p>
+        <h2 className="info-h"><Icon as={Lightbulb} /> {t('טיפים מהקבוצות')}</h2>
+        <p className="muted small info-note">{t('ממטיילים שחזרו, מקבוצות היפן בפייסבוק.')}</p>
         {TIPS.map((g) => (
           <details key={g.title} className="card tip">
             <summary>
@@ -219,8 +220,8 @@ export default function Essentials({ trip, members, userId }: Props) {
               </span>
             </summary>
             <ul>
-              {g.items.map((t) => (
-                <li key={t}>{t}</li>
+              {g.items.map((item) => (
+                <li key={item}>{item}</li>
               ))}
             </ul>
             {g.links && (
@@ -259,34 +260,34 @@ function EssentialCard(props: { item: Essential; onEdit: () => void; onShow: () 
       setTimeout(() => setCopied(false), 1500)
     } catch {
       // clipboard is blocked in some browsers; the value is still on screen to select
-      alert('ההעתקה נחסמה. אפשר לסמן את הטקסט ידנית.')
+      alert(t('ההעתקה נחסמה. אפשר לסמן את הטקסט ידנית.'))
     }
   }
   return (
     <div className="card info-card" onClick={props.onEdit}>
       <div className="row spread nowrap">
         <div className="info-title">{item.title}</div>
-        <span className={'who-tag' + (item.who ? ' apart' : '')}><Icon as={Users} /> {item.who ?? TOGETHER}</span>
+        <span className={'who-tag' + (item.who ? ' apart' : '')}><Icon as={Users} /> {item.who ? t(item.who) : t(TOGETHER)}</span>
       </div>
       {item.value && <div className="info-value" dir="auto">{item.value}</div>}
       {item.value && (
         <div className="row" onClick={(e) => e.stopPropagation()}>
           <button className="pill" onClick={copy}>
-            {copied ? <><Icon as={Check} /> הועתק</> : <><Icon as={Copy} /> העתקה</>}
+            {copied ? <><Icon as={Check} /> {t('הועתק')}</> : <><Icon as={Copy} /> {t('העתקה')}</>}
           </button>
           {item.kind === 'hotel' && (
             <button className="pill" onClick={props.onShow}>
-              <Icon as={Car} /> להראות לנהג
+              <Icon as={Car} /> {t('להראות לנהג')}
             </button>
           )}
           {item.kind === 'phone' && looksLikePhone(item.value) && (
             <a className="pill" href={telHref(item.value)} dir="ltr">
-              <Icon as={Phone} /> חיוג
+              <Icon as={Phone} /> {t('חיוג')}
             </a>
           )}
           {/^https?:\/\//.test(item.value.trim()) && (
             <a className="pill" href={item.value.trim()} target="_blank" rel="noreferrer">
-              <Icon as={ExternalLink} /> פתיחה
+              <Icon as={ExternalLink} /> {t('פתיחה')}
             </a>
           )}
         </div>
@@ -318,12 +319,12 @@ function EditSheet(props: { trip: Trip; couples: string[]; rows: Essential[]; it
     if (ok) props.onClose()
   }
   const remove = async () => {
-    if (f.id && confirm(`למחוק את "${f.title}"?`) && (await mutate(supabase.from('essentials').delete().eq('id', f.id)))) props.onClose()
+    if (f.id && confirm(t('למחוק את "{title}"?', { title: f.title ?? '' })) && (await mutate(supabase.from('essentials').delete().eq('id', f.id)))) props.onClose()
   }
 
   return (
-    <Sheet title={f.id ? 'עריכה' : 'פרט חדש'} onClose={props.onClose}>
-      <Field label="סוג">
+    <Sheet title={f.id ? t('עריכה') : t('פרט חדש')} onClose={props.onClose}>
+      <Field label={t('סוג')}>
         <select value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value as Essential['kind'] })}>
           {KIND_ORDER.map((k) => (
             <option key={k} value={k}>
@@ -333,29 +334,29 @@ function EditSheet(props: { trip: Trip; couples: string[]; rows: Essential[]; it
         </select>
       </Field>
       {props.couples.length > 1 && (
-        <Field label="של מי">
+        <Field label={t('של מי')}>
           <select value={f.who ?? ''} onChange={(e) => setF({ ...f, who: e.target.value })}>
-            <option value="">{TOGETHER}</option>
+            <option value="">{t(TOGETHER)}</option>
             {props.couples.map((c) => (
               <option key={c} value={c}>
-                {c}
+                {t(c)}
               </option>
             ))}
           </select>
         </Field>
       )}
-      <Field label="כותרת">
-        <input value={f.title ?? ''} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="למשל: Hotel Gracery Shinjuku" />
+      <Field label={t('כותרת')}>
+        <input value={f.title ?? ''} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder={t('למשל: Hotel Gracery Shinjuku')} />
       </Field>
-      <Field label={f.kind === 'hotel' ? 'כתובת (עדיף ביפנית)' : 'תוכן (כתובת, מספר, קישור…)'}>
+      <Field label={f.kind === 'hotel' ? t('כתובת (עדיף ביפנית)') : t('תוכן (כתובת, מספר, קישור…)')}>
         <textarea rows={4} dir="auto" value={f.value ?? ''} onChange={(e) => setF({ ...f, value: e.target.value })} />
       </Field>
       <button className="primary" onClick={save} disabled={busy || !f.title?.trim()}>
-        שמירה
+        {t('שמירה')}
       </button>
       {f.id && (
         <button className="danger" onClick={remove}>
-          מחיקה
+          {t('מחיקה')}
         </button>
       )}
     </Sheet>
@@ -379,7 +380,7 @@ export function ShowFull(props: { small: string; big: string; sub?: string; onCl
   const size = props.big.length > 60 ? 'xs' : props.big.length > 28 ? 's' : ''
   return (
     <div className="show-full" role="dialog" aria-modal="true" onClick={onClose}>
-      <button className="show-close" aria-label="סגירה">
+      <button className="show-close" aria-label={t('סגירה')}>
         <Icon as={X} size="1.25em" />
       </button>
       <div className={'show-big ' + size} lang="ja" dir="ltr">
@@ -403,7 +404,7 @@ export function PhraseList({ phrases }: { phrases: Phrase[] }) {
     <>
       {phrases.map((p) => (
         <button key={p.id} className="card phrase" onClick={() => setOpen(p)}>
-          <span className="phrase-he">{p.he}</span>
+          <span className="phrase-he">{isEn ? p.en : p.he}</span>
           <span className="phrase-ja" lang="ja" dir="ltr">
             {p.ja}
           </span>
@@ -412,7 +413,7 @@ export function PhraseList({ phrases }: { phrases: Phrase[] }) {
           </span>
         </button>
       ))}
-      {open && <ShowFull small={open.he} big={open.ja} sub={open.romaji} onClose={() => setOpen(null)} />}
+      {open && <ShowFull small={isEn ? open.en : open.he} big={open.ja} sub={open.romaji} onClose={() => setOpen(null)} />}
     </>
   )
 }

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { supabase } from '../supabase'
 import { AUDIENCES, CARD_STYLE, CITY_HE, VERDICTS, type Candidate } from '../types'
-import { aiError, mutate, safeUrl, samePlace } from '../lib'
+import { aiError, cityLabel, localizeCard, mutate, safeUrl, samePlace } from '../lib'
+import { isEn, t } from '../i18n'
 import { ArrowRight, Heart, List, Search, Star } from 'lucide-react'
 import { Field, Sheet } from '../ui'
 import { Icon } from '../icons'
@@ -112,7 +113,7 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
         setFailedLink(link)
         setErr('')
       } else {
-        setErr('לא מצאנו. נסו את השם כמו שהוא מופיע במפות, עם העיר או השכונה.')
+        setErr(t('לא מצאנו. נסו את השם כמו שהוא מופיע במפות, עם העיר או השכונה.'))
       }
       return
     }
@@ -153,7 +154,7 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
     }
     setBusy(false)
     if (done) onClose()
-    else setErr('לא נוסף אף מקום. הם כבר ברשימה, או שהשמירה נכשלה.')
+    else setErr(t('לא נוסף אף מקום. הם כבר ברשימה, או שהשמירה נכשלה.'))
   }
 
   const save = async (d: Draft, anyway = false) => {
@@ -176,7 +177,7 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
       if (found) {
         setTyped(d)
         setExisting({ found, draft: d })
-      } else setErr('כבר יש מקום בשם הזה בטיול')
+      } else setErr(t('כבר יש מקום בשם הזה בטיול'))
     }
     setBusy(false)
     if (res === 'ok') onClose()
@@ -252,7 +253,7 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
       // 23505: someone added the same name a moment ago
       if (error?.code === '23505') return 'dup'
       if (error) {
-        alert('שגיאה: ' + error.message)
+        alert(t('שגיאה: {msg}', { msg: error.message }))
         return 'error'
       }
       // suggesting a place counts as liking it
@@ -267,11 +268,11 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
           city: CITY_HE[d.city] ?? d.city,
           category: cat,
           url: social.maps_url,
-          notes: [d.tip, d.baby_notes && 'עם התינוק: ' + d.baby_notes].filter(Boolean).join('\n') || null,
+          notes: [d.tip, d.baby_notes && 'עם התינוק: ' + d.baby_notes].filter(Boolean).join('\n') || null, // he-only
         })
       if (error?.code === '23505') return 'dup'
       if (error) {
-        alert('שגיאה: ' + error.message)
+        alert(t('שגיאה: {msg}', { msg: error.message }))
         return 'error'
       }
       return 'ok'
@@ -279,12 +280,12 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
   }
 
   const destination = (
-    <div className="segmented" role="group" aria-label="לאן להוסיף">
+    <div className="segmented" role="group" aria-label={t('לאן להוסיף')}>
       <button className={to === 'deck' ? 'on' : ''} onClick={() => setTo('deck')}>
-        <Icon as={Heart} /> לגילוי, להצבעה
+        <Icon as={Heart} /> {t('לגילוי, להצבעה')}
       </button>
       <button className={to === 'list' ? 'on' : ''} onClick={() => setTo('list')}>
-        <Icon as={List} /> ישר לרשימה
+        <Icon as={List} /> {t('ישר לרשימה')}
       </button>
     </div>
   )
@@ -292,27 +293,27 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
   if (existing) {
     const { found, draft: d } = existing
     return (
-      <Sheet title="כבר קיים בטיול" onClose={onClose}>
+      <Sheet title={t('כבר קיים בטיול')} onClose={onClose}>
         <p>
-          <b dir="auto">{found.name}</b> {found.where === 'deck' ? 'כבר בגילוי.' : 'כבר ברשימת המקומות.'}
-          {!found.exact && ' נראה שזה אותו מקום.'}
+          <b dir="auto">{found.name}</b> {found.where === 'deck' ? t('כבר בגילוי.') : t('כבר ברשימת המקומות.')}
+          {!found.exact && ` ${t('נראה שזה אותו מקום.')}`}
         </p>
         <button className="primary" onClick={() => useExisting(found)} disabled={busy}>
           {found.where === 'deck' ? (
             <>
-              <Icon as={Heart} /> זה אותו מקום, לסמן לייק
+              <Icon as={Heart} /> {t('זה אותו מקום, לסמן לייק')}
             </>
           ) : (
-            'זה אותו מקום, סגירה'
+            t('זה אותו מקום, סגירה')
           )}
         </button>
         {!found.exact && (
           <button className="secondary" onClick={() => (setExisting(null), save(d, true))} disabled={busy}>
-            זה מקום אחר, להוסיף בכל זאת
+            {t('זה מקום אחר, להוסיף בכל זאת')}
           </button>
         )}
         <button className="link" onClick={() => setExisting(null)}>
-          חזרה לעריכה
+          {t('חזרה לעריכה')}
         </button>
       </Sheet>
     )
@@ -322,12 +323,14 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
     // ticked places already on the list are skipped, so they don't count
     const picked = many.filter((m) => m.on && m.found?.where !== 'list').length
     return (
-      <Sheet title={`נמצאו ${many.length} מקומות`} onClose={onClose}>
-        <p className="muted small">מסמנים אילו מקומות להוסיף. מקום שכבר בטיול לא יתווסף שוב, ואם הוא בגילוי יסומן לו לייק.</p>
+      <Sheet title={t('נמצאו {n} מקומות', { n: many.length })} onClose={onClose}>
+        <p className="muted small">{t('מסמנים אילו מקומות להוסיף. מקום שכבר בטיול לא יתווסף שוב, ואם הוא בגילוי יסומן לו לייק.')}</p>
         <div className="stack">
           {many.map((m, i) => {
             const style = CARD_STYLE[m.d.category ?? ''] ?? CARD_STYLE.sight
             const verdict = m.d.verdict ? VERDICTS[m.d.verdict] : null
+            // the lookup's English text for the preview; what gets added keeps the Hebrew columns and `en`
+            const shown = localizeCard(m.d)
             return (
               <label key={i} className="card pick-row">
                 <input
@@ -338,17 +341,17 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
                 <span className="pick-body">
                   <b dir="auto">{m.d.name}</b>
                   <span className="muted small">
-                    {[CITY_HE[m.d.city ?? ''], m.d.area, style.label].filter(Boolean).join(' · ')}
+                    {[cityLabel(CITY_HE[m.d.city ?? '']), m.d.area, style.label].filter(Boolean).join(' · ')}
                   </span>
-                  {(m.d.serves || m.d.todo || m.d.reality) && (
+                  {(shown.serves || shown.todo || shown.reality) && (
                     <span className="small clamp" dir="auto">
-                      {m.d.serves || m.d.todo || m.d.reality}
+                      {shown.serves || shown.todo || shown.reality}
                     </span>
                   )}
                   <span className="row">
                     {verdict && <span className={'verdict ' + verdict.tone}>{verdict.label}</span>}
                     {m.found && (
-                      <span className="verdict meh">{m.found.where === 'deck' ? 'כבר בגילוי' : 'כבר ברשימה'}</span>
+                      <span className="verdict meh">{m.found.where === 'deck' ? t('כבר בגילוי') : t('כבר ברשימה')}</span>
                     )}
                   </span>
                 </span>
@@ -359,10 +362,10 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
         {err && <p className="msg">{err}</p>}
         {destination}
         <button className="primary" onClick={addMany} disabled={busy || !picked}>
-          {busy ? 'מוסיף…' : picked === 1 ? 'הוספת מקום אחד' : `הוספת ${picked} מקומות`}
+          {busy ? t('מוסיף…') : picked === 1 ? t('הוספת מקום אחד') : t('הוספת {n} מקומות', { n: picked })}
         </button>
         <button className="link" onClick={() => (setErr(''), setMany(null))}>
-          <Icon as={ArrowRight} className="flip-ltr" /> חזרה
+          <Icon as={ArrowRight} className="flip-ltr" /> {t('חזרה')}
         </button>
       </Sheet>
     )
@@ -370,7 +373,7 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
 
   if (draft) {
     return (
-      <Sheet title="זה המקום?" onClose={onClose}>
+      <Sheet title={t('זה המקום?')} onClose={onClose}>
         <DraftForm
           draft={typed ?? draft}
           busy={busy}
@@ -385,41 +388,40 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
 
   if (failedLink) {
     return (
-      <Sheet title="מה שם המקום?" onClose={onClose}>
-        <p className="muted small">לא זיהינו את המקום מהקישור. כתבו את השם ונחפש דירוג, כתובת ופרטים.</p>
-        <Field label="שם המקום">
-          <input value={name} onChange={(e) => setName(e.target.value)} dir="auto" placeholder="למשל: Savoy, אזבו-ג׳ובן" autoFocus enterKeyHint="search" onKeyDown={(e) => e.key === 'Enter' && name.trim() && !busy && research({ name })} />
+      <Sheet title={t('מה שם המקום?')} onClose={onClose}>
+        <p className="muted small">{t('לא זיהינו את המקום מהקישור. כתבו את השם ונחפש דירוג, כתובת ופרטים.')}</p>
+        <Field label={t('שם המקום')}>
+          <input value={name} onChange={(e) => setName(e.target.value)} dir="auto" placeholder={t('למשל: Savoy, אזבו-ג׳ובן')} autoFocus enterKeyHint="search" onKeyDown={(e) => e.key === 'Enter' && name.trim() && !busy && research({ name })} />
         </Field>
         {err && <p className="msg">{err}</p>}
         <button className="primary" onClick={() => research({ name })} disabled={busy || !name.trim()}>
-          {busy ? 'מחפש, עד דקה…' : (<><Icon as={Search} /> חיפוש לפי שם</>)}
+          {busy ? t('מחפש, עד דקה…') : (<><Icon as={Search} /> {t('חיפוש לפי שם')}</>)}
         </button>
         <button className="link" onClick={() => (setErr(''), setFailedLink(''))}>
-          <Icon as={ArrowRight} className="flip-ltr" /> חזרה
+          <Icon as={ArrowRight} className="flip-ltr" /> {t('חזרה')}
         </button>
       </Sheet>
     )
   }
 
   return (
-    <Sheet title="הצעת מקום" onClose={onClose}>
+    <Sheet title={t('הצעת מקום')} onClose={onClose}>
       <p className="muted small">
-        הדביקו קישור מאינסטגרם, טיקטוק או גוגל מפות, או כתבו שם של מקום. נבדוק דירוג, כתובת, כשרות והתאמה
-        לתינוק.
+        {t('הדביקו קישור מאינסטגרם, טיקטוק או גוגל מפות, או כתבו שם של מקום. נבדוק דירוג, כתובת, כשרות והתאמה לתינוק.')}
       </p>
-      <Field label="קישור או שם של מקום">
+      <Field label={t('קישור או שם של מקום')}>
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           dir="auto"
-          placeholder="קישור, או שם כמו Ichiran Shibuya"
+          placeholder={t('קישור, או שם כמו Ichiran Shibuya')}
           enterKeyHint="search"
           onKeyDown={(e) => e.key === 'Enter' && query.trim() && !busy && lookUp()}
         />
       </Field>
       {err && <p className="msg">{err}</p>}
       <button className="primary" onClick={lookUp} disabled={busy || !query.trim()}>
-        {busy ? 'מחפש, עד דקה…' : (<><Icon as={Search} /> זיהוי ובדיקה</>)}
+        {busy ? t('מחפש, עד דקה…') : (<><Icon as={Search} /> {t('זיהוי ובדיקה')}</>)}
       </button>
     </Sheet>
   )
@@ -435,7 +437,12 @@ function DraftForm(props: {
 }) {
   const [d, setD] = useState<Draft>(props.draft)
   const set = (k: keyof Draft) => (e: { target: { value: string } }) => setD({ ...d, [k]: e.target.value })
+  // a tip typed in English replaces the card's English one too, or the card would still show the old text
+  const setTip = (e: { target: { value: string } }) =>
+    setD({ ...d, tip: e.target.value, ...(isEn && d.en ? { en: { ...d.en, tip: e.target.value } } : {}) })
   const verdict = d.verdict ? VERDICTS[d.verdict] : null
+  // the preview shows the lookup's English text; edits go to the Hebrew columns (and, for the tip, to `en` too)
+  const shown = localizeCard(d)
 
   return (
     <>
@@ -447,25 +454,25 @@ function DraftForm(props: {
           {d.google_score != null && <span className="small muted">Google <Icon as={Star} /> <bdi>{d.google_score}</bdi></span>}
         </div>
       )}
-      <Field label="שם">
+      <Field label={t('שם')}>
         <input value={d.name ?? ''} onChange={set('name')} dir="auto" />
       </Field>
       <div className="row">
-        <Field label="עיר">
+        <Field label={t('עיר')}>
           <select value={d.city} onChange={set('city')}>
             {Object.entries(CITY_HE).map(([k, v]) => (
               <option key={k} value={k}>
-                {v}
+                {cityLabel(v)}
               </option>
             ))}
           </select>
         </Field>
-        <Field label="שכונה">
+        <Field label={t('שכונה')}>
           <input value={d.area ?? ''} onChange={set('area')} dir="auto" />
         </Field>
       </div>
       <div className="row">
-        <Field label="סוג">
+        <Field label={t('סוג')}>
           <select value={d.category} onChange={set('category')}>
             {Object.entries(CARD_STYLE).map(([k, v]) => (
               <option key={k} value={k}>
@@ -474,7 +481,7 @@ function DraftForm(props: {
             ))}
           </select>
         </Field>
-        <Field label="למי">
+        <Field label={t('למי')}>
           <select value={d.audience ?? ''} onChange={set('audience')}>
             {Object.entries(AUDIENCES).map(([k, v]) => (
               <option key={k} value={k}>
@@ -486,43 +493,43 @@ function DraftForm(props: {
       </div>
       {d.serves && (
         <div className="small">
-          <b>מה מגישים:</b> <span dir="auto">{d.serves}</span>
+          <b>{t('מה מגישים:')}</b> <span dir="auto">{shown.serves}</span>
         </div>
       )}
       {d.kosher_note && (
         <div className="small">
-          <b>כשרות:</b> <span dir="auto">{d.kosher_note}</span>
+          <b>{t('כשרות:')}</b> <span dir="auto">{shown.kosher_note}</span>
         </div>
       )}
       {d.todo && (
         <div className="small">
-          <b>מה עושים שם:</b> <span dir="auto">{d.todo}</span>
+          <b>{t('מה עושים שם:')}</b> <span dir="auto">{shown.todo}</span>
         </div>
       )}
       {d.special && (
         <div className="small">
-          <b>מה מיוחד:</b> <span dir="auto">{d.special}</span>
+          <b>{t('מה מיוחד:')}</b> <span dir="auto">{shown.special}</span>
         </div>
       )}
       {d.reality && (
         <div className="small">
-          <b>בביקורות:</b> <span dir="auto">{d.reality}</span>
+          <b>{t('בביקורות:')}</b> <span dir="auto">{shown.reality}</span>
         </div>
       )}
       {d.baby_notes && (
         <div className="small">
-          <b>עם תינוק:</b> <span dir="auto">{d.baby_notes}</span>
+          <b>{t('עם תינוק:')}</b> <span dir="auto">{shown.baby_notes}</span>
         </div>
       )}
-      <Field label="טיפ / הערה">
-        <textarea value={d.tip ?? ''} onChange={set('tip')} rows={2} dir="auto" />
+      <Field label={t('טיפ / הערה')}>
+        <textarea value={shown.tip ?? ''} onChange={setTip} rows={2} dir="auto" />
       </Field>
       {props.destination}
       <button className="primary" onClick={() => props.onSave(d)} disabled={props.busy || !d.name?.trim()}>
-        {props.busy ? 'שומר…' : 'הוספה'}
+        {props.busy ? t('שומר…') : t('הוספה')}
       </button>
       <button className="link" onClick={props.onBack}>
-        <Icon as={ArrowRight} className="flip-ltr" /> חזרה
+        <Icon as={ArrowRight} className="flip-ltr" /> {t('חזרה')}
       </button>
     </>
   )

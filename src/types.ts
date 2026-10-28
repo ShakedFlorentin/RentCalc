@@ -1,3 +1,5 @@
+import { t } from './i18n'
+
 export type Trip = {
   id: string
   name: string
@@ -23,8 +25,8 @@ export type DayInfo = {
   who: string | null
 }
 
-export const TOGETHER = 'כולם ביחד'
-export const WHO_OPTIONS = ['שקד ומאור', 'אלמוג ושניר']
+export const TOGETHER = 'כולם ביחד' // he-only: stored and compared; shown through t(TOGETHER)
+export const WHO_OPTIONS = ['שקד ומאור', 'אלמוג ושניר'] // he-only: couple names are stored as keys
 
 export type ItineraryItem = {
   id: string
@@ -144,32 +146,32 @@ export function itemDone(i: ChecklistItem, couple: string | null) {
 }
 
 export const CATEGORIES: Record<string, string> = {
-  sight: 'אטרקציה',
-  food: 'אוכל',
-  shopping: 'קניות',
-  transport: 'תחבורה',
-  other: 'אחר',
+  sight: t('אטרקציה'),
+  food: t('אוכל'),
+  shopping: t('קניות'),
+  transport: t('תחבורה'),
+  other: t('אחר'),
 }
 
 export const BOOKING_KINDS: Record<string, string> = {
-  flight: 'טיסה',
-  hotel: 'מלון',
-  restaurant: 'מסעדה',
-  train: 'רכבת',
-  activity: 'כרטיס / אטרקציה',
-  insurance: 'ביטוח',
-  other: 'אחר',
+  flight: t('טיסה'),
+  hotel: t('מלון'),
+  restaurant: t('מסעדה'),
+  train: t('רכבת'),
+  activity: t('כרטיס / אטרקציה'),
+  insurance: t('ביטוח'),
+  other: t('אחר'),
 }
 
 /** Tabs on the bookings screen, one per kind; the first four always show, the rest only when they have bookings. */
 export const BOOKING_TABS: Record<string, string> = {
-  flight: 'טיסות',
-  hotel: 'מלונות',
-  restaurant: 'מסעדות',
-  activity: 'אטרקציות',
-  train: 'רכבות',
-  insurance: 'ביטוח',
-  other: 'אחר',
+  flight: t('טיסות'),
+  hotel: t('מלונות'),
+  restaurant: t('מסעדות'),
+  activity: t('אטרקציות'),
+  train: t('רכבות'),
+  insurance: t('ביטוח'),
+  other: t('אחר'),
 }
 
 /** A place from a published guide map (e.g. the Ptitim blog's Tokyo map), shown as an optional map layer. */
@@ -269,40 +271,40 @@ export type PlanFacts = {
 export type Swipe = { trip_id: string; candidate_id: string; user_id: string; liked: boolean; created_at: string }
 
 export const CITY_HE: Record<string, string> = {
-  tokyo: 'טוקיו',
-  kyoto: 'קיוטו',
-  osaka: 'אוסקה',
-  nara: 'נארה',
-  daytrip: 'טיולי יום',
+  tokyo: 'טוקיו', // he-only
+  kyoto: 'קיוטו', // he-only
+  osaka: 'אוסקה', // he-only
+  nara: 'נארה', // he-only
+  daytrip: 'טיולי יום', // he-only
 }
 
 /** Card label and the flat colour behind a card that has no photo (icons are in icons.tsx). */
 export const CARD_STYLE: Record<string, { label: string; bg: string }> = {
-  food: { label: 'אוכל', bg: '#8c3b2e' },
-  cafe: { label: 'קפה וקינוחים', bg: '#4d6b4f' },
-  sight: { label: 'אטרקציה', bg: '#5a4a72' },
-  shopping: { label: 'קניות', bg: '#8a6a2f' },
-  nightlife: { label: 'חיי לילה', bg: '#2f3349' },
-  experience: { label: 'פעילות', bg: '#3e6577' },
+  food: { label: t('אוכל'), bg: '#8c3b2e' },
+  cafe: { label: t('קפה וקינוחים'), bg: '#4d6b4f' },
+  sight: { label: t('אטרקציה'), bg: '#5a4a72' },
+  shopping: { label: t('קניות'), bg: '#8a6a2f' },
+  nightlife: { label: t('חיי לילה'), bg: '#2f3349' },
+  experience: { label: t('פעילות'), bg: '#3e6577' },
 }
 
 export const VERDICTS: Record<string, { label: string; tone: string }> = {
-  gem: { label: 'תגלית', tone: 'good' },
-  worth_it: { label: 'שווה את ההייפ', tone: 'good' },
-  overhyped: { label: 'מוגזם ברשתות', tone: 'meh' },
-  trap: { label: 'מלכודת תיירים', tone: 'bad' },
+  gem: { label: t('תגלית'), tone: 'good' },
+  worth_it: { label: t('שווה את ההייפ'), tone: 'good' },
+  overhyped: { label: t('מוגזם ברשתות'), tone: 'meh' },
+  trap: { label: t('מלכודת תיירים'), tone: 'bad' },
 }
 
 // no place in Japan is certified, so these describe eating without pork or seafood
 export const KOSHER: Record<string, { label: string; tone: string }> = {
-  friendly: { label: 'קל לשומרי כשרות', tone: 'good' },
-  options: { label: 'יש אפשרויות כשרות', tone: 'meh' },
-  hard: { label: 'קשה לשומרי כשרות', tone: 'bad' },
+  friendly: { label: t('קל לשומרי כשרות'), tone: 'good' },
+  options: { label: t('יש אפשרויות כשרות'), tone: 'meh' },
+  hard: { label: t('קשה לשומרי כשרות'), tone: 'bad' },
 }
 
 export const AUDIENCES: Record<string, string> = {
-  baby: 'עם התינוק',
-  adults: 'ערב מבוגרים',
+  baby: t('עם התינוק'),
+  adults: t('ערב מבוגרים'),
 }
 
 /** A problem someone reported from the app; status and reply are set from the backend when it's handled. */

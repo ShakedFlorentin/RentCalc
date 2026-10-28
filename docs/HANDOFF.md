@@ -3,6 +3,29 @@
 Live: https://shakedflorentin.github.io/RentCalc/ · branch `japan-trip`, deployed by fast-forwarding `main`
 (`git push origin japan-trip:main`; GitHub Pages builds on push). Supabase project `wbofjfwbdewgnwjmcpnv`.
 
+## Language: Hebrew and English (2026-10-28)
+- Settings → "שפה · Language". The choice lives on the phone (localStorage `lang`); switching reloads the app.
+  index.html sets `<html lang dir>` before the first paint; `src/styles/ltr.css` holds the left-to-right fixes
+  (tab bar, add/search buttons, photo taps, `.flip-ltr` arrows).
+- UI text: `t('עברית', vars?)` from `src/i18n.ts`; the Hebrew is the key, English in `src/i18n/en-*.ts` (a, b, c by
+  screen group, shared for city and first names). `node scripts/i18n-check.mjs --list` must report 0 missing and 0
+  Hebrew outside t(); Hebrew that is data (stored, compared, regex) carries `// he-only` and is shown via t().
+- Dates follow the language (`locale`). City names the database keeps in Hebrew show through `cityLabel()`.
+- Card text: `en` jsonb on place_library and candidates (same keys as the Hebrew columns), shown over the Hebrew by
+  `localizeCard()` (inside `withMedia`). sync_library and fill_plan_facts copy it; suggest-place (v19) returns it for
+  new cards, card-facts (v4) writes the English plan line. All 255 cards translated 2026-10-28
+  (`data/card-text-en-2026-10.json`, through the subscription).
+- Planner (v9): `itinerary_items.notes_en` next to `notes`; warnings carry `kind` (closed_date / closed_weekday /
+  hours) so the app words them in English. Places' "add to plan" saves notes_en too.
+- Translator (v6): `{ text, from: he|en|ja, lang }`; in English the traveller's side is English ↔ Japanese.
+- What stays as typed: people's own notes, titles, list items, booking names.
+
+## Wording (2026-10-28)
+Hebrew rewritten by five agents to sound like people, not a translation: UI strings, all 255 cards
+(`data/card-text-2026-10.json`, loaded into place_library, candidates and matched places' notes), and the prompts of
+suggest-place, card-facts and translate. `public/media.json` no longer carries card text (only links, photos,
+kosher); the database is the one source.
+
 **Before every deploy** (app or edge function), read the in-app problem reports: `select * from public.reports where
 status = 'open'` (sent from "דיווח על בעיה"; screen, build and phone come with each). Fix what fits, then set
 `status` ('fixed' / 'wontfix'), `reply` (Hebrew, shown to the reporter in the app) and `resolved_at`.
@@ -61,7 +84,7 @@ Offline: `public/sw.js` + localStorage cache in `useTripTable` (`src/lib.ts`).
   - Deploy both files of `supabase/functions/plan-trip` (index.ts, plan.ts). plan.ts is pure and can be bundled with
     esbuild and run in node for testing.
   - Facts arrive with every new card, at add time, never at planning time:
-    - added by link or name (suggest-place v18): the same extract call returns the plan fields (schema
+    - added by link or name (suggest-place v19): the same extract call returns the plan fields (schema
       PlaceListPlanned; if the API ever rejects it, it retries without them) and AddPlace saves them on the card;
     - same name as a library card: the `candidates_plan_facts` trigger copies the library's facts;
     - anything else (e.g. from the Ptitim map): trigger `card_needs_facts` → pg_net → edge function `card-facts`

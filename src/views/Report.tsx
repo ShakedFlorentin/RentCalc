@@ -4,13 +4,14 @@ import type { Report, Trip } from '../types'
 import { fmtDay, mutate, useTripTable } from '../lib'
 import { Field, Sheet } from '../ui'
 import { Icon } from '../icons'
+import { t } from '../i18n'
 import { Check, Send } from 'lucide-react'
 import '../styles/info.css'
 
 const STATUS: Record<Report['status'], { label: string; cls: string }> = {
-  open: { label: 'פתוח', cls: 'open' },
-  fixed: { label: 'תוקן', cls: 'fixed' },
-  wontfix: { label: 'לא יתוקן', cls: 'wontfix' },
+  open: { label: t('פתוח'), cls: 'open' },
+  fixed: { label: t('תוקן'), cls: 'fixed' },
+  wontfix: { label: t('לא יתוקן'), cls: 'wontfix' },
 }
 
 /**
@@ -48,8 +49,8 @@ export default function ReportSheet(props: { trip: Trip; me: string; from: strin
   }
 
   return (
-    <Sheet title="דיווח על בעיה" onClose={props.onClose}>
-      <Field label="מה לא עובד, או מה לא נכון?">
+    <Sheet title={t('דיווח על בעיה')} onClose={props.onClose}>
+      <Field label={t('מה לא עובד, או מה לא נכון?')}>
         <textarea
           rows={5}
           dir="auto"
@@ -59,29 +60,29 @@ export default function ReportSheet(props: { trip: Trip; me: string; from: strin
             setBody(e.target.value)
             setSent(false)
           }}
-          placeholder="למשל: בהזמנות, הטיסה של יום ה׳ בשעה לא נכונה"
+          placeholder={t('למשל: בהזמנות, הטיסה של יום ה׳ בשעה לא נכונה')}
         />
       </Field>
       <p className="muted small">
-        עם הדיווח נשמרים גם המסך ({props.from}), גרסת האפליקציה וסוג הטלפון, כדי שיהיה קל לתקן.
+        {t('עם הדיווח נשמרים גם המסך ({screen}), גרסת האפליקציה וסוג הטלפון, כדי שיהיה קל לתקן.', { screen: props.from })}
       </p>
       {sent && (
         <p className="report-sent" role="status">
-          <Icon as={Check} /> נשלח, תודה. כשזה יטופל, התשובה תופיע כאן.
+          <Icon as={Check} /> {t('נשלח, תודה. כשזה יטופל, התשובה תופיע כאן.')}
         </p>
       )}
       <button className="primary" onClick={send} disabled={busy || !body.trim()}>
-        <Icon as={Send} /> {busy ? 'שולח…' : 'שליחה'}
+        <Icon as={Send} /> {busy ? t('שולח…') : t('שליחה')}
       </button>
 
       {reports.length > 0 && (
         <section className="info-sec report-list">
-          <h3>דיווחים קודמים</h3>
+          <h3>{t('דיווחים קודמים')}</h3>
           {reports.map((r) => (
             <div key={r.id} className="card report">
               <div className="row spread nowrap">
                 <span className="muted small">
-                  <bdi>{r.reporter ?? 'מישהו'}</bdi> · {fmtDay(new Date(r.created_at))}
+                  <bdi>{r.reporter ?? t('מישהו')}</bdi> · {fmtDay(new Date(r.created_at))}
                   {r.screen && <> · <bdi>{r.screen}</bdi></>}
                 </span>
                 <span className={'report-status ' + STATUS[r.status].cls}>{STATUS[r.status].label}</span>

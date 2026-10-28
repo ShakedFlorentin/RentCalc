@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { t } from './i18n'
 
 export function useOnline() {
   const [online, setOnline] = useState(() => navigator.onLine)
@@ -18,11 +19,11 @@ export function useOnline() {
 /** "לפני 3 שעות" for a timestamp. */
 function ago(at: number) {
   const min = Math.max(1, Math.round((Date.now() - at) / 60000))
-  if (min < 60) return min === 1 ? 'לפני דקה' : `לפני ${min} דקות`
+  if (min < 60) return min === 1 ? t('לפני דקה') : t('לפני {n} דקות', { n: min })
   const h = Math.round(min / 60)
-  if (h < 24) return h === 1 ? 'לפני שעה' : h === 2 ? 'לפני שעתיים' : `לפני ${h} שעות`
+  if (h < 24) return h === 1 ? t('לפני שעה') : h === 2 ? t('לפני שעתיים') : t('לפני {n} שעות', { n: h })
   const d = Math.round(h / 24)
-  return d === 1 ? 'לפני יום' : d === 2 ? 'לפני יומיים' : `לפני ${d} ימים`
+  return d === 1 ? t('לפני יום') : d === 2 ? t('לפני יומיים') : t('לפני {n} ימים', { n: d })
 }
 
 /**
@@ -38,8 +39,8 @@ export function OfflineBanner({ since }: { since: number | null }) {
     return () => clearInterval(t)
   }, [])
   if (online && since == null) return null
-  const parts = [online ? 'השרת לא עונה' : 'אין אינטרנט']
-  if (since != null) parts.push(`עדכון אחרון ${ago(since)}`)
+  const parts = [online ? t('השרת לא עונה') : t('אין אינטרנט')]
+  if (since != null) parts.push(t('עדכון אחרון {ago}', { ago: ago(since) }))
   return (
     <div
       role="status"

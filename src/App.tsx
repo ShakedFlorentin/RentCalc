@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
+import { t } from './i18n'
 import type { Member, Trip } from './types'
 import { clearCache, currentDay, readCache, writeCache } from './lib'
 import { OfflineBanner } from './offline'
@@ -15,12 +16,12 @@ import SwipeGame from './views/Swipe'
 import Search, { type SearchTarget } from './views/Search'
 
 const TABS = [
-  { id: 'home', label: 'בית', d: 'M3 11.5 12 4l9 7.5M5.5 10v10h4.5v-6h4v6h4.5V10' },
-  { id: 'swipe', label: 'גילוי', d: 'M12 21c-4 0-7-2.8-7-6.6 0-2.6 1.5-4.4 3-6 .500 1.5 1.3 2.2 2.2 2.5C10 8 11 5.5 13 3c.5 3 4 5.5 4 9.5 0 .800-.100 1.5-.300 2 1.2-.600 1.8-1.5 2-2.5 .600 5.8-2.7 9-7.7 9Z' },
-  { id: 'plan', label: 'מסלול', d: 'M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1ZM4 10h16M8 3v4M16 3v4' },
-  { id: 'bookings', label: 'הזמנות', d: 'M3 8a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v2.5a2 2 0 0 0 0 3.8V16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-2.2a2 2 0 0 0 0-3.8ZM14 7v10' },
-  { id: 'places', label: 'מקומות', d: 'M12 21s-6.5-5.8-6.5-11a6.5 6.5 0 0 1 13 0c0 5.2-6.5 11-6.5 11ZM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z' },
-  { id: 'more', label: 'עוד', d: 'M4 6h16M4 12h16M4 18h16' },
+  { id: 'home', label: t('בית'), d: 'M3 11.5 12 4l9 7.5M5.5 10v10h4.5v-6h4v6h4.5V10' },
+  { id: 'swipe', label: t('גילוי'), d: 'M12 21c-4 0-7-2.8-7-6.6 0-2.6 1.5-4.4 3-6 .500 1.5 1.3 2.2 2.2 2.5C10 8 11 5.5 13 3c.5 3 4 5.5 4 9.5 0 .800-.100 1.5-.300 2 1.2-.600 1.8-1.5 2-2.5 .600 5.8-2.7 9-7.7 9Z' },
+  { id: 'plan', label: t('מסלול'), d: 'M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1ZM4 10h16M8 3v4M16 3v4' },
+  { id: 'bookings', label: t('הזמנות'), d: 'M3 8a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v2.5a2 2 0 0 0 0 3.8V16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-2.2a2 2 0 0 0 0-3.8ZM14 7v10' },
+  { id: 'places', label: t('מקומות'), d: 'M12 21s-6.5-5.8-6.5-11a6.5 6.5 0 0 1 13 0c0 5.2-6.5 11-6.5 11ZM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z' },
+  { id: 'more', label: t('עוד'), d: 'M4 6h16M4 12h16M4 18h16' },
 ] as const
 type Tab = (typeof TABS)[number]['id']
 
@@ -56,7 +57,7 @@ export default function App() {
     return () => data.subscription.unsubscribe()
   }, [])
 
-  if (userId === undefined) return <div className="center" role="status">טוען…</div>
+  if (userId === undefined) return <div className="center" role="status">{t('טוען…')}</div>
   if (!userId) return <Login />
   return <TripGate userId={userId} />
 }
@@ -106,7 +107,7 @@ function TripGate({ userId }: { userId: string }) {
   }, [userId, attempt])
 
   if (failed) return <LoadError onRetry={() => setAttempt((a) => a + 1)} />
-  if (tripId === undefined) return <div className="center" role="status">טוען…</div>
+  if (tripId === undefined) return <div className="center" role="status">{t('טוען…')}</div>
   if (!tripId) return <TripPicker onPick={choose} />
   return <TripApp tripId={tripId} userId={userId} onLeave={() => choose(null)} />
 }
@@ -121,7 +122,7 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
   // the avatar asks Home to open trip settings; Home clears the request once it has opened them
   const [settingsAsk, setSettingsAsk] = useState(false)
   // the screen the avatar was tapped on, for a problem report sent from the settings
-  const [settingsFrom, setSettingsFrom] = useState('בית')
+  const [settingsFrom, setSettingsFrom] = useState(t('בית'))
   const [searching, setSearching] = useState(false)
   const [day, setDay] = useState(1)
   const [moreSub, setMoreSub] = useRemembered('moreTab', 'money') as [MoreTab, (s: MoreTab) => void]
@@ -170,7 +171,7 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
     if (trip) setDay(currentDay(trip.start_date, trip.num_days) ?? 1)
   }, [trip?.start_date, trip?.num_days])
 
-  if (!trip) return failed ? <LoadError onRetry={() => setAttempt((a) => a + 1)} /> : <div className="center" role="status">טוען…</div>
+  if (!trip) return failed ? <LoadError onRetry={() => setAttempt((a) => a + 1)} /> : <div className="center" role="status">{t('טוען…')}</div>
   const me = members.find((m) => m.user_id === props.userId)?.display_name ?? ''
   const openDay = (d: number) => {
     setDay(d)
@@ -193,7 +194,7 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
         <h1>{TABS.find((t) => t.id === tab)?.label}</h1>
         <button
           className="avatar"
-          aria-label={`הגדרות טיול, ${me}`}
+          aria-label={t('הגדרות טיול, {me}', { me })}
           onClick={() => {
             const here = TABS.find((t) => t.id === tab)?.label ?? tab
             setSettingsFrom(tab === 'more' ? `${here} › ${MORE_TABS.find((t) => t.id === moreSub)?.label ?? moreSub}` : here)
@@ -227,7 +228,7 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
         {tab === 'places' && <Places trip={trip} me={me} userId={props.userId} members={members} />}
         {tab === 'more' && <More trip={trip} members={members} userId={props.userId} sub={moreSub} setSub={setMoreSub} />}
       </main>
-      <nav className="tabbar glass" aria-label="ניווט ראשי">
+      <nav className="tabbar glass" aria-label={t('ניווט ראשי')}>
         {TABS.map((t) => (
           <button key={t.id} className={tab === t.id ? 'active' : ''} aria-current={tab === t.id ? 'page' : undefined} onClick={() => setTab(t.id)}>
             <svg className="tab-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -238,7 +239,7 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
         ))}
       </nav>
       {/* Music keeps search as its own glass button beside the tab bar */}
-      <button className="search-fab glass" aria-label="חיפוש" onClick={() => setSearching(true)}>
+      <button className="search-fab glass" aria-label={t('חיפוש')} onClick={() => setSearching(true)}>
         <svg className="tab-icon" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M10.5 18a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15ZM21 21l-5.2-5.2" />
         </svg>
@@ -257,9 +258,9 @@ function initials(name: string) {
 function LoadError({ onRetry }: { onRetry: () => void }) {
   return (
     <div className="center stack" role="alert">
-      <p>אין חיבור לשרת. בדקו את האינטרנט.</p>
+      <p>{t('אין חיבור לשרת. בדקו את האינטרנט.')}</p>
       <button className="primary" onClick={onRetry}>
-        נסו שוב
+        {t('נסו שוב')}
       </button>
     </div>
   )

@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { CalendarDays, Heart, ListChecks, MapPin, Search as SearchIcon, Ticket } from 'lucide-react'
 import { BOOKING_ICON, Icon, type LucideIcon } from '../icons'
 import { BOOKING_TABS, CITY_HE, type Booking, type Candidate, type ChecklistItem, type ItineraryItem, type Place } from '../types'
-import { dayDate, fmtDay, useTripTable } from '../lib'
+import { cityLabel, dayDate, fmtDay, useTripTable } from '../lib'
+import { t } from '../i18n'
 import { Sheet } from '../ui'
 
 /** Where a result leads: the screen that shows it. */
@@ -20,7 +21,7 @@ const norm = (s: string | null | undefined) =>
   (s ?? '')
     .toLowerCase()
     .normalize('NFKD')
-    .replace(/[֑-ׇ'׳"״`]/g, '')
+    .replace(/[֑-ׇ'׳"״`]/g, '') // he-only
 
 /** Search across everything in the trip: places, the swipe deck, bookings, the day plan and the lists. */
 export default function Search({
@@ -53,60 +54,60 @@ export default function Search({
     const has = (...fields: (string | null | undefined)[]) => fields.some((f) => norm(f).includes(term))
     const out: { label: string; hits: Hit[] }[] = [
       {
-        label: 'מקומות',
+        label: t('מקומות'),
         hits: places
-          .filter((p) => has(p.name, p.city, p.area, p.notes))
-          .map((p) => ({ key: 'p' + p.id, title: p.name, sub: [p.city, p.area].filter(Boolean).join(' · '), icon: MapPin, to: { tab: 'places' } })),
+          .filter((p) => has(p.name, p.city, cityLabel(p.city), p.area, p.notes))
+          .map((p) => ({ key: 'p' + p.id, title: p.name, sub: [cityLabel(p.city), p.area].filter(Boolean).join(' · '), icon: MapPin, to: { tab: 'places' } })),
       },
       {
-        label: 'גילוי',
+        label: t('גילוי'),
         hits: cards
-          .filter((c) => has(c.name, c.name_ja, c.area, CITY_HE[c.city] ?? c.city, c.serves, c.todo, ...(c.dishes ?? [])))
-          .map((c) => ({ key: 'c' + c.id, title: c.name, sub: [CITY_HE[c.city] ?? c.city, c.area].filter(Boolean).join(' · '), icon: Heart, to: { tab: 'swipe' } })),
+          .filter((c) => has(c.name, c.name_ja, c.area, CITY_HE[c.city] ?? c.city, cityLabel(CITY_HE[c.city] ?? c.city), c.serves, c.todo, ...(c.dishes ?? [])))
+          .map((c) => ({ key: 'c' + c.id, title: c.name, sub: [cityLabel(CITY_HE[c.city] ?? c.city), c.area].filter(Boolean).join(' · '), icon: Heart, to: { tab: 'swipe' } })),
       },
       {
-        label: 'הזמנות',
+        label: t('הזמנות'),
         hits: bookings
           .filter((b) => has(b.title, b.location, b.confirmation, b.notes, b.who))
           .map((b) => ({
             key: 'b' + b.id,
             title: b.title,
-            sub: [BOOKING_TABS[b.kind] ?? b.kind, b.who].filter(Boolean).join(' · '),
+            sub: [BOOKING_TABS[b.kind] ?? b.kind, b.who && t(b.who)].filter(Boolean).join(' · '),
             icon: BOOKING_ICON[b.kind] ?? Ticket,
             to: { tab: 'bookings' },
           })),
       },
       {
-        label: 'מסלול',
+        label: t('מסלול'),
         hits: items
           .filter((i) => has(i.title, i.location, i.notes))
-          .map((i) => ({ key: 'i' + i.id, title: i.title, sub: `${fmtDay(dayDate(start, i.day)) || `יום ${i.day}`}${i.time ? ` · ${i.time.slice(0, 5)}` : ''}`, icon: CalendarDays, to: { tab: 'plan', day: i.day } })),
+          .map((i) => ({ key: 'i' + i.id, title: i.title, sub: `${fmtDay(dayDate(start, i.day)) || t('יום {day}', { day: i.day })}${i.time ? ` · ${i.time.slice(0, 5)}` : ''}`, icon: CalendarDays, to: { tab: 'plan', day: i.day } })),
       },
       {
-        label: 'רשימות',
+        label: t('רשימות'),
         hits: todos
-          .filter((t) => has(t.text, t.assignee))
-          .map((t) => ({ key: 't' + t.id, title: t.text, sub: t.done ? 'בוצע' : '', icon: ListChecks, to: { tab: 'lists' } })),
+          .filter((todo) => has(todo.text, todo.assignee))
+          .map((todo) => ({ key: 't' + todo.id, title: todo.text, sub: todo.done ? t('בוצע') : '', icon: ListChecks, to: { tab: 'lists' } })),
       },
     ]
     return out.filter((g) => g.hits.length)
   }, [q, places, cards, bookings, items, todos])
 
   return (
-    <Sheet title="חיפוש" onClose={onClose}>
+    <Sheet title={t('חיפוש')} onClose={onClose}>
       <label className="search-field">
         <Icon as={SearchIcon} />
         <input
           ref={input}
           type="search"
           enterKeyHint="search"
-          placeholder="מקומות, הזמנות, מסלול ועוד"
-          aria-label="חיפוש בטיול"
+          placeholder={t('מקומות, הזמנות, מסלול ועוד')}
+          aria-label={t('חיפוש בטיול')}
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
       </label>
-      {q.trim().length >= 2 && !groups.length && <p className="empty">אין תוצאות ל"{q.trim()}"</p>}
+      {q.trim().length >= 2 && !groups.length && <p className="empty">{t('אין תוצאות ל"{q}"', { q: q.trim() })}</p>}
       {groups.map((g) => (
         <section key={g.label} className="search-group">
           <h3>{g.label}</h3>

@@ -3,7 +3,7 @@ import { BedDouble, Check, CircleAlert, Navigation, Pencil, PlaneLanding, Plus, 
 import { supabase } from '../supabase'
 import { CATEGORIES, TOGETHER, WHO_OPTIONS, type Booking, type DayInfo, type Member, type Place, type PlanSummary, type Trip } from '../types'
 import { cityLabel, couplesOf, dayDate, keepRanges, dayOption, dayParts, fmtDayLong, mutate, replan, useTripTable } from '../lib'
-import { isEn } from '../i18n'
+import { isEn, t } from '../i18n'
 import { Empty, Field, Sheet, useRemembered } from '../ui'
 import { Icon } from '../icons'
 import {
@@ -23,7 +23,7 @@ import '../styles/plan.css'
 
 type Props = { trip: Trip; day: number; setDay: (d: number) => void; members?: Member[]; userId?: string }
 
-const MODES: Record<WhoMode, string> = { mine: 'שלנו', group: 'של כולם', all: 'הכל' }
+const MODES: Record<WhoMode, string> = { mine: t('שלנו'), group: t('של כולם'), all: t('הכל') }
 
 export default function Itinerary({ trip, day, setDay, members = [], userId }: Props) {
   const { rows: days } = useTripTable<DayInfo>('day_info', trip.id, 'day')
@@ -82,21 +82,21 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
       <section className="card day-head" onClick={() => setEditDay(true)}>
         <div className="row spread">
           <h2>
-            {trip.start_date ? fmtDayLong(dayDate(trip.start_date, day)) : `יום ${day}`} {info?.city ? `· ${cityLabel(info.city)}` : ''}
+            {trip.start_date ? fmtDayLong(dayDate(trip.start_date, day)) : t('יום {day}', { day })} {info?.city ? `· ${cityLabel(info.city)}` : ''}
           </h2>
           <Icon className="muted" as={Pencil} />
         </div>
         <div className={'who-tag' + (info?.who ? ' apart' : '')}>{info?.who ? (
-            `רק ${info.who}`
+            t('רק {who}', { who: t(info.who) })
           ) : (
             <>
-              <Icon as={Users} /> {TOGETHER}
+              <Icon as={Users} /> {t(TOGETHER)}
             </>
           )}
         </div>
         {hotelNights(nightLines(info?.hotel ?? null, bookings, date, couples).filter((l) => visible(l.who, mode, myCouple))).map((l) => (
           <div key={l.text}>
-            <Icon as={BedDouble} /> {l.who && mode === 'all' && <span className="muted small">{l.who}: </span>}
+            <Icon as={BedDouble} /> {l.who && mode === 'all' && <span className="muted small">{t(l.who)}: </span>}
             {l.text}
           </div>
         ))}
@@ -104,7 +104,7 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
       </section>
 
       {couples.length > 1 && (
-        <div className="segmented" role="group" aria-label="של מי התוכנית">
+        <div className="segmented" role="group" aria-label={t('של מי התוכנית')}>
           {(Object.keys(MODES) as WhoMode[]).map((m) => (
             <button key={m} className={mode === m ? 'on' : ''} aria-pressed={mode === m} onClick={() => setMode(m)}>
               {MODES[m]}
@@ -117,16 +117,16 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
         <ArrivalCard key={e.key} entry={e} />
       ))}
 
-      {entries.length === 0 && <Empty>אין תוכניות ליום הזה</Empty>}
+      {entries.length === 0 && <Empty>{t('אין תוכניות ליום הזה')}</Empty>}
       {sections.map((owner) => (
         <Fragment key={owner ?? 'all'}>
           {owner !== undefined && (
             <h3 className="plan-owner">
               {owner ? (
-                owner
+                t(owner)
               ) : (
                 <>
-                  <Icon as={Users} /> {TOGETHER}
+                  <Icon as={Users} /> {t(TOGETHER)}
                 </>
               )}
             </h3>
@@ -141,7 +141,7 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
 
       {spare.length > 0 && <Spare trip={trip} day={day} spare={spare} />}
 
-      <button className="fab" aria-label="פעילות חדשה" onClick={() => setEditItem({ day, category: 'sight', who: defaultWho })}>
+      <button className="fab" aria-label={t('פעילות חדשה')} onClick={() => setEditItem({ day, category: 'sight', who: defaultWho })}>
         <Plus size={28} strokeWidth={2} aria-hidden="true" />
       </button>
 
@@ -152,7 +152,7 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
         <DayForm
           tripId={trip.id}
           day={day}
-          title={trip.start_date ? fmtDayLong(dayDate(trip.start_date, day)) : `יום ${day}`}
+          title={trip.start_date ? fmtDayLong(dayDate(trip.start_date, day)) : t('יום {day}', { day })}
           info={info}
           onClose={() => setEditDay(false)}
         />
@@ -169,7 +169,7 @@ function EntryRow({ e, onEdit, warning }: { e: Entry; onEdit: (i: PlanItem) => v
       {i ? (
         <button
           className="check"
-          aria-label="בוצע"
+          aria-label={t('בוצע')}
           aria-pressed={i.done}
           onClick={() => mutate(supabase.from('itinerary_items').update({ done: !i.done }).eq('id', i.id))}
         >
@@ -183,12 +183,12 @@ function EntryRow({ e, onEdit, warning }: { e: Entry; onEdit: (i: PlanItem) => v
       <div className="item-body" onClick={i ? () => onEdit(i) : undefined} style={i ? undefined : { cursor: 'default' }}>
         <div className="item-title">
           {/* the planner's time is a rough guess: it shows as such until someone sets one */}
-          {e.time && (i?.auto ? <span className="time approx" title="שעה משוערת">~{e.time}</span> : <span className="time">{e.time}</span>)}
+          {e.time && (i?.auto ? <span className="time approx" title={t('שעה משוערת')}>~{e.time}</span> : <span className="time">{e.time}</span>)}
           {e.title}
         </div>
         <div className="muted small">
-          {i ? CATEGORIES[i.category] ?? i.category : 'הזמנה'}
-          {e.who && <span className="who-pill">{e.who}</span>}
+          {i ? CATEGORIES[i.category] ?? i.category : t('הזמנה')}
+          {e.who && <span className="who-pill">{t(e.who)}</span>}
         </div>
         {/* the planner's notes are one short line (and a baby line when it matters); people's own notes can run long */}
         {e.sub && <div className={'notes' + (i?.auto ? ' plan-auto-notes' : ' plan-notes')}>{keepRanges(e.sub)}</div>}
@@ -199,7 +199,7 @@ function EntryRow({ e, onEdit, warning }: { e: Entry; onEdit: (i: PlanItem) => v
         )}
         {e.location && (
           <a className="action nav-btn" href={navUrl(e.location)} target="_blank" rel="noreferrer">
-            <Icon as={Navigation} /> ניווט
+            <Icon as={Navigation} /> {t('ניווט')}
           </a>
         )}
       </div>
@@ -253,18 +253,20 @@ function Spare({ trip, day, spare }: { trip: Trip; day: number; spare: PlanSumma
   return (
     <details className="card spare">
       <summary>
-        {spare.length === 1 ? 'עוד מקום אחד שאהבתם בעיר ולא נכנס למסלול' : `עוד ${spare.length} מקומות שאהבתם בעיר ולא נכנסו למסלול`}
+        {spare.length === 1
+          ? t('עוד מקום אחד שאהבתם בעיר ולא נכנס למסלול')
+          : t('עוד {n} מקומות שאהבתם בעיר ולא נכנסו למסלול', { n: spare.length })}
       </summary>
       <ul>
         {spare.map((u) => (
           <li key={u.place_id}>
             <span>
               <bdi>{u.name}</bdi>
-              {u.who && <span className="who-pill">{u.who}</span>}
-              {u.reason === 'closed' && <span className="muted small"> · סגור בימים האלה</span>}
+              {u.who && <span className="who-pill">{t(u.who)}</span>}
+              {u.reason === 'closed' && <span className="muted small"> · {t('סגור בימים האלה')}</span>}
             </span>
             <button className="action" onClick={() => add(u)}>
-              <Icon as={Plus} /> ליום הזה
+              <Icon as={Plus} /> {t('ליום הזה')}
             </button>
           </li>
         ))}
@@ -281,14 +283,14 @@ function ArrivalCard({ entry }: { entry: Entry }) {
   return (
     <details className="card arrival" open>
       <summary>
-        <Icon as={PlaneLanding} /> נחיתה ב{a.name} · <span className="time">{entry.time}</span>
-        {b.who && <span className="who-pill">{b.who}</span>}
+        <Icon as={PlaneLanding} /> {t('נחיתה ב{airport}', { airport: a.name })} · <span className="time">{entry.time}</span>
+        {b.who && <span className="who-pill">{t(b.who)}</span>}
       </summary>
       <ul>
-        {a.steps.map((t) => (
-          <li key={t.text}>
-            <Icon as={t.icon} />
-            <span>{t.text}</span>
+        {a.steps.map((s) => (
+          <li key={s.text}>
+            <Icon as={s.icon} />
+            <span>{s.text}</span>
           </li>
         ))}
       </ul>
@@ -319,20 +321,20 @@ function ItemForm(props: { tripId: string; start: string | null; numDays: number
   }
 
   const remove = async () => {
-    if (f.id && confirm('למחוק?') && (await mutate(supabase.from('itinerary_items').delete().eq('id', f.id))))
+    if (f.id && confirm(t('למחוק?')) && (await mutate(supabase.from('itinerary_items').delete().eq('id', f.id))))
       props.onClose()
   }
 
   return (
-    <Sheet title={f.id ? 'עריכת פעילות' : 'פעילות חדשה'} onClose={props.onClose}>
-      <Field label="מה עושים?">
+    <Sheet title={f.id ? t('עריכת פעילות') : t('פעילות חדשה')} onClose={props.onClose}>
+      <Field label={t('מה עושים?')}>
         <input value={f.title ?? ''} onChange={set('title')} autoFocus />
       </Field>
       <div className="row">
-        <Field label="שעה">
+        <Field label={t('שעה')}>
           <input type="time" value={f.time ?? ''} onChange={set('time')} />
         </Field>
-        <Field label="יום">
+        <Field label={t('יום')}>
           <select value={f.day} onChange={set('day')}>
             {Array.from({ length: props.numDays }, (_, i) => (
               <option key={i + 1} value={i + 1}>
@@ -343,18 +345,18 @@ function ItemForm(props: { tripId: string; start: string | null; numDays: number
         </Field>
       </div>
       {props.couples.length > 0 && (
-        <Field label="של מי">
+        <Field label={t('של מי')}>
           <select value={f.who ?? ''} onChange={set('who')}>
-            <option value="">{TOGETHER}</option>
+            <option value="">{t(TOGETHER)}</option>
             {[...new Set([...props.couples, ...(f.who ? [f.who] : [])])].map((c) => (
               <option key={c} value={c}>
-                רק {c}
+                {t('רק {who}', { who: t(c) })}
               </option>
             ))}
           </select>
         </Field>
       )}
-      <Field label="סוג">
+      <Field label={t('סוג')}>
         <select value={f.category} onChange={set('category')}>
           {Object.entries(CATEGORIES).map(([k, v]) => (
             <option key={k} value={k}>
@@ -363,18 +365,18 @@ function ItemForm(props: { tripId: string; start: string | null; numDays: number
           ))}
         </select>
       </Field>
-      <Field label="מיקום (לחיפוש במפות)">
+      <Field label={t('מיקום (לחיפוש במפות)')}>
         <input value={f.location ?? ''} onChange={set('location')} dir="auto" />
       </Field>
-      <Field label="הערות">
+      <Field label={t('הערות')}>
         <textarea value={f.notes ?? ''} onChange={set('notes')} rows={3} />
       </Field>
       <button className="primary" onClick={save}>
-        שמירה
+        {t('שמירה')}
       </button>
       {f.id && (
         <button className="danger" onClick={remove}>
-          מחיקה
+          {t('מחיקה')}
         </button>
       )}
     </Sheet>
@@ -403,27 +405,27 @@ function DayForm(props: { tripId: string; day: number; title: string; info?: Day
 
   return (
     <Sheet title={props.title} onClose={props.onClose}>
-      <Field label="עיר">
+      <Field label={t('עיר')}>
         <input value={city} onChange={(e) => setCity(e.target.value)} />
       </Field>
-      <Field label="מי ביפן">
+      <Field label={t('מי ביפן')}>
         <select value={who} onChange={(e) => setWho(e.target.value)}>
-          <option value="">{TOGETHER}</option>
+          <option value="">{t(TOGETHER)}</option>
           {[...new Set([...WHO_OPTIONS, ...(who ? [who] : [])])].map((w) => (
             <option key={w} value={w}>
-              רק {w}
+              {t('רק {who}', { who: t(w) })}
             </option>
           ))}
         </select>
       </Field>
-      <Field label="לינה">
+      <Field label={t('לינה')}>
         <input value={hotel} onChange={(e) => setHotel(e.target.value)} />
       </Field>
-      <Field label="הערות ליום">
+      <Field label={t('הערות ליום')}>
         <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
       </Field>
       <button className="primary" onClick={save}>
-        שמירה
+        {t('שמירה')}
       </button>
     </Sheet>
   )

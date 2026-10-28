@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Copy, Languages, Mic, Square, Volume2 } from 'lucide-react'
 import { supabase } from '../supabase'
 import { Icon } from '../icons'
-import { isEn } from '../i18n'
+import { isEn, t } from '../i18n'
 
 /*
  * Voice translator between Hebrew and Japanese. Tap the language you are speaking, speak, tap again: the phone's
@@ -39,12 +39,12 @@ const Recognizer = (window as unknown as { SpeechRecognition?: new () => Recogni
   .SpeechRecognition ?? (window as unknown as { webkitSpeechRecognition?: new () => Recognition }).webkitSpeechRecognition
 
 const ERRORS: Record<string, string> = {
-  'not-allowed': 'אין הרשאה למיקרופון. אפשר לאשר בהגדרות > ספארי > מיקרופון.',
-  'service-not-allowed': 'ספארי חוסם זיהוי דיבור כאן.',
-  network: 'אין חיבור. זיהוי הדיבור צריך אינטרנט.',
-  'no-speech': 'לא נשמע דיבור. נסו שוב קרוב יותר לטלפון.',
-  'audio-capture': 'לא נמצא מיקרופון.',
-  'language-not-supported': 'הטלפון הזה לא מזהה דיבור בשפה הזאת.',
+  'not-allowed': t('אין הרשאה למיקרופון. אפשר לאשר בהגדרות > ספארי > מיקרופון.'),
+  'service-not-allowed': t('ספארי חוסם זיהוי דיבור כאן.'),
+  network: t('אין חיבור. זיהוי הדיבור צריך אינטרנט.'),
+  'no-speech': t('לא נשמע דיבור. נסו שוב קרוב יותר לטלפון.'),
+  'audio-capture': t('לא נמצא מיקרופון.'),
+  'language-not-supported': t('הטלפון הזה לא מזהה דיבור בשפה הזאת.'),
 }
 
 const standalone = () =>
@@ -68,9 +68,10 @@ async function translateError(error: unknown) {
   const res = (error as { context?: Response } | null)?.context
   const body = await res?.clone().json().catch(() => null)
   if (res?.status === 429)
-    return /daily limit/.test(body?.error ?? '') ? 'הגעתם למגבלה היומית: 200 תרגומים ביום לכל אחד.' : 'השירות עמוס. נסו שוב בעוד דקה.'
-  if (!navigator.onLine) return 'אין חיבור לאינטרנט.'
-  return `התרגום נכשל${res?.status ? ` (${res.status}${body?.error ? `: ${body.error}` : ''})` : ''}.`
+    return /daily limit/.test(body?.error ?? '') ? t('הגעתם למגבלה היומית: 200 תרגומים ביום לכל אחד.') : t('השירות עמוס. נסו שוב בעוד דקה.')
+  if (!navigator.onLine) return t('אין חיבור לאינטרנט.')
+  const detail = res?.status ? ` (${res.status}${body?.error ? `: ${body.error}` : ''})` : ''
+  return t('התרגום נכשל{detail}.', { detail })
 }
 
 export default function Translator() {
@@ -132,25 +133,33 @@ export default function Translator() {
     const u = new SpeechSynthesisUtterance(text)
     u.lang = as
     if (v) u.voice = v
-    setSpoke(`${as}, קול: ${v ? `${v.name} (${norm(v)})` : 'לא נמצא, ברירת מחדל'}`)
+    const voice = v ? `${v.name} (${norm(v)})` : t('לא נמצא, ברירת מחדל')
+    setSpoke(t('{lang}, קול: {voice}', { lang: as, voice }))
     speechSynthesis.cancel()
     speechSynthesis.speak(u)
   }
 
   const translate = async (text: string, from: Lang) => {
     setBusy(true)
-    note('שולח לתרגום')
+    note(t('שולח לתרגום'))
     const sent = performance.now()
     const { data, error } = await supabase.functions.invoke('translate', { body: { text, from: from.slice(0, 2), lang: isEn ? 'en' : 'he' } })
     setBusy(false)
     const took = Math.round(performance.now() - sent)
     if (error || !data?.translation) {
-      note('התרגום נכשל')
+      note(t('התרגום נכשל'))
       setError(await translateError(error))
       return
     }
     // where the wait went: the whole round trip, and inside the server its checks and the Claude call
-    note(`התקבל תרגום אחרי ${took}ms (בדיקות ${data.ms?.checks ?? '?'}ms, Claude ${data.ms?.claude ?? '?'}ms, רשת והפעלה ${data.ms ? took - data.ms.checks - data.ms.claude : '?'}ms)`)
+    note(
+      t('התקבל תרגום אחרי {took}ms (בדיקות {checks}ms, Claude {claude}ms, רשת והפעלה {net}ms)', {
+        took,
+        checks: data.ms?.checks ?? '?',
+        claude: data.ms?.claude ?? '?',
+        net: data.ms ? took - data.ms.checks - data.ms.claude : '?',
+      }),
+    )
     const turn = { id: Date.now(), from, heard: text, text: data.translation, romaji: data.romaji ?? '', back: data.back ?? '' }
     setTurns((t) => [turn, ...t].slice(0, MAX_TURNS))
     setHeard('')
@@ -167,7 +176,7 @@ export default function Translator() {
     }
     if (listening) {
       stopping.current = true
-      note('נלחץ עצירה')
+      note(t('נלחץ עצירה'))
       const r = rec.current
       r?.stop()
       // a recognizer that never really started may never end: free the button regardless. Tied to this
@@ -175,7 +184,7 @@ export default function Translator() {
       forceStop.current = setTimeout(() => {
         if (!live.current || rec.current !== r) return
         r?.abort()
-        note('לא נגמר תוך שנייה וחצי, עצרתי בכוח')
+        note(t('לא נגמר תוך שנייה וחצי, עצרתי בכוח'))
         reset()
       }, 1500)
       return
@@ -201,13 +210,13 @@ export default function Translator() {
     // adding only the changed ones repeats words when Safari resends a result it already finalised
     let final = ''
     let pending = ''
-    r.onstart = () => note('התחיל')
+    r.onstart = () => note(t('התחיל'))
     r.onaudiostart = () => {
       clearTimeout(watchdog.current)
-      note('המיקרופון נפתח')
+      note(t('המיקרופון נפתח'))
     }
-    r.onsoundstart = () => note('נשמע קול')
-    r.onspeechstart = () => note('זוהה דיבור')
+    r.onsoundstart = () => note(t('נשמע קול'))
+    r.onspeechstart = () => note(t('זוהה דיבור'))
     r.onresult = (e) => {
       final = ''
       pending = ''
@@ -220,13 +229,13 @@ export default function Translator() {
       setInterim(pending)
     }
     r.onerror = (e) => {
-      note(`שגיאה: ${e.error}`)
-      if (e.error !== 'aborted') setError(ERRORS[e.error] ?? `שגיאה: ${e.error}`)
+      note(t('שגיאה: {msg}', { msg: e.error }))
+      if (e.error !== 'aborted') setError(ERRORS[e.error] ?? t('שגיאה: {msg}', { msg: e.error }))
     }
     // whatever was heard when recording ends, by a tap or by Safari after a pause, goes to translation; words
     // still pending at the stop count too, since Safari doesn't always finalise the last one
     r.onend = () => {
-      note('נגמר')
+      note(t('נגמר'))
       reset()
       if (rec.current !== r) return
       const said = (final + pending).trim()
@@ -235,38 +244,38 @@ export default function Translator() {
     }
     rec.current = r
     try {
-      note('קריאה ל-start')
+      note(t('קריאה ל-start'))
       r.start()
       live.current = true
       setListening(true)
       // the microphone should open within a moment; if it doesn't, say so instead of waiting forever
       watchdog.current = setTimeout(() => {
         if (!live.current || rec.current !== r) return
-        note('המיקרופון לא נפתח תוך 4 שניות')
-        setError('המיקרופון לא נפתח. סגרו את האפליקציה ופתחו מחדש, ונסו שוב.')
+        note(t('המיקרופון לא נפתח תוך 4 שניות'))
+        setError(t('המיקרופון לא נפתח. סגרו את האפליקציה ופתחו מחדש, ונסו שוב.'))
         r.abort()
         reset()
       }, 4000)
     } catch (err) {
-      note(`start נכשל: ${(err as Error).message}`)
-      setError(`לא הצלחתי להתחיל: ${(err as Error).message}`)
+      note(t('start נכשל: {msg}', { msg: (err as Error).message }))
+      setError(t('לא הצלחתי להתחיל: {msg}', { msg: (err as Error).message }))
     }
   }
 
   const voiceFor = (code: string) =>
-    voices.filter((v) => v.lang.replace('_', '-').startsWith(code)).map((v) => v.name).slice(0, 3).join(', ') || 'אין'
+    voices.filter((v) => v.lang.replace('_', '-').startsWith(code)).map((v) => v.name).slice(0, 3).join(', ') || t('אין')
   const report = [
-    `זיהוי דיבור: ${Recognizer ? 'קיים' : 'לא קיים'}`,
-    `נפתח מ: ${standalone() ? 'מסך הבית' : 'ספארי'}`,
-    `קול בעברית: ${voiceFor(HOME.slice(0, 2))}`,
-    `קול ביפנית: ${voiceFor('ja')}`,
-    `שפה אחרונה: ${lang}`,
-    `נשמע: ${heard || turns[0]?.heard || '(ריק)'}`,
-    turns[0] && `תרגום אחרון: ${turns[0].text}`,
-    turns[0]?.back && `בחזרה לעברית: ${turns[0].back}`,
-    error && `שגיאה: ${error}`,
-    spoke && `השמעה אחרונה: ${spoke}`,
-    log.length > 0 && `אירועים:\n${log.join('\n')}`,
+    t('זיהוי דיבור: {state}', { state: Recognizer ? t('קיים') : t('לא קיים') }),
+    t('נפתח מ: {from}', { from: standalone() ? t('מסך הבית') : t('ספארי') }),
+    t('קול בעברית: {voices}', { voices: voiceFor(HOME.slice(0, 2)) }),
+    t('קול ביפנית: {voices}', { voices: voiceFor('ja') }),
+    t('שפה אחרונה: {lang}', { lang }),
+    t('נשמע: {text}', { text: heard || turns[0]?.heard || t('(ריק)') }),
+    turns[0] && t('תרגום אחרון: {text}', { text: turns[0].text }),
+    turns[0]?.back && t('בחזרה לעברית: {text}', { text: turns[0].back }),
+    error && t('שגיאה: {msg}', { msg: error }),
+    spoke && t('השמעה אחרונה: {text}', { text: spoke }),
+    log.length > 0 && `${t('אירועים:')}\n${log.join('\n')}`,
   ]
     .filter(Boolean)
     .join('\n')
@@ -274,10 +283,10 @@ export default function Translator() {
   return (
     <section className="info-sec">
       <h2 className="info-h">
-        <Icon as={Languages} /> תרגום קולי
+        <Icon as={Languages} /> {t('תרגום קולי')}
       </h2>
       <div className="card voice-test">
-        <p className="muted small">לוחצים על השפה שמדברים בה, מדברים, ולוחצים שוב. התרגום מופיע ומושמע בשפה השנייה.</p>
+        <p className="muted small">{t('לוחצים על השפה שמדברים בה, מדברים, ולוחצים שוב. התרגום מופיע ומושמע בשפה השנייה.')}</p>
         {Recognizer ? (
           <div className="rec-row">
             {LANGS.map((l) => {
@@ -287,26 +296,26 @@ export default function Translator() {
                   key={l.id}
                   className={'rec-btn' + (on ? ' on' : '')}
                   aria-pressed={on}
-                  aria-label={on ? `עצירה ותרגום מ${l.label}` : `דיבור ב${l.label}`}
+                  aria-label={on ? t('עצירה ותרגום מ{lang}', { lang: l.label }) : t('דיבור ב{lang}', { lang: l.label })}
                   disabled={(listening && !on) || busy}
                   onClick={() => toggle(l.id)}
                 >
                   <Icon as={on ? Square : Mic} size="1.5rem" />
-                  <span lang={l.id}>{on ? 'עצירה' : l.label}</span>
+                  <span lang={l.id}>{on ? t('עצירה') : l.label}</span>
                 </button>
               )
             })}
           </div>
         ) : (
-          <p className="msg">הדפדפן הזה לא מזהה דיבור.</p>
+          <p className="msg">{t('הדפדפן הזה לא מזהה דיבור.')}</p>
         )}
         {(listening || busy || heard || interim) && (
           // the exchange in progress: what is being heard, then the wait for its translation
           <div className={'turn pending ' + (lang === HOME ? 'he' : 'ja')} aria-live="polite">
             <span className="turn-heard" lang={lang} dir="auto">
-              {heard || interim ? `${heard}${interim ? ` ${interim}` : ''}` : 'מקשיב…'}
+              {heard || interim ? `${heard}${interim ? ` ${interim}` : ''}` : t('מקשיב…')}
             </span>
-            {busy && <span className="muted">מתרגם…</span>}
+            {busy && <span className="muted">{t('מתרגם…')}</span>}
           </div>
         )}
         {error && (
@@ -316,31 +325,31 @@ export default function Translator() {
         )}
         {turns.length > 0 ? (
           <div className="turns">
-            {turns.map((t) => {
-              const to: Lang = t.from === HOME ? 'ja-JP' : HOME
+            {turns.map((turn) => {
+              const to: Lang = turn.from === HOME ? 'ja-JP' : HOME
               return (
                 // the bubble is the replay button: tap to hear the translation again
                 <button
-                  key={t.id}
-                  className={'turn ' + (t.from === HOME ? 'he' : 'ja')}
+                  key={turn.id}
+                  className={'turn ' + (turn.from === HOME ? 'he' : 'ja')}
                   disabled={listening}
-                  aria-label={`השמעה שוב: ${t.text}`}
-                  onClick={() => say(t.text)}
+                  aria-label={t('השמעה שוב: {text}', { text: turn.text })}
+                  onClick={() => say(turn.text)}
                 >
-                  <span className="turn-heard muted" lang={t.from} dir="auto">
-                    {t.heard}
+                  <span className="turn-heard muted" lang={turn.from} dir="auto">
+                    {turn.heard}
                   </span>
                   <span className="turn-text" lang={to} dir="auto">
-                    {t.text}
+                    {turn.text}
                   </span>
-                  {t.romaji && (
+                  {turn.romaji && (
                     <span className="turn-romaji muted" lang="ja-Latn" dir="ltr">
-                      {t.romaji}
+                      {turn.romaji}
                     </span>
                   )}
-                  {t.back && (
+                  {turn.back && (
                     <span className="turn-back muted" dir="auto">
-                      בעברית זה אומר: {t.back}
+                      {t('בעברית זה אומר: {text}', { text: turn.back })}
                     </span>
                   )}
                   <Icon as={Volume2} className="turn-play" />
@@ -350,19 +359,19 @@ export default function Translator() {
             <button
               className="link"
               disabled={listening || busy}
-              onClick={() => confirm('למחוק את השיחה מהטלפון?') && setTurns([])}
+              onClick={() => confirm(t('למחוק את השיחה מהטלפון?')) && setTurns([])}
             >
-              ניקוי השיחה
+              {t('ניקוי השיחה')}
             </button>
           </div>
         ) : (
-          !listening && !busy && <p className="muted">השיחה תופיע כאן. לוחצים על תרגום כדי לשמוע אותו שוב.</p>
+          !listening && !busy && <p className="muted">{t('השיחה תופיע כאן. לוחצים על תרגום כדי לשמוע אותו שוב.')}</p>
         )}
         <details className="voice-details">
-          <summary>פרטים טכניים</summary>
+          <summary>{t('פרטים טכניים')}</summary>
           <pre className="voice-report">{report}</pre>
-          <button className="link" onClick={() => navigator.clipboard.writeText(report).then(() => alert('הועתק. אפשר להדביק לי בצ׳אט'))}>
-            <Icon as={Copy} /> העתקת הפרטים
+          <button className="link" onClick={() => navigator.clipboard.writeText(report).then(() => alert(t('הועתק. אפשר להדביק לי בצ׳אט')))}>
+            <Icon as={Copy} /> {t('העתקת הפרטים')}
           </button>
         </details>
       </div>

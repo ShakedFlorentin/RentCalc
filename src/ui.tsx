@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useRef, useState } from 'react'
 import { Icon, type LucideIcon } from './icons'
+import { t } from './i18n'
 
 const stop = (e: { stopPropagation: () => void }) => e.stopPropagation()
 
@@ -134,7 +135,7 @@ export function Sheet(props: { title: string; onClose: () => void; children: Rea
         <div className="sheet-head">
           <span className="grabber" aria-hidden="true" />
           <button className="sheet-close" onClick={onClose}>
-            סגירה
+            {t('סגירה')}
           </button>
           <h2>{props.title}</h2>
           <span />
@@ -216,9 +217,9 @@ export function useRemembered(key: string, initial: string) {
 export function LoadNote({ onRetry }: { onRetry: () => void }) {
   return (
     <p className="msg" role="alert">
-      העדכון נכשל, בדקו את החיבור.{' '}
+      {t('העדכון נכשל, בדקו את החיבור.')}{' '}
       <button className="link" onClick={onRetry}>
-        נסו שוב
+        {t('נסו שוב')}
       </button>
     </p>
   )

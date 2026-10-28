@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { ExternalLink, Globe, MapPin, Play } from 'lucide-react'
 import { Sheet } from './ui'
+import { t } from './i18n'
 import { mapsUrl, safeUrl } from './lib'
 import { Icon, type LucideIcon } from './icons'
 
@@ -42,7 +43,7 @@ export function VideoSheet({ media, title, onClose }: { media: NonNullable<Retur
       ) : null}
       <a className="secondary btn-link" href={safeUrl(media.href)} target="_blank" rel="noreferrer">
         <Icon as={ExternalLink} />
-        {media.kind === 'instagram' ? 'פתיחה באינסטגרם' : 'פתיחה בטיקטוק'}
+        {media.kind === 'instagram' ? t('פתיחה באינסטגרם') : t('פתיחה בטיקטוק')}
       </a>
     </Sheet>
   )
@@ -62,17 +63,17 @@ export function MediaActions(props: { name: string; maps?: string | null; websit
     <div className={'actions' + (props.compact ? ' compact' : '')} onClick={(e) => e.stopPropagation()}>
       {maps && (
         <a className="action" href={maps} target="_blank" rel="noreferrer">
-          <Icon as={MapPin} /> <span>מפה</span>
+          <Icon as={MapPin} /> <span>{t('מפה')}</span>
         </a>
       )}
       {website && (
         <a className="action" href={website} target="_blank" rel="noreferrer">
-          <Icon as={Globe} /> <span>אתר</span>
+          <Icon as={Globe} /> <span>{t('אתר')}</span>
         </a>
       )}
       {video && (
         <button className="action" onClick={() => setOpen(true)}>
-          <Icon as={Play} /> <span>סרטון</span>
+          <Icon as={Play} /> <span>{t('סרטון')}</span>
         </button>
       )}
       {props.children}

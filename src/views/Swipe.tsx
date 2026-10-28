@@ -2,8 +2,9 @@ import { PointerEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../supabase'
 import { AUDIENCES, CARD_STYLE, CITY_HE, KOSHER, VERDICTS, type Candidate, type Member, type Swipe, type Trip } from '../types'
-import { couplesOf, keepRanges, mutate, safeUrl, useMediaIndex, useTripTable, withMedia } from '../lib'
+import { cityLabel, couplesOf, keepRanges, mutate, safeUrl, useMediaIndex, useTripTable, withMedia } from '../lib'
 import AddPlace from './AddPlace'
+import { t } from '../i18n'
 import { Empty, Sheet } from '../ui'
 import { MediaActions } from '../media'
 import { ChevronLeft, ChevronUp, Heart, Lightbulb, MapPin, MessageSquare, Plus, ReceiptText, Search, Sparkles, Star, Target, Timer, Users, Utensils, UtensilsCrossed, Wine, Baby } from 'lucide-react'
@@ -11,11 +12,11 @@ import { AUDIENCE_ICON, CARD_ICON, Icon, type LucideIcon } from '../icons'
 import '../styles/game.css'
 
 const LEVELS = [
-  { xp: 0, name: 'גאיג׳ין' },
-  { xp: 200, name: 'תייר' },
-  { xp: 500, name: 'נוסע' },
-  { xp: 1000, name: 'מקומי' },
-  { xp: 2000, name: 'שוגון' },
+  { xp: 0, name: t('גאיג׳ין') },
+  { xp: 200, name: t('תייר') },
+  { xp: 500, name: t('נוסע') },
+  { xp: 1000, name: t('מקומי') },
+  { xp: 2000, name: t('שוגון') },
 ]
 
 type Props = { trip: Trip; userId: string; members: Member[] }
@@ -139,7 +140,7 @@ export default function SwipeGame({ trip, userId, members }: Props) {
 
   return (
     <div className="swipe-screen">
-      <button className="hud" onClick={() => setBoardOpen(true)} aria-label="פתיחת הדירוג">
+      <button className="hud" onClick={() => setBoardOpen(true)} aria-label={t('פתיחת הדירוג')}>
         <span className="hud-level">
           <b>{meRow?.level.name ?? ''}</b>
           <span className="bar">
@@ -157,12 +158,12 @@ export default function SwipeGame({ trip, userId, members }: Props) {
         </span>
       </button>
 
-      <div className="chips scroll filters" role="group" aria-label="סינון">
+      <div className="chips scroll filters" role="group" aria-label={t('סינון')}>
         <button className="chip add-chip" onClick={() => setAdding(true)}>
-          <Icon as={Plus} /> הצעת מקום
+          <Icon as={Plus} /> {t('הצעת מקום')}
         </button>
         <button className={'chip' + (!city && !aud ? ' on' : '')} aria-pressed={!city && !aud} onClick={() => (setCity(''), setAud(''))}>
-          הכל
+          {t('הכל')}
         </button>
         {Object.entries(AUDIENCES).map(([k, v]) => (
           <button key={k} className={'chip' + (aud === k ? ' on' : '')} aria-pressed={aud === k} onClick={() => setAud(aud === k ? '' : k)}>
@@ -172,7 +173,7 @@ export default function SwipeGame({ trip, userId, members }: Props) {
         <span className="chip-sep" aria-hidden="true" />
         {cities.map((c) => (
           <button key={c} className={'chip' + (city === c ? ' on' : '')} aria-pressed={city === c} onClick={() => setCity(city === c ? '' : c)}>
-            {CITY_HE[c]}
+            {cityLabel(CITY_HE[c])}
           </button>
         ))}
       </div>
@@ -180,7 +181,7 @@ export default function SwipeGame({ trip, userId, members }: Props) {
       {adding && <AddPlace tripId={trip.id} userId={userId} me={me} defaultTo="deck" onClose={() => setAdding(false)} />}
 
       {boardOpen && (
-        <Sheet title="דירוג" onClose={() => setBoardOpen(false)}>
+        <Sheet title={t('דירוג')} onClose={() => setBoardOpen(false)}>
           <div className="board">
             {board.map((b, i) => (
               <div key={b.m.user_id} className="player">
@@ -189,7 +190,7 @@ export default function SwipeGame({ trip, userId, members }: Props) {
                   <div className="row spread nowrap">
                     <b>
                       {b.m.display_name}
-                      {b.m.user_id === userId && ' (אני)'}
+                      {b.m.user_id === userId && ` ${t('(אני)')}`}
                     </b>
                     <span className="small muted">
                       {b.level.name} · <bdi>{b.xp} XP</bdi>
@@ -199,15 +200,14 @@ export default function SwipeGame({ trip, userId, members }: Props) {
                     <span style={{ width: `${candidates.length ? (b.done / candidates.length) * 100 : 0}%` }} />
                   </div>
                   {b.m.user_id !== userId && b.twin !== null && (
-                    <div className="small muted">טעם משותף איתך: {b.twin}%</div>
+                    <div className="small muted">{t('טעם משותף איתך: {pct}%', { pct: b.twin })}</div>
                   )}
                 </div>
               </div>
             ))}
           </div>
           <p className="small muted">
-            כל זוג מצביע ביחד: מספיק שאחד אוהב, אלא אם השני דילג. שואלים על מקום רק את מי שישן לידו, והוא נכנס למסלול
-            ביום שכולם בעיר, אם כל הזוגות האלה אהבו אותו. לייק או דילוג שווים 10 XP, מאצ׳ 50 XP.
+            {t('כל זוג מצביע ביחד: מספיק שאחד אוהב, אלא אם השני דילג. שואלים על מקום רק את מי שישן לידו, והוא נכנס למסלול ביום שכולם בעיר, אם כל הזוגות האלה אהבו אותו. לייק או דילוג שווים 10 XP, מאצ׳ 50 XP.')}
           </p>
         </Sheet>
       )}
@@ -216,10 +216,10 @@ export default function SwipeGame({ trip, userId, members }: Props) {
         {!loading && deck.length === 0 && (
           <Empty>
             {!candidates.length
-              ? 'עוד אין מקומות בגילוי'
+              ? t('עוד אין מקומות בגילוי')
               : candidates.some((c) => !mine.has(c.id) && forMe(c))
-                ? 'אין מקומות בסינון הזה'
-                : 'ראיתם את כל המקומות. אפשר לחכות לחברים או להציץ במאצ׳ים בלשונית מקומות'}
+                ? t('אין מקומות בסינון הזה')
+                : t('ראיתם את כל המקומות. אפשר לחכות לחברים או להציץ במאצ׳ים בלשונית מקומות')}
           </Empty>
         )}
         {deck
@@ -231,30 +231,31 @@ export default function SwipeGame({ trip, userId, members }: Props) {
       </div>
       {(deck.length > 0 || history.length > 0) && (
         <div className="swipe-buttons">
-          <button className="round small-round" onClick={undo} disabled={!history.length} aria-label="ביטול החלקה אחרונה">
+          <button className="round small-round" onClick={undo} disabled={!history.length} aria-label={t('ביטול החלקה אחרונה')}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3" /></svg>
           </button>
-          <button className="round nope" onClick={() => deck[0] && swipe(deck[0], false)} disabled={!deck.length} aria-label="דלג">
+          <button className="round nope" onClick={() => deck[0] && swipe(deck[0], false)} disabled={!deck.length} aria-label={t('דלג')}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
           </button>
-          <button className="round like" onClick={() => deck[0] && swipe(deck[0], true)} disabled={!deck.length} aria-label="אהבתי">
+          <button className="round like" onClick={() => deck[0] && swipe(deck[0], true)} disabled={!deck.length} aria-label={t('אהבתי')}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path className="fill" d="M12 20.5s-7.5-4.6-9.2-9.4C1.6 7.7 4 4.5 7.2 4.5c1.9 0 3.4 1 4.8 2.8 1.4-1.8 2.9-2.8 4.8-2.8 3.2 0 5.6 3.2 4.4 6.6-1.7 4.8-9.2 9.4-9.2 9.4z" /></svg>
           </button>
-          {deck.length > 0 && <span className="left-count" aria-live="polite">{deck.length === 1 ? 'נשאר אחד' : `נשארו ${deck.length}`}</span>}
+          {deck.length > 0 && <span className="left-count" aria-live="polite">{deck.length === 1 ? t('נשאר אחד') : t('נשארו {n}', { n: deck.length })}</span>}
         </div>
       )}
 
       {match && (
         <div className="backdrop center-modal" onClick={() => setMatch(null)}>
-          <div className="match-pop" role="dialog" aria-modal="true" aria-label="מאצ׳" onClick={(e) => e.stopPropagation()}>
-            <h2>מאצ׳</h2>
+          <div className="match-pop" role="dialog" aria-modal="true" aria-label={t('מאצ׳')} onClick={(e) => e.stopPropagation()}>
+            <h2>{t('מאצ׳')}</h2>
             <p>
-              <b dir="auto">{match.c.name}</b> נכנס {match.who ? `לרשימה של ${match.who}` : 'לרשימה של כולם'}
+              <b dir="auto">{match.c.name}</b>{' '}
+              {match.who ? t('נכנס לרשימה של {who}', { who: match.who.split(' + ').map((w) => t(w)).join(' + ') }) : t('נכנס לרשימה של כולם')}
             </p>
-            <p className="muted small">נכנס למסלול ביום פנוי בעיר שלו. טיול יום יחכה עד שתבחרו לו יום.</p>
-            <p className="muted">{match.names.join(' · ')} אהבו את המקום</p>
+            <p className="muted small">{t('נכנס למסלול ביום פנוי בעיר שלו. טיול יום יחכה עד שתבחרו לו יום.')}</p>
+            <p className="muted">{t('{names} אהבו את המקום', { names: match.names.join(' · ') })}</p>
             <button className="primary" onClick={() => setMatch(null)}>
-              המשך
+              {t('המשך')}
             </button>
           </div>
         </div>
@@ -384,9 +385,9 @@ function Card({ c, top, likedBy, onSwipe }: { c: Candidate; top: boolean; likedB
       setMore(true)
       return
     }
-    const t = trail.current
-    const a = t[0]
-    const b = t[t.length - 1]
+    const tr = trail.current
+    const a = tr[0]
+    const b = tr[tr.length - 1]
     // a finger that stopped before letting go has no speed left, whatever it had before the pause
     const v = b.t > a.t && e.timeStamp - b.t < 50 ? ((b.x - a.x) / (b.t - a.t)) * 1000 : 0
     // decide by where the flick is going, not where the finger let go. RTL doesn't change it: right = like
@@ -431,8 +432,8 @@ function Card({ c, top, likedBy, onSwipe }: { c: Candidate; top: boolean; likedB
         )}
         {top && photos.length > 1 && (
           <>
-            <button className="photo-tap prev" aria-label="תמונה קודמת" onClick={(e) => cycle(e, -1)} />
-            <button className="photo-tap next" aria-label="תמונה הבאה" onClick={(e) => cycle(e, 1)} />
+            <button className="photo-tap prev" aria-label={t('תמונה קודמת')} onClick={(e) => cycle(e, -1)} />
+            <button className="photo-tap next" aria-label={t('תמונה הבאה')} onClick={(e) => cycle(e, 1)} />
             <div className="dots" aria-hidden="true">
               {photos.map((u, i) => (
                 <i key={u} className={i === Math.min(photo, photos.length - 1) ? 'on' : ''} />
@@ -441,15 +442,15 @@ function Card({ c, top, likedBy, onSwipe }: { c: Candidate; top: boolean; likedB
           </>
         )}
         <span className="stamp like-stamp" style={{ opacity: dx > 0 ? p : 0 }} aria-hidden="true">
-          אהבתי
+          {t('אהבתי')}
         </span>
         <span className="stamp nope-stamp" style={{ opacity: dx < 0 ? p : 0 }} aria-hidden="true">
-          דלג
+          {t('דלג')}
         </span>
         <div className="card-title">
           {likedBy.length > 0 && (
             <span className="liked-by">
-              <Icon as={Heart} /> <bdi>{likedBy.join(', ')}</bdi> אהבו
+              <Icon as={Heart} /> <bdi>{likedBy.map((c) => t(c)).join(', ')}</bdi> {t('אהבו')}
             </span>
           )}
           <h2 dir="auto">{c.name}</h2>
@@ -459,7 +460,7 @@ function Card({ c, top, likedBy, onSwipe }: { c: Candidate; top: boolean; likedB
             </div>
           )}
           <div className="card-meta">
-            <Icon as={MapPin} /> {CITY_HE[c.city] ?? c.city}
+            <Icon as={MapPin} /> {cityLabel(CITY_HE[c.city] ?? c.city)}
             {c.area && (
               <>
                 {' · '}
@@ -482,38 +483,38 @@ function Card({ c, top, likedBy, onSwipe }: { c: Candidate; top: boolean; likedB
         <Tags c={c} />
         {c.serves && (
           <div className="fact">
-            <Label icon={Utensils}>מה מגישים</Label>
+            <Label icon={Utensils}>{t('מה מגישים')}</Label>
             <p dir="auto" className="clamp">{keepRanges(c.serves)}</p>
           </div>
         )}
         {c.todo && !c.serves && (
           <div className="fact">
-            <Label icon={Target}>מה עושים שם</Label>
+            <Label icon={Target}>{t('מה עושים שם')}</Label>
             <p dir="auto" className="clamp">{keepRanges(c.todo)}</p>
           </div>
         )}
         {c.special && (
           <div className="fact">
-            <Label icon={Sparkles}>מה מיוחד</Label>
+            <Label icon={Sparkles}>{t('מה מיוחד')}</Label>
             <p dir="auto" className="clamp">{keepRanges(c.special)}</p>
           </div>
         )}
         {c.hype && !c.serves && !c.todo && !c.special && (
           <div className="fact">
-            <Label icon={MessageSquare}>ברשתות</Label>
+            <Label icon={MessageSquare}>{t('ברשתות')}</Label>
             <p dir="auto" className="clamp">{keepRanges(c.hype)}</p>
           </div>
         )}
         {c.reality && !c.todo && !c.special && (
           <div className="fact">
-            <Label icon={Search}>בביקורות</Label>
+            <Label icon={Search}>{t('בביקורות')}</Label>
             <p dir="auto" className="clamp">{keepRanges(c.reality)}</p>
           </div>
         )}
       </div>
       {top && (
         <button className="link more-btn" onClick={() => setMore(true)}>
-          <Icon as={ChevronUp} /> עוד פרטים
+          <Icon as={ChevronUp} /> {t('עוד פרטים')}
         </button>
       )}
       {more &&
@@ -523,7 +524,7 @@ function Card({ c, top, likedBy, onSwipe }: { c: Candidate; top: boolean; likedB
               <Tags c={c} />
               {c.serves && (
                 <div className="fact">
-                  <Label icon={Utensils}>מה מגישים</Label>
+                  <Label icon={Utensils}>{t('מה מגישים')}</Label>
                   <p dir="auto">{keepRanges(c.serves)}</p>
                   {!!c.dishes?.length && (
                     <div className="dishes">
@@ -538,20 +539,20 @@ function Card({ c, top, likedBy, onSwipe }: { c: Candidate; top: boolean; likedB
               )}
               {c.kosher_note && (
                 <div className="fact">
-                  <Label icon={UtensilsCrossed}>כשרות (בלי חזיר ופירות ים)</Label>
+                  <Label icon={UtensilsCrossed}>{t('כשרות (בלי חזיר ופירות ים)')}</Label>
                   <p dir="auto">{keepRanges(c.kosher_note)}</p>
                 </div>
               )}
               {c.todo && (
                 <div className="fact">
-                  {c.serves ? <Label icon={ReceiptText}>איך זה עובד</Label> : <Label icon={Target}>מה עושים שם</Label>}
+                  {c.serves ? <Label icon={ReceiptText}>{t('איך זה עובד')}</Label> : <Label icon={Target}>{t('מה עושים שם')}</Label>}
                   <p dir="auto">{keepRanges(c.todo)}</p>
                   {c.time_needed && <p className="muted small"><Icon as={Timer} /> {c.time_needed}</p>}
                 </div>
               )}
               {c.special && (
                 <div className="fact">
-                  <Label icon={Sparkles}>מה מיוחד</Label>
+                  <Label icon={Sparkles}>{t('מה מיוחד')}</Label>
                   <p dir="auto">{keepRanges(c.special)}</p>
                   {!!c.highlights?.length && (
                     <div className="dishes">
@@ -566,25 +567,25 @@ function Card({ c, top, likedBy, onSwipe }: { c: Candidate; top: boolean; likedB
               )}
               {c.hype && (
                 <div className="fact">
-                  <Label icon={MessageSquare}>ברשתות</Label>
+                  <Label icon={MessageSquare}>{t('ברשתות')}</Label>
                   <p dir="auto">{keepRanges(c.hype)}</p>
                 </div>
               )}
               {c.reality && (
                 <div className="fact">
-                  <Label icon={Search}>בביקורות</Label>
+                  <Label icon={Search}>{t('בביקורות')}</Label>
                   <p dir="auto">{keepRanges(c.reality)}</p>
                 </div>
               )}
               {c.baby_notes && (
                 <div className="fact">
-                  {c.audience === 'adults' ? <Label icon={Wine}>למה בלי התינוק</Label> : <Label icon={Baby}>עם תינוק</Label>}
+                  {c.audience === 'adults' ? <Label icon={Wine}>{t('למה בלי התינוק')}</Label> : <Label icon={Baby}>{t('עם תינוק')}</Label>}
                   <p dir="auto">{keepRanges(c.baby_notes)}</p>
                 </div>
               )}
               {c.tip && (
                 <div className="fact">
-                  <Label icon={Lightbulb}>טיפ</Label>
+                  <Label icon={Lightbulb}>{t('טיפ')}</Label>
                   <p dir="auto">{keepRanges(c.tip)}</p>
                 </div>
               )}
@@ -593,17 +594,17 @@ function Card({ c, top, likedBy, onSwipe }: { c: Candidate; top: boolean; likedB
                 <div className="row">
                   {c.sources.flatMap((s) => safeUrl(s) ?? []).slice(0, 4).map((s, i) => (
                     <a key={s} className="pill" href={s} target="_blank" rel="noreferrer">
-                      מקור {i + 1}
+                      {t('מקור {n}', { n: i + 1 })}
                     </a>
                   ))}
                 </div>
               )}
             </div>
             <div className="sheet-decide">
-              <button className="round nope" onClick={() => decide(-1)} aria-label="דלג">
+              <button className="round nope" onClick={() => decide(-1)} aria-label={t('דלג')}>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
               </button>
-              <button className="round like" onClick={() => decide(1)} aria-label="אהבתי">
+              <button className="round like" onClick={() => decide(1)} aria-label={t('אהבתי')}>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path className="fill" d="M12 20.5s-7.5-4.6-9.2-9.4C1.6 7.7 4 4.5 7.2 4.5c1.9 0 3.4 1 4.8 2.8 1.4-1.8 2.9-2.8 4.8-2.8 3.2 0 5.6 3.2 4.4 6.6-1.7 4.8-9.2 9.4-9.2 9.4z" /></svg>
               </button>
             </div>
@@ -635,7 +636,7 @@ function Tags({ c }: { c: Candidate }) {
         )}
         {c.local_pick && (
           <div className="verdict local">
-            <Icon as={Users} /> מקומיים ממליצים
+            <Icon as={Users} /> {t('מקומיים ממליצים')}
           </div>
         )}
       </div>
@@ -658,7 +659,8 @@ function Label({ icon, children }: { icon: LucideIcon; children: React.ReactNode
 }
 
 function nameOf(members: Member[], id: string) {
-  return members.find((m) => m.user_id === id)?.display_name ?? '?'
+  // a person's name in the app's language (the group's names have English in the dictionary)
+  return t(members.find((m) => m.user_id === id)?.display_name ?? '?')
 }
 
 /** % of shared swipes where two members made the same call; null when there's nothing to compare. */
