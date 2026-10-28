@@ -3,6 +3,10 @@
 Live: https://shakedflorentin.github.io/RentCalc/ · branch `japan-trip`, deployed by fast-forwarding `main`
 (`git push origin japan-trip:main`; GitHub Pages builds on push). Supabase project `wbofjfwbdewgnwjmcpnv`.
 
+**Before every deploy** (app or edge function), read the in-app problem reports: `select * from public.reports where
+status = 'open'` (sent from "דיווח על בעיה"; screen, build and phone come with each). Fix what fits, then set
+`status` ('fixed' / 'wontfix'), `reply` (Hebrew, shown to the reporter in the app) and `resolved_at`.
+
 ## The trip
 - Two couples: **שקד ומאור** (in Japan 12/12–28/12, Haneda) and **אלמוג ושניר** (15/12–31/12, Narita in, Haneda out).
   One couple has a 5-month-old baby (milk only). Some keep "kosher style" (no pork/seafood; fish with scales is fine).
