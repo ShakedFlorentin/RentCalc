@@ -750,3 +750,6 @@ a.pill, button.pill { min-height: 36px; padding-inline: 12px; }
 /* An English name inside the Hebrew layout (dir="auto") keeps its own reading order but lines up on the right with
    the Hebrew around it, instead of jumping to the left edge. Not the full-screen card (centred) or chat bubbles. */
 :is(h2, h3, p, div, b, span)[dir="auto"]:not(.show-sub, .show-small, .turn-heard, .turn-text, .turn-back) { text-align: right; }
+/* settings: light / dark / like the phone, three equal targets */
+.theme-picker button { min-height: 44px; }
+.field:has(> .theme-picker) { margin-top: 10px; }

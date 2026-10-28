@@ -8,10 +8,13 @@ import {
   Layers,
   LogOut as LogOutIcon,
   MessageSquareWarning,
+  Moon,
   ListChecks,
   Navigation,
   Share2,
   ShieldAlert,
+  Sun,
+  SunMoon,
   Ticket,
   Users,
   Wallet,
@@ -479,6 +482,7 @@ function Settings(props: { trip: Trip; me: string; userId: string; onClose: () =
       <button className="primary" onClick={save}>
         שמירה
       </button>
+      <ThemePicker />
       <button className="secondary" onClick={props.onReport}>
         <Icon as={MessageSquareWarning} /> דיווח על בעיה או טעות
       </button>
@@ -495,6 +499,49 @@ function Settings(props: { trip: Trip; me: string; userId: string; onClose: () =
         <Icon as={LogOutIcon} /> התנתקות
       </button>
     </Sheet>
+  )
+}
+
+const THEMES = [
+  { id: 'auto', label: 'כמו בטלפון', icon: SunMoon },
+  { id: 'light', label: 'בהיר', icon: Sun },
+  { id: 'dark', label: 'כהה', icon: Moon },
+] as const
+
+/**
+ * Light, dark, or following the phone. Kept on this phone only and applied at once: html[data-theme] switches the
+ * dark styles (see themeOverride in vite.config.ts), and index.html applies it again before the next load paints.
+ */
+function ThemePicker() {
+  const [theme, setTheme] = useState(() => {
+    try {
+      return localStorage.getItem('theme') ?? 'auto'
+    } catch {
+      return 'auto'
+    }
+  })
+  const pick = (t: string) => {
+    setTheme(t)
+    if (t === 'auto') delete document.documentElement.dataset.theme
+    else document.documentElement.dataset.theme = t
+    try {
+      if (t === 'auto') localStorage.removeItem('theme')
+      else localStorage.setItem('theme', t)
+    } catch {
+      // private browsing: the choice holds until the app closes
+    }
+  }
+  return (
+    <div className="field">
+      <span id="theme-label">מראה</span>
+      <div className="segmented theme-picker" role="radiogroup" aria-labelledby="theme-label">
+        {THEMES.map((t) => (
+          <button key={t.id} role="radio" aria-checked={theme === t.id} className={theme === t.id ? 'on' : ''} onClick={() => pick(t.id)}>
+            <Icon as={t.icon} /> {t.label}
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }
 

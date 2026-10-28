@@ -62,6 +62,10 @@ sort by date with whose on each card, "read the file" in the + form. Info tab: t
 kosher (Chabad, product list, onigiri) and December; phrase card "no pork or seafood". Baby: formula note,
 tax-free now refunded at the airport (from Nov 2026).
 
+Light/dark: settings (avatar) → "מראה" (כמו בטלפון / בהיר / כהה), kept per phone in localStorage `theme` and set as
+`html[data-theme]` (index.html applies it before first paint). Dark styles are still written only as
+`@media (prefers-color-scheme: dark)`; `themeOverride` in vite.config.ts emits each block twice at build.
+
 Look: iOS grouped style from the `apple-design` skill (grey ground, flat white groups, one red tint, large tight
 titles, iPhone system font). Swipe card moves on springs (`springTo` in `Swipe.tsx`): grabs mid-flight, keeps the
 finger's speed, and likes/skips by where the flick projects, not where it was let go.
