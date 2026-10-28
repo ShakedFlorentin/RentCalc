@@ -38,16 +38,26 @@ Offline: `public/sw.js` + localStorage cache in `useTripTable` (`src/lib.ts`).
     load ≤ 8.5 h, ≤ 2 meals, a couple's own items on a together day ≤ 3 h, day trips (> 25 km) alone on a morning day
     with the ride counted once, closed weekdays/dates skipped. Then a rough time each (shown as "~10:00"): evening
     places (sunset, dinner, bars) wait for the evening, nothing after it closes (else it's moved to another day).
-  - `place_facts` (by name key): hours, closed days, year-end closures, visit length, best time, one Hebrew line,
-    a baby line (shown only when it blocks: no strollers, stairs, smoke, adults only). Looked up once per place with
-    Claude + web search (~$0.03 each, `ai_calls` fn plan-trip), 8 per run, the rest by a self-call.
+  - No AI in the planner. Each card carries its planning facts (columns on `place_library` and `candidates`: opens,
+    closes, closed_weekdays, closed_dates, best_time, visit_mins, booking, plan_line, baby_block, facts_at,
+    facts_sure); sync_library copies them into a trip, and the `candidates_plan_facts` trigger gives a card added by
+    hand or link the facts of a library card with the same name. A card without facts is planned from its kind and
+    time_needed (no hours, no closed days) and its note is the first sentence of its Hebrew tip.
+  - Filling facts is done by a Claude Code session (the user's subscription, not the API): read
+    `cards_without_facts` (backend view), research with parallel agents into a JSON like
+    `data/place-facts-2026-10.json`, push it, and load it with `extensions.http_get` from raw.githubusercontent
+    (recipe in `supabase/sql/2026-10-28-trip-planner.sql`). Done 2026-10-28 for all 206 active library cards and
+    all 155 trip cards (81 confirmed from a source, the rest estimated: small places, year-end closures by custom).
+    The baby line shows in the plan only when it blocks (no strollers, stairs, smoke, adults only).
   - `plan_state.summary`: places left out (waiting for a vote / no room / closed) and warnings on items people fixed
     on a closed day; the plan shows the warnings and "עוד N מקומות שאהבתם בעיר" for the day's city.
   - Check without writing: POST `{trip_id, dry: true}` with the planner token (SQL: `extensions.http` with header
-    `x-plan-token` from `vault.decrypted_secrets`; returns plan + inputs). `{translate_cards: true}` translated the
-    139 English library cards to Hebrew (20 per call; already done).
-  - Deploy all five files of `supabase/functions/plan-trip` (index, plan, facts, translate-cards, ai-log). plan.ts
-    is pure and can be bundled with esbuild and run in node for testing.
+    `x-plan-token` from `vault.decrypted_secrets`; returns plan + inputs). The 139 English library cards were
+    translated to Hebrew on 2026-10-28 (one-off, through the API, before the no-API rule).
+  - Deploy both files of `supabase/functions/plan-trip` (index.ts, plan.ts). plan.ts is pure and can be bundled with
+    esbuild and run in node for testing.
+  - Adding a place by link (suggest-place) does not return hours yet: such a card is planned from defaults until a
+    session fills it (or until its schema gets the plan fields; that needs one live API test before deploying).
 - Swipe game: `place_library` (curated cards, `active` flag) → `sync_library(tid)` copies to `candidates` on game open.
   Hebrew text for the original 107 cards lives in `public/media.json` (overlays DB by name via `withMedia`).
   Couple match → `on_swipe` trigger writes `places` (who = couple or null for everyone).

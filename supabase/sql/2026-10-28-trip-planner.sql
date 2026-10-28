@@ -131,3 +131,21 @@ create trigger places_replan_who after update on public.places
   execute function public.request_plan();
 create trigger bookings_replan after insert or update on public.bookings
   for each row execute function public.request_plan();
+
+-- ---- plan_facts_on_cards, plan_facts_sure, plan_facts_sure_copies, cards_without_facts (same day, later) ----
+-- The planner needs no AI: each card carries its planning facts. Columns added to place_library and candidates:
+--   opens text, closes text ("HH:MM"), closed_weekdays int[] (0 = Sunday), closed_dates date[], best_time text
+--   (morning|midday|afternoon|evening|night|any), visit_mins int, booking text (required|recommended|no),
+--   plan_line text (one Hebrew line), baby_block text (Hebrew, only when it blocks a visit with the baby),
+--   facts_at date (checked on; null = never), facts_sure boolean (confirmed from a source vs estimated).
+-- sync_library copies them into a trip's copy and refreshes a copy older than the library card; the trigger
+-- candidates_plan_facts (fill_plan_facts) gives a new card the facts of a library card with the same name.
+-- view cards_without_facts (backend only) lists the cards still planned from their kind alone.
+-- Filling them: research → JSON array like data/place-facts-2026-10.json, push it, then:
+--   with src as (select * from jsonb_to_recordset((select content::jsonb from extensions.http_get(
+--     'https://raw.githubusercontent.com/ShakedFlorentin/RentCalc/japan-trip/data/<file>.json')))
+--     as x("table" text, id uuid, opens text, closes text, closed_weekdays int[], closed_dates date[], best_time text,
+--          visit_mins int, booking text, plan_line text, baby_block text, confidence text))
+--   update public.place_library l set ... from src s where s."table" = 'lib' and l.id = s.id;   -- and candidates:
+--   ... where (s."table" = 'cand' and c.id = s.id) or (s."table" = 'lib' and c.library_id = s.id)
+-- place_facts (looked up through the API earlier the same day) is no longer read; its rows were copied onto the cards.

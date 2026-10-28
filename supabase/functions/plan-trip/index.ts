@@ -2,11 +2,10 @@
 // day it is open, around bookings, with a rough time and one short line of what to know. Runs after each swipe,
 // match or booking (database triggers via pg_net) and when the plan is opened in the app.
 // A plan item a person added, moved or edited is never touched; only the planner's own items (auto) are.
-import Anthropic from 'npm:@anthropic-ai/sdk@1.1.0'
+// No AI here: opening hours and the rest come with the card (place_library → candidates, the plan columns), and a
+// card without them is planned from its kind and time_needed.
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
 import { hhmm, km, plan, type BestTime, type Day, type Fixed, type Point, type Presence, type Unit } from './plan.ts'
-import { factKey, lookUp, type Facts, type PlaceInfo } from './facts.ts'
-import { translateCards } from './translate-cards.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -14,9 +13,7 @@ const cors = {
 }
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const MEDIA_URL = 'https://shakedflorentin.github.io/RentCalc/media.json'
-// places looked up per run, all at once (a few cents each); the rest wait for the next run, which starts right after
-const FACTS_PER_RUN = 8
-const LEASE_MS = 120_000
+const LEASE_MS = 60_000
 
 const BASE_POINT: Record<string, Point> = {
   tokyo: { lat: 35.681, lng: 139.767 },
@@ -43,7 +40,7 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
-  const body = (await req.json().catch(() => null)) as { trip_id?: unknown; dry?: unknown; wait?: unknown; translate_cards?: unknown } | null
+  const body = (await req.json().catch(() => null)) as { trip_id?: unknown; dry?: unknown; wait?: unknown } | null
   const tid = typeof body?.trip_id === 'string' && UUID.test(body.trip_id) ? body.trip_id : null
   if (!tid) return json({ error: 'trip_id missing' }, 400)
 
@@ -63,12 +60,6 @@ Deno.serve(async (req) => {
     if (!auth.user) return json({ error: 'not signed in' }, 401)
     const { data: member } = await user.rpc('is_trip_member', { tid })
     if (!member) return json({ error: 'not a trip member' }, 403)
-  }
-
-  // upkeep (planner token only): English swipe cards to Hebrew, a batch per call
-  if (trusted && body?.translate_cards === true) {
-    const key = Deno.env.get('ANTHROPIC_API_KEY') || ((await admin.rpc('get_anthropic_key')).data as string)
-    return json(await translateCards(admin, new Anthropic({ apiKey: key })))
   }
 
   // a dry run (planner token only) returns the plan it would write, for checking
@@ -105,7 +96,6 @@ async function loop(admin: SupabaseClient, tid: string) {
     if (!(await acquire())) return { queued: true }
   }
   const results: unknown[] = []
-  let more = false
   try {
     for (let round = 0; round < 2; round++) {
       // swipes come in bursts: let the burst settle so one run covers it
@@ -113,14 +103,13 @@ async function loop(admin: SupabaseClient, tid: string) {
       try {
         const r = await run(admin, tid, false)
         results.push(r.stats)
-        more = r.factsPending > 0
         await admin.from('plan_state').update({ ran_at: new Date().toISOString(), error: null, summary: r.summary }).eq('trip_id', tid)
       } catch (e) {
         console.error('plan failed', e)
         await admin.from('plan_state').update({ error: String(e instanceof Error ? e.message : e).slice(0, 500) }).eq('trip_id', tid)
       }
       const { data } = await admin.from('plan_state').select('dirty').eq('trip_id', tid).single()
-      if (!data?.dirty && !more) break
+      if (!data?.dirty) break
       await admin
         .from('plan_state')
         .update({ dirty: false, lease_until: new Date(Date.now() + LEASE_MS).toISOString() })
@@ -129,16 +118,7 @@ async function loop(admin: SupabaseClient, tid: string) {
   } finally {
     await admin.from('plan_state').update({ lease_until: null }).eq('trip_id', tid)
   }
-  // places still to look up: hand on to a fresh run, so no single run outgrows the time a function may take
-  if (more) {
-    const { data: token } = await admin.rpc('get_planner_token')
-    await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/plan-trip`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-plan-token': token as string },
-      body: JSON.stringify({ trip_id: tid }),
-    }).catch((e) => console.error('hand-on failed', e))
-  }
-  return { results, more }
+  return { results }
 }
 
 type Row = Record<string, unknown>
@@ -169,7 +149,32 @@ type Place = {
   visited: boolean
   auto_planned: boolean
 }
-type Cand = PlaceInfo & { id: string; lat: number | null; lng: number | null; verdict: string | null; local_pick: boolean | null; tabelog_score: number | null }
+// a card's planning facts (see the plan columns on place_library / candidates); facts_at null = never checked
+type Facts = {
+  opens: string | null
+  closes: string | null
+  closed_weekdays: number[] | null
+  closed_dates: string[] | null
+  best_time: string | null
+  visit_mins: number | null
+  booking: string | null
+  plan_line: string | null
+  baby_block: string | null
+  facts_at: string | null
+}
+type Cand = Facts & {
+  id: string
+  name: string
+  city: string | null
+  category: string | null
+  lat: number | null
+  lng: number | null
+  tip: string | null
+  time_needed: string | null
+  verdict: string | null
+  local_pick: boolean | null
+  tabelog_score: number | null
+}
 type Media = { lat?: number; lng?: number; hype?: string; reality?: string; tip?: string; baby_notes?: string; time_needed?: string }
 
 const mins = (t: string | null | undefined) => {
@@ -216,9 +221,9 @@ async function geocode(admin: SupabaseClient, q: string): Promise<Point | null> 
   return p
 }
 
-/** How long a visit takes, in minutes: the looked-up hours, else the card's Hebrew estimate, else by kind. */
+/** How long a visit takes, in minutes: the card's checked length, else its Hebrew estimate, else by kind. */
 function visitMins(f: Facts | undefined, timeNeeded: string | null | undefined, category: string) {
-  if (f?.hours) return Math.round(f.hours * 60)
+  if (f?.visit_mins) return f.visit_mins
   const t = timeNeeded ?? ''
   if (/יום שלם/.test(t)) return 420
   if (/חצי יום/.test(t)) return 240
@@ -231,12 +236,22 @@ function visitMins(f: Facts | undefined, timeNeeded: string | null | undefined, 
   return { food: 75, cafe: 45, shopping: 90, sight: 120, experience: 120, nightlife: 90 }[category] ?? 90
 }
 
+const CAND_COLUMNS =
+  'id,name,city,category,lat,lng,tip,time_needed,verdict,local_pick,tabelog_score,' +
+  'opens,closes,closed_weekdays,closed_dates,best_time,visit_mins,booking,plan_line,baby_block,facts_at'
+/** The same place under small differences in spelling, case or punctuation gets one key. */
+const factKey = (name: string) => name.toLowerCase().normalize('NFKD').replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
+
 const VERDICT: Record<string, number> = { gem: 4, worth_it: 3, overhyped: 1.5, trap: 0.5 }
 
 // the baby line only when it changes the plan (no strollers, stairs only, smoke, adults only); "no information on
 // strollers" on every place made people stop reading the notes
 const BABY_BLOCKER = /אסור|לא מתאים|לא מומלץ|לא נכנס|אין גישה|אין מקום לעגלה|קשה לעגלה|קשה להכניס עגלה|רק מדרגות|מדרגות בלבד|עשן|מעושן|מעשנים|למבוגרים|לא לילדים|מתחת לגיל/
 const babyLine = (b: string | null) => (b && BABY_BLOCKER.test(b) ? b : null)
+// when a card was never checked: when its kind is usually best
+const DEFAULT_TIME: Record<string, BestTime> = { nightlife: 'night' }
+/** The facts of a card that has them; undefined for one never checked. */
+const factsOf = (c: Cand | undefined): Facts | undefined => (c?.facts_at ? c : undefined)
 
 async function run(admin: SupabaseClient, tid: string, dry: boolean) {
   const q = async <T>(p: PromiseLike<{ data: T | null; error: { message: string } | null }>) => {
@@ -261,8 +276,9 @@ async function run(admin: SupabaseClient, tid: string, dry: boolean) {
     ? await q<Cand[]>(
         admin
           .from('candidates')
-          .select('id,name,name_ja,city,area,category,lat,lng,tip,baby_notes,hype,reality,time_needed,verdict,local_pick,tabelog_score')
-          .in('id', candIds),
+          .select(CAND_COLUMNS)
+          .in('id', candIds)
+          .returns<Cand[]>(),
       )
     : []
   const candById = new Map(cands.map((c) => [c.id, c]))
@@ -340,18 +356,8 @@ async function run(admin: SupabaseClient, tid: string, dry: boolean) {
     basePt.set(b, { lat: pts.reduce((s, p) => s + p.hotel.lat, 0) / pts.length, lng: pts.reduce((s, p) => s + p.hotel.lng, 0) / pts.length })
   }
 
-  // ---- facts for every place in play
-  const info = (c: Cand): PlaceInfo => {
-    const m = mediaIdx[c.name]
-    return {
-      ...c,
-      hype: m?.hype ?? c.hype,
-      reality: m?.reality ?? c.reality,
-      tip: m?.tip ?? c.tip,
-      baby_notes: m?.baby_notes ?? c.baby_notes,
-      time_needed: m?.time_needed ?? c.time_needed,
-    }
-  }
+  // the Hebrew tip, from the shipped translations for the first cards
+  const tipOf = (c: Cand) => mediaIdx[c.name]?.tip ?? c.tip
   const fixedItems = items.filter((i) => !i.auto || i.done)
   const autoItems = items.filter((i) => i.auto && !i.done)
   const fixedPlaceIds = new Set(fixedItems.map((i) => i.place_id).filter(Boolean))
@@ -376,50 +382,13 @@ async function run(admin: SupabaseClient, tid: string, dry: boolean) {
     want.push({ p, c })
   }
 
-  const factKeys = [...new Set([...want.map((w) => factKey(w.p.name)), ...fixedItems.map((i) => factKey(i.title))])]
-  const factRows = factKeys.length ? await q<Facts[]>(admin.from('place_facts').select('*').in('key', factKeys)) : []
-  const facts = new Map(factRows.map((f) => [f.key, f]))
-  const missing = want.filter((w) => !facts.has(factKey(w.p.name)))
-  let factsPending = 0
-  if (missing.length && !dry) {
-    const client = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY') || ((await admin.rpc('get_anthropic_key')).data as string) })
-    // the most wanted first, so the start of the plan is right soonest
-    const rank = (w: { c: Cand }) => VERDICT[w.c.verdict ?? ''] ?? 2.5
-    const batch = [...missing].sort((a, b) => rank(b) - rank(a)).slice(0, FACTS_PER_RUN)
-    factsPending = missing.length - batch.length
-    const got = await Promise.all(batch.map((w) => lookUp(admin, client, info(w.c))))
-    // a lookup that failed is kept as an empty row, so it isn't paid for again on every run
-    const rows = got.map(
-      (f, i) =>
-        f ?? {
-          key: factKey(batch[i].p.name),
-          name: batch[i].p.name,
-          line_he: null,
-          baby_he: null,
-          opens: null,
-          closes: null,
-          closed_weekdays: [],
-          closed_dates: [],
-          best_time: 'any',
-          hours: null,
-          booking: 'no',
-          lat: null,
-          lng: null,
-        },
-    )
-    if (rows.length) {
-      await admin.from('place_facts').upsert(rows.map((f) => ({ ...f, checked_at: new Date().toISOString() })))
-      for (const f of rows) facts.set(f.key, f)
-    }
-  }
-
   // ---- the places to plan
   const units: Unit[] = []
   const unitPlace = new Map<string, { p: Place; c: Cand; f?: Facts; point: Point | null; base: string }>()
   for (const { p, c } of want) {
-    const f = facts.get(factKey(p.name))
+    const f = factsOf(c)
     const m = mediaIdx[c.name]
-    const own = m?.lat != null ? { lat: m.lat, lng: m.lng! } : c.lat != null ? { lat: c.lat, lng: c.lng! } : f?.lat != null ? { lat: f.lat, lng: f.lng! } : null
+    const own = m?.lat != null ? { lat: m.lat, lng: m.lng! } : c.lat != null ? { lat: c.lat, lng: c.lng! } : null
     const unitCouples = p.who ? p.who.split(' + ') : couples
     // the nearest city its couples sleep in
     const bases = [...new Set(days.flatMap((d) => unitCouples.map((x) => d.at.get(x)?.base).filter((b): b is string => !!b)))]
@@ -452,11 +421,11 @@ async function run(admin: SupabaseClient, tid: string, dry: boolean) {
       point,
       mins: Math.min(visitMins(f, c.time_needed, category), 420),
       category,
-      best: (f?.best_time as BestTime) ?? 'any',
+      best: (f?.best_time as BestTime) ?? DEFAULT_TIME[category] ?? 'any',
       opens,
       closes,
       closedWeekdays: f?.closed_weekdays ?? [],
-      closedDates: f?.closed_dates ?? [],
+      closedDates: (f?.closed_dates ?? []).map((d) => d.slice(0, 10)),
       priority:
         (VERDICT[c.verdict ?? ''] ?? 2.5) +
         (c.local_pick ? 0.5 : 0) +
@@ -469,15 +438,18 @@ async function run(admin: SupabaseClient, tid: string, dry: boolean) {
 
   // ---- what is already fixed: bookings with a time, and plan items people put in
   const placeById = new Map(places.map((p) => [p.id, p]))
+  // a plan item's card, through its place
+  const factsOfItem = (i: Item) => {
+    const p = i.place_id ? placeById.get(i.place_id) : null
+    return factsOf(p ? candById.get(p.candidate_id) : undefined)
+  }
   const pointOfItem = (i: Item): Point | null => {
     const m = i.location?.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/)
     if (m) return { lat: Number(m[1]), lng: Number(m[2]) }
     const p = i.place_id ? placeById.get(i.place_id) : null
     if (p?.lat != null) return { lat: p.lat, lng: p.lng! }
     const md = mediaIdx[i.title]
-    if (md?.lat != null) return { lat: md.lat, lng: md.lng! }
-    const f = facts.get(factKey(i.title))
-    return f?.lat != null ? { lat: f.lat, lng: f.lng! } : null
+    return md?.lat != null ? { lat: md.lat, lng: md.lng! } : null
   }
   const whoOf = (who: string | null, day: number) => {
     const present = [...(days[day - 1]?.at.keys() ?? [])]
@@ -490,7 +462,7 @@ async function run(admin: SupabaseClient, tid: string, dry: boolean) {
       couples: whoOf(i.who, i.day),
       point: pointOfItem(i),
       start: mins(i.time),
-      mins: visitMins(facts.get(factKey(i.title)), null, i.category === 'food' ? 'food' : i.category === 'shopping' ? 'shopping' : 'sight'),
+      mins: visitMins(factsOfItem(i), null, i.category === 'food' ? 'food' : i.category === 'shopping' ? 'shopping' : 'sight'),
     })
   }
   for (const b of bookings) {
@@ -512,9 +484,9 @@ async function run(admin: SupabaseClient, tid: string, dry: boolean) {
 
   // ---- the rows the plan wants, against the rows there are
   const noteOf = (u: { c: Cand; f?: Facts }) => {
-    if (u.f?.line_he) return [u.f.line_he, babyLine(u.f.baby_he)].filter(Boolean).join('\n')
-    // not looked up (yet): the first sentence of the Hebrew tip, if there is one
-    const tip = info(u.c).tip
+    if (u.f?.plan_line) return [u.f.plan_line, babyLine(u.f.baby_block)].filter(Boolean).join('\n')
+    // never checked: the first sentence of the Hebrew tip, if there is one
+    const tip = tipOf(u.c)
     if (!hebrew(tip)) return null
     const first = tip!.split(/(?<=[.!?])\s/)[0]
     return first.length > 90 ? first.slice(0, 88) + '…' : first
@@ -566,11 +538,11 @@ async function run(admin: SupabaseClient, tid: string, dry: boolean) {
   const WEEKDAY = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת']
   for (const i of fixedItems) {
     if (i.done) continue
-    const f = facts.get(factKey(i.title))
+    const f = factsOfItem(i)
     const d = days[i.day - 1]
     if (!f || !d) continue
-    if (f.closed_dates.includes(d.date)) warnings.push({ item_id: i.id, text: 'סגור בתאריך הזה' })
-    else if (f.closed_weekdays.includes(d.weekday)) warnings.push({ item_id: i.id, text: `סגור בימי ${WEEKDAY[d.weekday]}` })
+    if ((f.closed_dates ?? []).some((x) => x.slice(0, 10) === d.date)) warnings.push({ item_id: i.id, text: 'סגור בתאריך הזה' })
+    else if ((f.closed_weekdays ?? []).includes(d.weekday)) warnings.push({ item_id: i.id, text: `סגור בימי ${WEEKDAY[d.weekday]}` })
     else {
       const t = mins(i.time)
       const o = mins(f.opens)
@@ -593,14 +565,14 @@ async function run(admin: SupabaseClient, tid: string, dry: boolean) {
     if (names.length) cityRows.push({ day: d.day, city: names.join(' / ') })
   }
 
-  const summary = { unplanned, warnings, facts_pending: factsPending + (dry ? missing.length : 0) }
+  // facts_pending: cards planned from their kind alone, never checked (fill their plan columns to plan them better)
+  const summary = { unplanned, warnings, facts_pending: units.filter((u) => !unitPlace.get(u.id)!.f).length }
   const stats = {
     placed: out.placed.size,
     insert: toInsert.length,
     update: toUpdate.length,
     remove: toRemove.length,
     unplanned: unplanned.length,
-    looked_up: dry ? 0 : Math.min(missing.length, FACTS_PER_RUN),
   }
   if (dry) {
     const byDay = desired
@@ -636,7 +608,7 @@ async function run(admin: SupabaseClient, tid: string, dry: boolean) {
     await admin.from('day_info').upsert({ trip_id: tid, day: r.day }, { onConflict: 'trip_id,day', ignoreDuplicates: true })
     await admin.from('day_info').update({ city: r.city }).eq('trip_id', tid).eq('day', r.day).is('city', null)
   }
-  return { stats, summary, factsPending }
+  return { stats, summary }
 }
 
 function groupBy<T>(xs: T[], key: (x: T) => string) {

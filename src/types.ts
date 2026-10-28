@@ -218,6 +218,25 @@ export type Candidate = {
   instagram_url?: string | null
   tiktok_url?: string | null
   photos?: string[] | null
+} & PlanFacts
+
+/**
+ * What the trip planner needs about a place, carried by the card (library → trip copy) so planning needs no lookup:
+ * usual hours ("HH:MM"), weekly closing days (0 = Sunday), closed dates in the trip, best time of day, visit length,
+ * booking, one short Hebrew line for the plan, and a Hebrew line only when something blocks a visit with the baby.
+ * facts_at is the day they were checked; null = never (the planner then goes by the card's kind and time_needed).
+ */
+export type PlanFacts = {
+  opens?: string | null
+  closes?: string | null
+  closed_weekdays?: number[] | null
+  closed_dates?: string[] | null
+  best_time?: 'morning' | 'midday' | 'afternoon' | 'evening' | 'night' | 'any' | null
+  visit_mins?: number | null
+  booking?: 'required' | 'recommended' | 'no' | null
+  plan_line?: string | null
+  baby_block?: string | null
+  facts_at?: string | null
 }
 
 export type Swipe = { trip_id: string; candidate_id: string; user_id: string; liked: boolean; created_at: string }
