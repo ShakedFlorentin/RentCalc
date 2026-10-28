@@ -40,6 +40,15 @@ export type ItineraryItem = {
   place_id?: string | null
   /** whose plan it is: a couple, or null for everyone */
   who?: string | null
+  /** put there by the planner and not touched since: its time is a rough guess and it may still move */
+  auto?: boolean
+}
+
+/** What the planner (plan-trip) last said about the trip: places it left out, and plan items that clash with opening days. */
+export type PlanSummary = {
+  unplanned: { place_id: string; name: string; reason: 'waiting' | 'full' | 'closed' | 'no_day'; who: string | null; city?: string | null }[]
+  warnings: { item_id: string; text: string }[]
+  facts_pending: number
 }
 
 /** Must-have info: hotel addresses in Japanese, phone numbers, insurance, documents. */

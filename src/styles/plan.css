@@ -94,3 +94,14 @@
 .arrival summary .time { margin-inline: 0 0; }
 .count-chips { display: flex; flex-wrap: wrap; gap: 4px 12px; font-weight: 400; }
 .count-chips span { white-space: nowrap; }
+
+/* the planner's rough time: lighter, so a time someone set stands out */
+.time.approx { color: var(--muted); font-weight: 500; }
+/* plan rows show the first lines; the whole note is one tap away in the edit sheet */
+.plan-notes { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.plan-auto-notes { color: var(--muted); }
+.plan-warn { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 0.875rem; font-weight: 600; color: var(--accent); }
+.spare summary { cursor: pointer; font-weight: 600; min-height: 32px; }
+.spare ul { margin: 8px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.spare li { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.spare li .action { flex: none; }

@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabase'
 import { AUDIENCES, CATEGORIES, VERDICTS, type DayInfo, type GuidePlace, type ItineraryItem, type Member, type Place, type Trip } from '../types'
-import { couplesOf, errorText, keepRanges, mapsUrl, mutate, normName, safeUrl, useMediaIndex, useTripTable, withMedia } from '../lib'
+import { couplesOf, errorText, keepRanges, mapsUrl, mutate, normName, replan, safeUrl, useMediaIndex, useTripTable, withMedia } from '../lib'
 import { BookOpen, CalendarCheck, CalendarPlus, Check, Heart, List, Map as MapIcon, MapPin, Plus, Users, Wand2 } from 'lucide-react'
 import { Empty, Field, LoadNote, Sheet, useRemembered } from '../ui'
 import { AUDIENCE_ICON, CATEGORY_ICON, Icon } from '../icons'
@@ -38,7 +38,6 @@ export default function Places({ trip, me, userId, members }: Props) {
     () => rawRows.filter((p) => p.candidate_id || p.added_by).map((p) => withMedia(p, media)),
     [rawRows, media],
   )
-  const { rows: days } = useTripTable<DayInfo>('day_info', trip.id, 'day')
   const { rows: items } = useTripTable<ItineraryItem>('itinerary_items', trip.id, 'sort')
   const [view, setView] = useState<'list' | 'map'>('list')
   const [city, setCity] = useState('')
@@ -104,28 +103,11 @@ export default function Places({ trip, me, userId, members }: Props) {
     areas.set(a, [...(areas.get(a) ?? []), p])
   }
 
-  const planBusy = useRef(false)
-  const autoPlan = async () => {
-    // a second tap before the itinerary reloads would plan the same places again
-    if (planBusy.current) return
-    planBusy.current = true
-    try {
-      await runAutoPlan()
-    } finally {
-      planBusy.current = false
-    }
-  }
-  const runAutoPlan = async () => {
-    const { data: planned } = await supabase.from('itinerary_items').select('place_id').eq('trip_id', trip.id)
-    const done = new Set((planned ?? []).map((i) => i.place_id))
-    const plan = buildPlan(rows.filter((p) => !done.has(p.id) && !p.visited), days)
-    if (!plan.rows.length) {
-      alert('אין מקומות חדשים לשבץ' + (plan.skipped ? ` (${plan.skipped} בלי יום מתאים לעיר שלהם)` : ''))
-      return
-    }
-    if (!confirm(`לשבץ ${plan.rows.length} מקומות בימים לפי עיר ושכונה?`)) return
-    const ok = await mutate(supabase.from('itinerary_items').insert(plan.rows.map((r) => ({ ...r, trip_id: trip.id }))))
-    if (ok) alert(`שובצו ${plan.rows.length} מקומות` + (plan.skipped ? `\n${plan.skipped} לא שובצו – אין יום בעיר שלהם` : ''))
+  // the planner runs by itself after every match and booking; this only asks it to run now
+  const [replanned, setReplanned] = useState(false)
+  const autoPlan = () => {
+    replan(trip.id)
+    setReplanned(true)
   }
 
   return (
@@ -198,8 +180,8 @@ export default function Places({ trip, me, userId, members }: Props) {
         </>
       ) : (
         <>
-          <button className="secondary" onClick={autoPlan}>
-            <Icon as={Wand2} /> שיבוץ המקומות בימים
+          <button className="secondary" onClick={autoPlan} disabled={replanned}>
+            <Icon as={Wand2} /> {replanned ? 'המסלול מתעדכן, זה לוקח כמה שניות' : 'סידור המסלול מחדש'}
           </button>
           {error && <LoadNote onRetry={reload} />}
           {!loading && !error && shown.length === 0 && (
@@ -266,9 +248,10 @@ function PlaceRow(props: { p: Place; planned: boolean; onEdit: (p: Place) => voi
             </>
           )}
         </div>
-        {p.notes && (
+        {/* the baby line a match copies in is left to the place's own sheet: the row already says if it suits the baby */}
+        {notesShown(p.notes) && (
           <div className="notes" dir="auto">
-            {keepRanges(p.notes)}
+            {keepRanges(notesShown(p.notes)!)}
           </div>
         )}
         {/* one row of chips under the text, the plan button among them, so the name gets the card's width */}
@@ -287,71 +270,12 @@ function PlaceRow(props: { p: Place; planned: boolean; onEdit: (p: Place) => voi
   )
 }
 
-/**
- * Spread places over the days spent in their city: areas are ordered west→east so
- * neighbouring areas share a day, then cut into roughly equal per-day chunks.
- */
-function buildPlan(places: Place[], days: DayInfo[]) {
-  const rows: Partial<ItineraryItem>[] = []
-  let skipped = 0
-  const byCity = new Map<string, Place[]>()
-  for (const p of places) byCity.set(p.city ?? '', [...(byCity.get(p.city ?? '') ?? []), p])
-
-  // rows already put on each day, so sort values never repeat within a day
-  const load = new Map<number, number>()
-
-  for (const [city, ps] of byCity) {
-    // Nara is a day trip: use the day whose notes mention it
-    const inCity = days.filter((d) => d.city === city || (city === 'נארה' && d.notes?.includes('נארה')))
-    for (const [who, wps] of groupBy(ps, (p) => p.who ?? '')) {
-      // a group place needs everyone there; a couple's place fits any day that couple is in Japan
-      const fits = (d: DayInfo) => !d.who || (!!who && who.split(' + ').every((c) => c === d.who))
-      planCity(wps, inCity.filter(fits))
-    }
-  }
-  return { rows, skipped }
-
-  function planCity(ps: Place[], cityDays: DayInfo[]) {
-    if (!cityDays.length) {
-      skipped += ps.length
-      return
-    }
-    const areaLng = new Map<string, number>()
-    for (const p of ps) if (p.lng != null && !areaLng.has(p.area ?? '')) areaLng.set(p.area ?? '', p.lng)
-    const sorted = [...ps].sort(
-      (a, b) =>
-        (areaLng.get(a.area ?? '') ?? 999) - (areaLng.get(b.area ?? '') ?? 999) ||
-        (a.area ?? '').localeCompare(b.area ?? ''),
-    )
-    // the emptiest days first, so a second group doesn't pile onto day 1; chunks still run west→east by day
-    const used = [...cityDays]
-      .sort((a, b) => (load.get(a.day) ?? 0) - (load.get(b.day) ?? 0) || a.day - b.day)
-      .slice(0, sorted.length)
-      .sort((a, b) => a.day - b.day)
-    const per = Math.ceil(sorted.length / used.length)
-    sorted.forEach((p, i) => {
-      const d = used[Math.min(Math.floor(i / per), used.length - 1)]
-      const n = load.get(d.day) ?? 0
-      load.set(d.day, n + 1)
-      rows.push({
-        day: d.day,
-        title: p.name,
-        location: p.lat != null ? `${p.lat},${p.lng}` : `${p.name} ${p.city ?? ''}`,
-        notes: p.notes,
-        category: p.category,
-        place_id: p.id,
-        who: p.who ?? d.who ?? null,
-        sort: 100 + n,
-      })
-    })
-  }
-}
-
-function groupBy<T>(xs: T[], key: (x: T) => string) {
-  const m = new Map<string, T[]>()
-  for (const x of xs) m.set(key(x), [...(m.get(key(x)) ?? []), x])
-  return m
-}
+const notesShown = (notes: string | null) =>
+  notes
+    ?.split('\n')
+    .filter((l) => !l.startsWith('עם התינוק:'))
+    .join('\n')
+    .trim() || null
 
 function rank(city: string | null) {
   const i = CITY_ORDER.indexOf(city ?? '')

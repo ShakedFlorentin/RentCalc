@@ -1,8 +1,8 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
-import { BedDouble, Check, Navigation, Pencil, PlaneLanding, Plus, Users } from 'lucide-react'
+import { BedDouble, Check, CircleAlert, Navigation, Pencil, PlaneLanding, Plus, Users } from 'lucide-react'
 import { supabase } from '../supabase'
-import { CATEGORIES, TOGETHER, WHO_OPTIONS, type Booking, type DayInfo, type Member, type Trip } from '../types'
-import { couplesOf, dayDate, keepRanges, fmtDay, mutate, useTripTable } from '../lib'
+import { CATEGORIES, TOGETHER, WHO_OPTIONS, type Booking, type DayInfo, type Member, type Place, type PlanSummary, type Trip } from '../types'
+import { couplesOf, dayDate, keepRanges, fmtDay, mutate, replan, useTripTable } from '../lib'
 import { Empty, Field, Sheet, useRemembered } from '../ui'
 import { Icon } from '../icons'
 import {
@@ -36,6 +36,7 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
   const [editItem, setEditItem] = useState<Partial<PlanItem> | null>(null)
   const [editDay, setEditDay] = useState(false)
   const stripRef = useRef<HTMLDivElement>(null)
+  const summary = usePlanSummary(trip.id, items)
 
   useEffect(() => {
     stripRef.current?.querySelector('.active')?.scrollIntoView({ inline: 'center', block: 'nearest' })
@@ -50,6 +51,12 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
   const arrivals = entries.filter((e) => e.key.endsWith(':arr'))
   // a day only one couple is in Japan is that couple's plan by default
   const defaultWho = info?.who ?? null
+  const warnings = new Map(summary?.warnings.map((w) => [w.item_id, w.text]))
+  // places you liked in today's city that didn't fit into any day: ready to swap in
+  const dayCities = (info?.city ?? '').split(' / ').filter(Boolean)
+  const spare = (summary?.unplanned ?? []).filter(
+    (u) => (u.reason === 'full' || u.reason === 'closed') && !!u.city && dayCities.includes(u.city) && visible(u.who, mode, myCouple),
+  )
 
   return (
     <div className="stack">
@@ -123,10 +130,12 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
           {entries
             .filter((e) => owner === undefined || e.who === owner)
             .map((e) => (
-              <EntryRow key={e.key} e={e} onEdit={setEditItem} />
+              <EntryRow key={e.key} e={e} onEdit={setEditItem} warning={e.item && warnings.get(e.item.id)} />
             ))}
         </Fragment>
       ))}
+
+      {spare.length > 0 && <Spare trip={trip} day={day} spare={spare} />}
 
       <button className="fab" aria-label="פעילות חדשה" onClick={() => setEditItem({ day, category: 'sight', who: defaultWho })}>
         <Plus size={28} strokeWidth={2} aria-hidden="true" />
@@ -141,7 +150,7 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
 }
 
 /** One line of the day: a plan item you can tick and edit, or a booking moment that is read-only here. */
-function EntryRow({ e, onEdit }: { e: Entry; onEdit: (i: PlanItem) => void }) {
+function EntryRow({ e, onEdit, warning }: { e: Entry; onEdit: (i: PlanItem) => void; warning?: string }) {
   const i = e.item
   return (
     <div className={'item card' + (i ? '' : ' plan-booking') + (e.done ? ' done' : '')}>
@@ -161,14 +170,21 @@ function EntryRow({ e, onEdit }: { e: Entry; onEdit: (i: PlanItem) => void }) {
       )}
       <div className="item-body" onClick={i ? () => onEdit(i) : undefined} style={i ? undefined : { cursor: 'default' }}>
         <div className="item-title">
-          {e.time && <span className="time">{e.time}</span>}
+          {/* the planner's time is a rough guess: it shows as such until someone sets one */}
+          {e.time && (i?.auto ? <span className="time approx" title="שעה משוערת">~{e.time}</span> : <span className="time">{e.time}</span>)}
           {e.title}
         </div>
         <div className="muted small">
           {i ? CATEGORIES[i.category] ?? i.category : 'הזמנה'}
           {e.who && <span className="who-pill">{e.who}</span>}
         </div>
-        {e.sub && <div className="notes">{keepRanges(e.sub)}</div>}
+        {/* the planner's notes are one short line (and a baby line when it matters); people's own notes can run long */}
+        {e.sub && <div className={'notes' + (i?.auto ? ' plan-auto-notes' : ' plan-notes')}>{keepRanges(e.sub)}</div>}
+        {warning && (
+          <div className="plan-warn">
+            <Icon as={CircleAlert} /> {warning}
+          </div>
+        )}
         {e.location && (
           <a className="action nav-btn" href={navUrl(e.location)} target="_blank" rel="noreferrer">
             <Icon as={Navigation} /> ניווט
@@ -176,6 +192,71 @@ function EntryRow({ e, onEdit }: { e: Entry; onEdit: (i: PlanItem) => void }) {
         )}
       </div>
     </div>
+  )
+}
+
+/** The planner's last word on the trip; refreshed whenever the plan changes, and the planner asked to run once a visit. */
+function usePlanSummary(tripId: string, items: PlanItem[]) {
+  const [summary, setSummary] = useState<PlanSummary | null>(null)
+  useEffect(() => {
+    // once per visit: it also runs after every swipe and booking, this catches anything that slipped by
+    const key = 'replanned:' + tripId
+    try {
+      if (sessionStorage.getItem(key)) return
+      sessionStorage.setItem(key, '1')
+    } catch {
+      // no session storage: ask anyway
+    }
+    replan(tripId)
+  }, [tripId])
+  useEffect(() => {
+    supabase
+      .from('plan_state')
+      .select('summary')
+      .eq('trip_id', tripId)
+      .maybeSingle()
+      .then(({ data }) => data?.summary && setSummary(data.summary as PlanSummary))
+  }, [tripId, items])
+  return summary
+}
+
+/** Liked places in this city that the plan had no room for (or that are closed on its days), each one tap from today. */
+function Spare({ trip, day, spare }: { trip: Trip; day: number; spare: PlanSummary['unplanned'] }) {
+  const { rows: places } = useTripTable<Place>('places', trip.id)
+  const add = async (u: PlanSummary['unplanned'][number]) => {
+    const p = places.find((x) => x.id === u.place_id)
+    await mutate(
+      supabase.from('itinerary_items').insert({
+        trip_id: trip.id,
+        day,
+        title: u.name,
+        location: p?.lat != null ? `${p.lat},${p.lng}` : `${u.name} ${p?.city ?? ''}`.trim(),
+        category: p?.category ?? 'sight',
+        place_id: u.place_id,
+        who: u.who,
+      }),
+    )
+  }
+  return (
+    <details className="card spare">
+      <summary>
+        עוד {spare.length} מקומות שאהבתם בעיר ולא נכנסו למסלול
+      </summary>
+      <ul>
+        {spare.map((u) => (
+          <li key={u.place_id}>
+            <span>
+              <bdi>{u.name}</bdi>
+              {u.who && <span className="who-pill">{u.who}</span>}
+              {u.reason === 'closed' && <span className="muted small"> · סגור בימים האלה</span>}
+            </span>
+            <button className="action" onClick={() => add(u)}>
+              <Icon as={Plus} /> ליום הזה
+            </button>
+          </li>
+        ))}
+      </ul>
+    </details>
   )
 }
 

@@ -35,7 +35,7 @@ export function costOf(model: string, u: Usage) {
 export type Call = {
   fn: string
   step: string
-  userId: string
+  userId: string | null
   lookupId?: string
   model?: string
   usage?: Usage

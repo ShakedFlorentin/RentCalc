@@ -2,7 +2,7 @@ import { Fragment, useEffect, useState } from 'react'
 import { Check, Download, Link as LinkIcon, Mail, Map as MapIcon, Paperclip, Pencil, Plus, Users, Wand2 } from 'lucide-react'
 import { supabase } from '../supabase'
 import { BOOKING_KINDS, BOOKING_TABS, TOGETHER, type Booking, type Member, type Trip } from '../types'
-import { aiError, couplesOf, errorText, normName, fmtDateTime, fromInputDateTime, mapsUrl, mutate, safeUrl, toInputDateTime, useTripTable } from '../lib'
+import { aiError, couplesOf, errorText, normName, fmtDateTime, fromInputDateTime, mapsUrl, mutate, replan, safeUrl, toInputDateTime, useTripTable } from '../lib'
 import { Empty, Field, LoadNote, Sheet, Tabs, useRemembered } from '../ui'
 import { BOOKING_ICON, Icon } from '../icons'
 
@@ -335,6 +335,8 @@ function BookingForm(props: {
   const remove = async () => {
     if (!f.id || !confirm('למחוק את ההזמנה?')) return
     if (!(await mutate(supabase.from('bookings').delete().eq('id', f.id)))) return
+    // the database announces new and changed bookings to the planner, not deleted ones
+    replan(tripId)
     if (f.file_path) await removeDocIfUnused(tripId, f.file_path, f.id)
     props.onClose()
   }

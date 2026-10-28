@@ -202,6 +202,14 @@ type MediaEntry = {
 }
 let mediaCache: Promise<Record<string, MediaEntry>> | null = null
 
+/**
+ * Asks the trip planner (edge function plan-trip) to plan the trip again now. It also runs by itself after every swipe,
+ * match and booking; this covers what the database can't announce, like a deleted booking.
+ */
+export function replan(tripId: string) {
+  return supabase.functions.invoke('plan-trip', { body: { trip_id: tripId } }).catch(() => null)
+}
+
 /** Links/photos collected per place name (public/media.json), shipped with the app. */
 export function useMediaIndex() {
   const [index, setIndex] = useState<Record<string, MediaEntry>>({})
