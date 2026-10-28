@@ -40,7 +40,9 @@ Offline: `public/sw.js` + localStorage cache in `useTripTable` (`src/lib.ts`).
   columns and read their trip's reports; `status` ('open'|'fixed'|'wontfix') and `reply` are backend-only and show
   in the app under "דיווחים קודמים". Open ones: `select * from reports where status = 'open' order by created_at`.
   After a fix: `update reports set status = 'fixed', reply = '…', resolved_at = now() where id = …`.
-- Edge functions (`supabase/functions/*`, deploy via MCP): `suggest-place` (v14, link/name → up to 10 place cards
+- Edge functions (`supabase/functions/*`, deploy via MCP): `suggest-place` (v15, link/name → up to 10 place cards; every lookup is saved in `place_lookups` (by the app's id,
+  with a key per post/name): the search finishes even if the phone stops waiting and the app reads the result back,
+  and the same post or name within 30 days is answered from there for free
   with kosher fields; structured outputs allow at most 16 nullable fields, so its text fields return "" and are
   turned into null in the function — v13 had 18 and every call failed with a 400) and `parse-booking` (v8). Model `claude-haiku-5-5`, key in Vault `anthropic_api_key`,
   30 calls/user/day. Both validate the body before charging quota and only pass http(s) links.

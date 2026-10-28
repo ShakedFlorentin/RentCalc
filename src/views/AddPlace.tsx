@@ -28,6 +28,25 @@ function existingIn(trip: TripPlaces, d: Draft): Existing | null {
 type Props = { tripId: string; userId: string; me: string; defaultTo: 'deck' | 'list'; onClose: () => void }
 
 /**
+ * The places a lookup found, read from place_lookups: the search keeps running when the phone stops waiting, so the
+ * answer can be there although the request failed. Waits up to two minutes while it is still running.
+ */
+async function savedResult(id: string): Promise<Draft[] | undefined> {
+  const start = Date.now()
+  let seen = false
+  while (Date.now() - start < 120_000) {
+    const { data } = await supabase.from('place_lookups').select('status, places').eq('id', id).maybeSingle()
+    if (data?.status === 'done') return (data.places as Draft[] | null) ?? []
+    if (data?.status === 'failed') return undefined
+    if (data) seen = true
+    // still no row after ten seconds: the request never reached the search
+    else if (!seen && Date.now() - start > 10_000) return undefined
+    await new Promise((r) => setTimeout(r, 3000))
+  }
+  return undefined
+}
+
+/**
  * Suggest a place from an Instagram/TikTok/Maps link or just its name; Claude finds it on the web and fills in the
  * card. Nobody types details by hand: when a link can't be read, the place's name is searched instead.
  */
@@ -77,14 +96,16 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
     if (!link && !text) return
     setBusy(true)
     setErr('')
-    const { data, error } = await supabase.functions.invoke('suggest-place', { body: link ? { link } : { text } })
+    const id = crypto.randomUUID()
+    const { data, error } = await supabase.functions.invoke('suggest-place', { body: link ? { link, id } : { text, id } })
+    const status = (error as { context?: Response } | null)?.context?.status
+    // no answer at all (screen locked, another app) while the search went on: read what it found
+    const places = error && !status ? await savedResult(id) : (data?.places as Draft[] | undefined)
     setBusy(false)
     // the card keeps the post it came from, also when it was found by name
     const from = link || failedLink
-    // older function versions return one place; newer ones a list
-    const found: Draft[] = error || !data ? [] : ((data.places ?? (data.found ? [data] : [])) as Draft[]).map((p) => ({ ...p, link: from }))
+    const found: Draft[] = (places ?? []).map((p) => ({ ...p, link: from }))
     if (!found.length) {
-      const status = (error as { context?: Response } | null)?.context?.status
       // out of lookups or offline: searching by name won't help either, so say why
       if (error && (status === 429 || status === 413 || !navigator.onLine)) return setErr(await aiError(error, ''))
       if (link) {

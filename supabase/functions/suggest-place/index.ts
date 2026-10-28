@@ -145,11 +145,8 @@ async function anthropicKey(admin: SupabaseClient) {
   return (data as string | null) ?? undefined
 }
 
-/**
- * Lets a request spend the Claude key only for a signed-in member of a trip who is under today's cap, and records
- * the call. Returns the client for the key lookup, or the response to send instead.
- */
-async function admit(req: Request, fn: string, json: (body: unknown, status?: number) => Response) {
+/** The signed-in trip member behind the request, with a service client; or the response to send instead. */
+async function signedIn(req: Request, json: (body: unknown, status?: number) => Response) {
   // the anon key is also a valid JWT, so check there is a signed-in user behind the request
   const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
     global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } },
@@ -161,35 +158,118 @@ async function admit(req: Request, fn: string, json: (body: unknown, status?: nu
     .select('trip_id', { count: 'exact', head: true })
     .eq('user_id', auth.user.id)
   if (!trips) return json({ error: 'not a trip member' }, 403)
-
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+  return { userId: auth.user.id, admin }
+}
+
+/** Lets the user spend the Claude key only under today's cap, and records the call; or the response to send instead. */
+async function charge(admin: SupabaseClient, userId: string, fn: string, json: (body: unknown, status?: number) => Response) {
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
   const { count: used } = await admin
     .from('ai_usage')
     .select('*', { count: 'exact', head: true })
-    .eq('user_id', auth.user.id)
+    .eq('user_id', userId)
     .eq('fn', fn)
     .gte('at', since)
   if ((used ?? 0) >= DAILY_LIMIT) return json({ error: 'daily limit reached' }, 429)
-  await admin.from('ai_usage').insert({ user_id: auth.user.id, fn })
-  return admin
+  await admin.from('ai_usage').insert({ user_id: userId, fn })
+  return null
 }
+
+/**
+ * The same post or the same place name gives the same key, whatever tracking bits the share link carries
+ * (?igsh=, ?cplk=, a trailing slash, www): a repeat is answered from place_lookups instead of searched again.
+ */
+function lookupKey(link: string, text: string) {
+  if (link) {
+    try {
+      const u = new URL(link)
+      const host = u.hostname.toLowerCase().replace(/^(www|m)\./, '')
+      const ig = host === 'instagram.com' && u.pathname.match(/^\/(?:p|reel|reels|tv)\/([\w-]+)/)?.[1]
+      if (ig) return 'ig:' + ig
+      return 'url:' + host + u.pathname.replace(/\/+$/, '')
+    } catch {
+      return null
+    }
+  }
+  const t = text.trim().toLowerCase().replace(/\s+/g, ' ')
+  return t ? 'q:' + t : null
+}
+// a saved answer is good for a month; places don't move, but scores and hours do
+const CACHE_DAYS = 30
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+// Supabase's runtime keeps a promise running after the response is sent, or after the client has gone
+const edge = (globalThis as { EdgeRuntime?: { waitUntil(p: Promise<unknown>): void } }).EdgeRuntime
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
 
-  // check the request before admit(), so a malformed one doesn't use up the daily quota
-  const body = (await req.json().catch(() => null)) as { link?: unknown; text?: unknown } | null
+  // check the request before charging for it, so a malformed one doesn't use up the daily quota
+  const body = (await req.json().catch(() => null)) as { link?: unknown; text?: unknown; id?: unknown } | null
   const link = typeof body?.link === 'string' ? body.link : undefined
   const text = typeof body?.text === 'string' ? body.text : undefined
   if (!link?.trim() && !text?.trim()) return json({ error: 'nothing to look up' }, 400)
   if ((link?.length ?? 0) > 500 || (text?.length ?? 0) > 1000) return json({ error: 'too long' }, 413)
 
-  const admin = await admit(req, 'suggest-place', json)
-  if (admin instanceof Response) return admin
+  const who = await signedIn(req, json)
+  if (who instanceof Response) return who
+  const { userId, admin } = who
+  const key = lookupKey(link?.trim() ?? '', text ?? '')
+  // the app's own id for this lookup, so it can read the result back if it stopped waiting; only ever inserted, so
+  // an id that's taken (someone else's lookup) gets a fresh one instead of overwriting it
+  let id = typeof body?.id === 'string' && UUID.test(body.id) ? body.id : crypto.randomUUID()
+  const track = async (row: Record<string, unknown>) => {
+    const { error } = await admin.from('place_lookups').insert({ id, user_id: userId, lookup_key: key, ...row })
+    if (error?.code === '23505') {
+      id = crypto.randomUUID()
+      await admin.from('place_lookups').insert({ id, user_id: userId, lookup_key: key, ...row })
+    }
+  }
 
+  if (key) {
+    const since = new Date(Date.now() - CACHE_DAYS * 24 * 60 * 60 * 1000).toISOString()
+    const { data: hit } = await admin
+      .from('place_lookups')
+      .select('places')
+      .eq('lookup_key', key)
+      .eq('status', 'done')
+      .gte('finished_at', since)
+      .order('finished_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    const places = hit?.places as unknown[] | null
+    if (places?.length) {
+      console.log('cached', key, places.length)
+      await track({ status: 'done', places, finished_at: new Date().toISOString() })
+      return json({ places, cached: true })
+    }
+  }
+
+  const refused = await charge(admin, userId, 'suggest-place', json)
+  if (refused) return refused
+  await track({ status: 'running' })
+
+  // the search runs on its own, so it finishes and saves its result even if the phone stops waiting
+  const work = research(admin, link, text).then(async (r) => {
+    const finished_at = new Date().toISOString()
+    await admin
+      .from('place_lookups')
+      .update('places' in r ? { status: 'done', places: r.places, finished_at } : { status: 'failed', error: r.error, finished_at })
+      .eq('id', id)
+    return r
+  })
+  edge?.waitUntil(work)
+  const r = await work
+  return 'places' in r ? json({ places: r.places }) : json({ error: r.error }, r.status)
+})
+
+/** Finds the place(s) a link or name is about and turns them into cards; or an error with its status. */
+async function research(admin: SupabaseClient, link: string | undefined, text: string | undefined): Promise<
+  { places: Record<string, unknown>[] } | { error: string; status: number }
+> {
   const caption = link ? await postContext(link) : ''
   console.log('caption', caption.length, caption.slice(0, 300))
   const ask = [link && `Link: ${link}`, caption, text && `Note from the member: ${text}`].filter(Boolean).join('\n')
@@ -210,7 +290,7 @@ Deno.serve(async (req) => {
       if (research.stop_reason !== 'pause_turn') break
       messages.push({ role: 'assistant', content: research.content })
     }
-    if (!research || research.stop_reason === 'refusal') return json({ error: 'could not research this place' }, 422)
+    if (!research || research.stop_reason === 'refusal') return { error: 'could not research this place', status: 422 }
     const notes = research.content
       .filter((b): b is Anthropic.TextBlock => b.type === 'text')
       .map((b) => b.text)
@@ -223,7 +303,7 @@ Deno.serve(async (req) => {
       system: EXTRACT,
       messages: [{ role: 'user', content: `${ask}\n\nResearch notes:\n${notes}` }],
     })
-    if (!card.parsed_output) return json({ error: 'could not read the research' }, 422)
+    if (!card.parsed_output) return { error: 'could not read the research', status: 422 }
     // the notes are prose, so take the sources from the search itself: cited pages first, then results
     const cited = research.content.flatMap((b) =>
       b.type === 'text' ? (b.citations ?? []).flatMap((c) => ('url' in c && c.url ? [c.url] : [])) : [],
@@ -238,13 +318,14 @@ Deno.serve(async (req) => {
       .slice(0, MAX_PLACES)
       .map((p) => ({ ...blanksToNull(p), sources: web(p.sources).length ? web(p.sources) : fallback }))
     console.log('places', places.length, places.map((p) => p.name).join(' | ') || notes.slice(0, 500))
-    return json({ places })
+    return { places }
   } catch (error) {
     // the reason goes to the function log: a 502 alone said nothing when the schema was rejected
     if (error instanceof Anthropic.APIError) console.error('claude error', error.status, error.message)
-    if (error instanceof Anthropic.AuthenticationError) return json({ error: 'ANTHROPIC_API_KEY is missing or invalid' }, 500)
-    if (error instanceof Anthropic.RateLimitError) return json({ error: 'busy, try again in a minute' }, 429)
-    if (error instanceof Anthropic.APIError) return json({ error: `Claude API error ${error.status}` }, 502)
-    throw error
+    if (error instanceof Anthropic.AuthenticationError) return { error: 'ANTHROPIC_API_KEY is missing or invalid', status: 500 }
+    if (error instanceof Anthropic.RateLimitError) return { error: 'busy, try again in a minute', status: 429 }
+    if (error instanceof Anthropic.APIError) return { error: `Claude API error ${error.status}`, status: 502 }
+    console.error('lookup failed', error)
+    return { error: 'lookup failed', status: 500 }
   }
-})
+}
