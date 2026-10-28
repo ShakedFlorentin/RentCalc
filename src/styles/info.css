@@ -138,3 +138,12 @@ button.pill, .info-card .pill { min-height: 44px; }
 .turn-back { font-size: 0.8125rem; }
 .turn-play { position: absolute; inset-inline-end: 14px; bottom: 12px; color: var(--accent); }
 .turns > .link { align-self: center; }
+/* problem reports */
+.report-sent { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--ok); font-weight: 600; }
+.report-list { margin-top: 12px; }
+.report-list h3 { margin: 0; }
+.report { display: flex; flex-direction: column; gap: 6px; }
+.report-body { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.report-reply { margin: 0; padding: 8px 12px; border-radius: 12px; background: var(--fill); font-size: 0.9375rem; }
+.report-status { flex: none; padding: 2px 10px; border-radius: 999px; font-size: 0.8125rem; font-weight: 600; background: var(--fill); color: var(--muted); }
+.report-status.fixed { background: color-mix(in srgb, var(--ok) 16%, var(--card)); color: var(--ok); }

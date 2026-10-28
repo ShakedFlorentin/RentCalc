@@ -7,6 +7,7 @@ import {
   Languages,
   Layers,
   LogOut as LogOutIcon,
+  MessageSquareWarning,
   ListChecks,
   Navigation,
   Share2,
@@ -36,6 +37,7 @@ import { cityPhoto } from '../cities'
 import { BOOKING_ICON, Icon } from '../icons'
 import type { MoreTab } from './More'
 import { dayEntries, fmtUntil, hotelFor, nightLines, stayInJapan, minutesOf, navUrl, ymd, type Entry, type PlanItem } from './planUtils'
+import ReportSheet from './Report'
 import '../styles/plan.css'
 
 type Props = {
@@ -51,9 +53,11 @@ type Props = {
   /** the top bar's avatar asks for trip settings; Home opens them and clears the request */
   settingsAsk: boolean
   onSettingsShown: () => void
+  /** where the avatar was tapped, e.g. "עוד › כסף": a problem report says which screen it is about */
+  settingsFrom: string
 }
 
-export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore, onOpenPlaces, onLeave, settingsAsk, onSettingsShown }: Props) {
+export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore, onOpenPlaces, onLeave, settingsAsk, onSettingsShown, settingsFrom }: Props) {
   const { rows: days } = useTripTable<DayInfo>('day_info', trip.id, 'day')
   const { rows: items } = useTripTable<PlanItem>('itinerary_items', trip.id, 'sort')
   const { rows: bookings } = useTripTable<Booking>('bookings', trip.id, 'starts_at')
@@ -61,6 +65,7 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
   const { rows: candidates } = useTripTable<Candidate>('candidates', trip.id)
   const { rows: swipes } = useTripTable<Swipe>('swipes', trip.id)
   const [editing, setEditing] = useState(false)
+  const [reporting, setReporting] = useState(false)
   useEffect(() => {
     if (!settingsAsk) return
     setEditing(true)
@@ -265,8 +270,19 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
       </section>
 
       {editing && (
-        <Settings trip={trip} me={me} userId={userId} onClose={() => setEditing(false)} onLeave={onLeave} />
+        <Settings
+          trip={trip}
+          me={me}
+          userId={userId}
+          onClose={() => setEditing(false)}
+          onLeave={onLeave}
+          onReport={() => {
+            setEditing(false)
+            setReporting(true)
+          }}
+        />
       )}
+      {reporting && <ReportSheet trip={trip} me={me} from={settingsFrom} onClose={() => setReporting(false)} />}
     </div>
   )
 }
@@ -416,7 +432,7 @@ function BeforeTrip(props: {
   )
 }
 
-function Settings(props: { trip: Trip; me: string; userId: string; onClose: () => void; onLeave: () => void }) {
+function Settings(props: { trip: Trip; me: string; userId: string; onClose: () => void; onLeave: () => void; onReport: () => void }) {
   const [name, setName] = useState(props.trip.name)
   const [start, setStart] = useState(props.trip.start_date ?? '')
   const [numDays, setNumDays] = useState(props.trip.num_days)
@@ -462,6 +478,9 @@ function Settings(props: { trip: Trip; me: string; userId: string; onClose: () =
       <p className="muted small">זה השם שהאחרים רואים. ההתחברות נשארת עם השם המקורי שלך באנגלית או בעברית.</p>
       <button className="primary" onClick={save}>
         שמירה
+      </button>
+      <button className="secondary" onClick={props.onReport}>
+        <Icon as={MessageSquareWarning} /> דיווח על בעיה או טעות
       </button>
       <button className="link" onClick={props.onLeave}>
         מעבר לטיול אחר / הצטרפות בקוד

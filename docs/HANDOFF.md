@@ -35,6 +35,11 @@ Offline: `public/sw.js` + localStorage cache in `useTripTable` (`src/lib.ts`).
   `update trips set settle_by = 'people' where id = …`. Logic: `partiesOf`/`settleUp` in `src/money.ts`.
 - `trips` is granted column by column: a new column needs `grant select (col) on trips to anon, authenticated`
   or the app's `select('*')` on trips fails.
+- Problem reports: settings (avatar) → "דיווח על בעיה או טעות" → table `reports` (body, reporter, screen it was sent
+  from e.g. "עוד › כסף", app_version = commit + build time, device = user agent). Members can only insert their own
+  columns and read their trip's reports; `status` ('open'|'fixed'|'wontfix') and `reply` are backend-only and show
+  in the app under "דיווחים קודמים". Open ones: `select * from reports where status = 'open' order by created_at`.
+  After a fix: `update reports set status = 'fixed', reply = '…', resolved_at = now() where id = …`.
 - Edge functions (`supabase/functions/*`, deploy via MCP): `suggest-place` (v13, link/name → up to 10 place cards
   with kosher fields) and `parse-booking` (v8). Model `claude-haiku-5-5`, key in Vault `anthropic_api_key`,
   30 calls/user/day. Both validate the body before charging quota and only pass http(s) links.

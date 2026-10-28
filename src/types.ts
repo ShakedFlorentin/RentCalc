@@ -249,3 +249,19 @@ export const AUDIENCES: Record<string, string> = {
   baby: 'עם התינוק',
   adults: 'ערב מבוגרים',
 }
+
+/** A problem someone reported from the app; status and reply are set from the backend when it's handled. */
+export type Report = {
+  id: string
+  trip_id: string
+  user_id: string
+  reporter: string | null
+  body: string
+  screen: string | null
+  app_version: string | null
+  device: string | null
+  status: 'open' | 'fixed' | 'wontfix'
+  reply: string | null
+  created_at: string
+  resolved_at: string | null
+}

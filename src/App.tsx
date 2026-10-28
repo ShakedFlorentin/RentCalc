@@ -9,7 +9,7 @@ import Home from './views/Home'
 import Itinerary from './views/Itinerary'
 import Bookings from './views/Bookings'
 import Places from './views/Places'
-import More, { type MoreTab } from './views/More'
+import More, { MORE_TABS, type MoreTab } from './views/More'
 import { useRemembered } from './ui'
 import SwipeGame from './views/Swipe'
 import Search, { type SearchTarget } from './views/Search'
@@ -120,6 +120,8 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
   const [tab, setTab] = useState<Tab>('home')
   // the avatar asks Home to open trip settings; Home clears the request once it has opened them
   const [settingsAsk, setSettingsAsk] = useState(false)
+  // the screen the avatar was tapped on, for a problem report sent from the settings
+  const [settingsFrom, setSettingsFrom] = useState('בית')
   const [searching, setSearching] = useState(false)
   const [day, setDay] = useState(1)
   const [moreSub, setMoreSub] = useRemembered('moreTab', 'money') as [MoreTab, (s: MoreTab) => void]
@@ -193,6 +195,8 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
           className="avatar"
           aria-label={`הגדרות טיול, ${me}`}
           onClick={() => {
+            const here = TABS.find((t) => t.id === tab)?.label ?? tab
+            setSettingsFrom(tab === 'more' ? `${here} › ${MORE_TABS.find((t) => t.id === moreSub)?.label ?? moreSub}` : here)
             setTab('home')
             setSettingsAsk(true)
           }}
@@ -214,6 +218,7 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
             onLeave={props.onLeave}
             settingsAsk={settingsAsk}
             onSettingsShown={() => setSettingsAsk(false)}
+            settingsFrom={settingsFrom}
           />
         )}
         {tab === 'swipe' && <SwipeGame trip={trip} userId={props.userId} members={members} />}

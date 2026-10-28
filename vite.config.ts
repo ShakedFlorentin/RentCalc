@@ -41,5 +41,12 @@ function precacheList(): Plugin {
   }
 }
 
-// relative base so the build works on GitHub Pages under /<repo>/
-export default defineConfig({ plugins: [react(), precacheList()], base: './' })
+// which build a problem report came from: the commit on GitHub Actions, and when it was built
+const build = `${(process.env.GITHUB_SHA ?? 'local').slice(0, 7)} ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`
+
+export default defineConfig({
+  plugins: [react(), precacheList()],
+  // relative base so the build works on GitHub Pages under /<repo>/
+  base: './',
+  define: { 'import.meta.env.VITE_BUILD': JSON.stringify(build) },
+})
