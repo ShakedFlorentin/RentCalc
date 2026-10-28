@@ -73,6 +73,11 @@ Offline: `public/sw.js` + localStorage cache in `useTripTable` (`src/lib.ts`).
     `itinerary_item_address` puts it on items people add for a known place. Addresses for all 155 trip cards and 206
     library cards came from `data/place-addresses-2026-10.json` (subscription research, 46 of 223 marked guess:
     street/area-level or an unverified branch); new cards get one from suggest-place (v18) or card-facts (v3).
+  - The 32 inactive library cards (never copied into a trip) got facts and addresses the same way on 2026-10-28
+    (`data/place-facts-lib32-2026-10.json`, 10 of 32 guess), so a same-name card added later is filled by
+    `candidates_plan_facts` instead of a paid card-facts lookup. Every library and trip card now has both;
+    `cards_without_facts` is empty. Oedo Onsen Monogatari closed in 2021: its card points at Manyo Club Toyosu
+    (its plan_line says so); Ramen Sugimoto has no Kanda branch, the card points at Marunouchi Brick Square.
 - Swipe game: `place_library` (curated cards, `active` flag) → `sync_library(tid)` copies to `candidates` on game open.
   Hebrew text for the original 107 cards lives in `public/media.json` (overlays DB by name via `withMedia`).
   Couple match → `on_swipe` trigger writes `places` (who = couple or null for everyone).
