@@ -248,7 +248,7 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
             <div className="city-grid">
               {destinations.map(([city, n], i) => (
                 <CityTile key={city} name={CITY_HE[city] ?? city} slug={city} i={i} onClick={onOpenPlaces}>
-                  {n} מקומות
+                  {n === 1 ? 'מקום אחד' : `${n} מקומות`}
                 </CityTile>
               ))}
             </div>
@@ -267,7 +267,7 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
           ))}
         </div>
         <p className="muted small">
-          להזמנה: שלחו את הקישור לאפליקציה ואת קוד הטיול{' '}
+          להצטרפות: שלחו את הקישור וקוד הטיול{' '}
           <b className="code" dir="ltr">{trip.join_code}</b>
         </p>
         <button
@@ -322,9 +322,9 @@ function NextCard(props: { next?: Entry; nowHM: string; hasPlan: boolean; leftCo
         <p className="muted">
           {props.hasPlan
             ? props.leftCount
-              ? `נשארו ${props.leftCount === 1 ? 'פעילות אחת' : `${props.leftCount} פעילויות`} שלא סומנו כבוצעו.`
+              ? (props.leftCount === 1 ? 'נשארה פעילות אחת שלא סומנה.' : `נשארו ${props.leftCount} פעילויות שלא סומנו.`)
               : 'אין עוד פעילויות להיום.'
-            : 'אפשר לבחור מקום בלשונית מקומות ולהוסיף אותו למסלול, או לכתוב פעילות בתוכנית.'}
+            : 'אפשר להוסיף מקום מלשונית מקומות, או לכתוב פעילות בתוכנית.'}
         </p>
         <button className="link" onClick={props.onOpenDay}>
           לתוכנית של היום <Icon as={ChevronLeft} />
@@ -412,7 +412,7 @@ function BeforeTrip(props: {
         <button className="todo-row" onClick={props.open}>
           <span className="tile orange"><Icon as={ListChecks} /></span>
           <span>
-            <b>{left ? `${left} משימות לפני הטיסה` : 'כל המשימות הושלמו'}</b>
+            <b>{left ? (left === 1 ? 'משימה אחת לפני הטיסה' : `${left} משימות לפני הטיסה`) : 'כל המשימות הושלמו'}</b>
             <span className="muted small">
               {todo.length - left}/{todo.length} הושלמו
             </span>
@@ -436,8 +436,8 @@ function BeforeTrip(props: {
         <div className="todo-row">
           <span className="tile red"><Icon as={Layers} /></span>
           <span>
-            <b>עוד {props.swipesLeft} מקומות בגילוי</b>
-            <span className="muted small">כל לייק או פאס משפיע על המאצ׳ים של הזוגות</span>
+            <b>{props.swipesLeft === 1 ? 'עוד מקום אחד בגילוי' : `עוד ${props.swipesLeft} מקומות בגילוי`}</b>
+            <span className="muted small">כל לייק או פאס משנה את המאצ׳ים</span>
           </span>
         </div>
       )}
@@ -453,7 +453,7 @@ function Settings(props: { trip: Trip; me: string; userId: string; onClose: () =
 
   const save = async () => {
     if (!Number.isInteger(numDays) || numDays < 1 || numDays > 60) {
-      alert('מספר הימים צריך להיות בין 1 ל-60')
+      alert('בחרו בין 1 ל-60 ימים')
       return
     }
     const ok = await mutate(
@@ -483,13 +483,13 @@ function Settings(props: { trip: Trip; me: string; userId: string; onClose: () =
         <input type="number" min={1} max={60} value={numDays} onChange={(e) => setNumDays(+e.target.value)} />
       </Field>
       <p className="muted small">
-        מאצ׳: כל זוג מצביע יחד, ולייק של אחד מבני הזוג מספיק אם השני לא דילג. מקום נשאל רק אצל הזוגות שישנים לידו, ונכנס
-        למסלול כשכולם אהבו אותו.
+        מאצ׳: כל זוג מצביע ביחד, ומספיק שאחד אוהב אם השני לא דילג. שואלים על מקום רק את הזוגות שישנים לידו, והוא נכנס
+        למסלול כשכולם אהבו.
       </p>
       <Field label="השם שלי">
         <input value={myName} onChange={(e) => setMyName(e.target.value)} />
       </Field>
-      <p className="muted small">זה השם שהאחרים רואים. ההתחברות נשארת עם השם המקורי שלך באנגלית או בעברית.</p>
+      <p className="muted small">זה השם שהאחרים רואים. ההתחברות נשארת עם השם המקורי.</p>
       <button className="primary" onClick={save}>
         שמירה
       </button>

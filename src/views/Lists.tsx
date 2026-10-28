@@ -74,7 +74,7 @@ export default function Lists({ tripId, members, userId }: { tripId: string; mem
 
       <form className="add-row" onSubmit={add}>
         <input value={text} onChange={(e) => setText(e.target.value)} placeholder="להוסיף…" />
-        <select value={assignee} onChange={(e) => setAssignee(e.target.value)} aria-label="אחראי/ת">
+        <select value={assignee} onChange={(e) => setAssignee(e.target.value)} aria-label="אחראי">
           <option value="">{perCouple ? 'שנינו' : 'כולם'}</option>
           {members
             .filter((m) => !perCouple || m.couple === myCouple)

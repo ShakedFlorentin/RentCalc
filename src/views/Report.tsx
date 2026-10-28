@@ -59,11 +59,11 @@ export default function ReportSheet(props: { trip: Trip; me: string; from: strin
             setBody(e.target.value)
             setSent(false)
           }}
-          placeholder="למשל: בהזמנות, הטיסה של יום ה׳ מופיעה בשעה לא נכונה"
+          placeholder="למשל: בהזמנות, הטיסה של יום ה׳ בשעה לא נכונה"
         />
       </Field>
       <p className="muted small">
-        עם הדיווח נשמרים גם המסך שממנו שלחת ({props.from}), גרסת האפליקציה וסוג הטלפון, כדי שיהיה קל למצוא ולתקן.
+        עם הדיווח נשמרים גם המסך ({props.from}), גרסת האפליקציה וסוג הטלפון, כדי שיהיה קל לתקן.
       </p>
       {sent && (
         <p className="report-sent" role="status">

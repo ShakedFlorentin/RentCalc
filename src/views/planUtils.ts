@@ -237,7 +237,7 @@ export const ARRIVAL: Record<Airport, { name: string; steps: ArrivalStep[] }> = 
       BORDER,
       CARD,
       CASH,
-      { icon: TrainFront, text: 'הנדה קרוב לעיר, כחצי שעה למרכז. רכבת קייקיו או המונורייל, ומשם לקו שמגיע למלון.' },
+      { icon: TrainFront, text: 'הנדה קרוב, כחצי שעה למרכז. רכבת קייקיו או המונורייל, ומשם ברכבת למלון.' },
       CHECKIN,
     ],
   },

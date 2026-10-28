@@ -39,7 +39,7 @@ export default function TripPicker({ onPick }: { onPick: (id: string) => void })
 
       <form onSubmit={join} className="card">
         <h3>הצטרפות לטיול קיים</h3>
-        <p className="muted small">את קוד הטיול מקבלים ממי שיצר אותו, והוא מופיע במסך הבית שלו</p>
+        <p className="muted small">את הקוד מקבלים ממי שיצר את הטיול, הוא מופיע אצלו במסך הבית</p>
         <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="קוד טיול" dir="ltr" required />
         <button className="primary" disabled={!name.trim()}>
           הצטרפות
@@ -48,7 +48,7 @@ export default function TripPicker({ onPick }: { onPick: (id: string) => void })
 
       <form onSubmit={create} className="card">
         <h3>יצירת טיול חדש</h3>
-        <p className="muted small">הטיול נוצר עם מסלול בסיסי של טוקיו, קיוטו ואוסקה, וניתן לערוך אותו</p>
+        <p className="muted small">נוצר מסלול בסיסי של טוקיו, קיוטו ואוסקה, אפשר לערוך אותו</p>
         <Field label="שם הטיול">
           <input value={tripName} onChange={(e) => setTripName(e.target.value)} required />
         </Field>

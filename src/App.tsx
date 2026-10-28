@@ -257,7 +257,7 @@ function initials(name: string) {
 function LoadError({ onRetry }: { onRetry: () => void }) {
   return (
     <div className="center stack" role="alert">
-      <p>אין חיבור לשרת. בדקו את האינטרנט ונסו שוב.</p>
+      <p>אין חיבור לשרת. בדקו את האינטרנט.</p>
       <button className="primary" onClick={onRetry}>
         נסו שוב
       </button>

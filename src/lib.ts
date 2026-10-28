@@ -113,7 +113,7 @@ export const keepRanges = (s: string) =>
 /** A save failed: say so in plain Hebrew, and say it's the connection when there's no network. */
 export function errorText(message: string) {
   return !navigator.onLine || /failed to fetch|network|load failed/i.test(message)
-    ? 'אין חיבור לאינטרנט, לא נשמר. נסו שוב כשיש קליטה.'
+    ? 'אין אינטרנט, לא נשמר. נסו שוב כשיש קליטה.'
     : 'שגיאה: ' + message
 }
 
@@ -292,7 +292,7 @@ export async function aiError(error: unknown, fallback: string) {
     // the same status means either today's cap or Claude being busy for a minute
     const body = await res?.clone().json().catch(() => null)
     return /daily limit/.test(body?.error ?? '')
-      ? 'הגעתם למגבלה היומית (30 בדיקות ביום לכל אחד). נסו שוב מחר.'
+      ? 'נגמרו 30 הבדיקות להיום (לכל אחד). נסו שוב מחר.'
       : 'השירות עמוס כרגע. נסו שוב בעוד דקה.'
   }
   if (status === 413) return 'הטקסט או הקובץ ארוכים מדי.'

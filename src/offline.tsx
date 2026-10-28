@@ -38,8 +38,8 @@ export function OfflineBanner({ since }: { since: number | null }) {
     return () => clearInterval(t)
   }, [])
   if (online && since == null) return null
-  const parts = [online ? 'אין תקשורת עם השרת' : 'אין חיבור']
-  if (since != null) parts.push(`מוצג מידע מ${ago(since)}`)
+  const parts = [online ? 'השרת לא עונה' : 'אין אינטרנט']
+  if (since != null) parts.push(`עדכון אחרון ${ago(since)}`)
   return (
     <div
       role="status"

@@ -134,7 +134,7 @@ export function Sheet(props: { title: string; onClose: () => void; children: Rea
         <div className="sheet-head">
           <span className="grabber" aria-hidden="true" />
           <button className="sheet-close" onClick={onClose}>
-            סגור
+            סגירה
           </button>
           <h2>{props.title}</h2>
           <span />
@@ -216,9 +216,9 @@ export function useRemembered(key: string, initial: string) {
 export function LoadNote({ onRetry }: { onRetry: () => void }) {
   return (
     <p className="msg" role="alert">
-      לא הצלחתי לעדכן מהשרת – בדקו את החיבור.{' '}
+      העדכון נכשל, בדקו את החיבור.{' '}
       <button className="link" onClick={onRetry}>
-        לנסות שוב
+        נסו שוב
       </button>
     </p>
   )

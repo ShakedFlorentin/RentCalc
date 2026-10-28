@@ -252,7 +252,7 @@ function Spare({ trip, day, spare }: { trip: Trip; day: number; spare: PlanSumma
   return (
     <details className="card spare">
       <summary>
-        עוד {spare.length} מקומות שאהבתם בעיר ולא נכנסו למסלול
+        {spare.length === 1 ? 'עוד מקום אחד שאהבתם בעיר ולא נכנס למסלול' : `עוד ${spare.length} מקומות שאהבתם בעיר ולא נכנסו למסלול`}
       </summary>
       <ul>
         {spare.map((u) => (

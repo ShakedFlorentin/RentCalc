@@ -106,7 +106,7 @@ export default function Search({
           onChange={(e) => setQ(e.target.value)}
         />
       </label>
-      {q.trim().length >= 2 && !groups.length && <p className="empty">לא נמצא כלום עבור "{q.trim()}"</p>}
+      {q.trim().length >= 2 && !groups.length && <p className="empty">אין תוצאות ל"{q.trim()}"</p>}
       {groups.map((g) => (
         <section key={g.label} className="search-group">
           <h3>{g.label}</h3>

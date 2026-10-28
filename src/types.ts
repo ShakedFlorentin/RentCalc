@@ -260,11 +260,11 @@ export const CARD_STYLE: Record<string, { label: string; bg: string }> = {
   sight: { label: 'אטרקציה', bg: '#5a4a72' },
   shopping: { label: 'קניות', bg: '#8a6a2f' },
   nightlife: { label: 'חיי לילה', bg: '#2f3349' },
-  experience: { label: 'חוויה', bg: '#3e6577' },
+  experience: { label: 'פעילות', bg: '#3e6577' },
 }
 
 export const VERDICTS: Record<string, { label: string; tone: string }> = {
-  gem: { label: 'פנינה נסתרת', tone: 'good' },
+  gem: { label: 'תגלית', tone: 'good' },
   worth_it: { label: 'שווה את ההייפ', tone: 'good' },
   overhyped: { label: 'מוגזם ברשתות', tone: 'meh' },
   trap: { label: 'מלכודת תיירים', tone: 'bad' },
@@ -272,7 +272,7 @@ export const VERDICTS: Record<string, { label: string; tone: string }> = {
 
 // no place in Japan is certified, so these describe eating without pork or seafood
 export const KOSHER: Record<string, { label: string; tone: string }> = {
-  friendly: { label: 'ידידותי לכשרות', tone: 'good' },
+  friendly: { label: 'קל לשומרי כשרות', tone: 'good' },
   options: { label: 'יש אפשרויות כשרות', tone: 'meh' },
   hard: { label: 'קשה לשומרי כשרות', tone: 'bad' },
 }

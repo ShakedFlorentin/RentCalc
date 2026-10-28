@@ -112,7 +112,7 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
         setFailedLink(link)
         setErr('')
       } else {
-        setErr('לא מצאנו מקום כזה. נסו לכתוב את השם כמו שהוא מופיע במפות, אפשר עם העיר או השכונה.')
+        setErr('לא מצאנו. נסו את השם כמו שהוא מופיע במפות, עם העיר או השכונה.')
       }
       return
     }
@@ -153,7 +153,7 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
     }
     setBusy(false)
     if (done) onClose()
-    else setErr('לא נוסף אף מקום. הם כבר ברשימה או שהשמירה לא הצליחה, אפשר לנסות שוב.')
+    else setErr('לא נוסף אף מקום. הם כבר ברשימה, או שהשמירה נכשלה.')
   }
 
   const save = async (d: Draft, anyway = false) => {
@@ -321,7 +321,7 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
     const picked = many.filter((m) => m.on && m.found?.where !== 'list').length
     return (
       <Sheet title={`נמצאו ${many.length} מקומות`} onClose={onClose}>
-        <p className="muted small">מסמנים את המקומות להוסיף. מקום שכבר קיים בטיול לא יתווסף שוב; אם הוא בגילוי, יסומן לך לייק.</p>
+        <p className="muted small">מסמנים אילו מקומות להוסיף. מקום שכבר בטיול לא יתווסף שוב, ואם הוא בגילוי יסומן לו לייק.</p>
         <div className="stack">
           {many.map((m, i) => {
             const style = CARD_STYLE[m.d.category ?? ''] ?? CARD_STYLE.sight
@@ -384,7 +384,7 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
   if (failedLink) {
     return (
       <Sheet title="מה שם המקום?" onClose={onClose}>
-        <p className="muted small">לא הצלחנו לזהות את המקום מהקישור. כתבו את שם המקום, ונחפש אותו ברשת עם הדירוגים, הכתובת וכל השאר.</p>
+        <p className="muted small">לא זיהינו את המקום מהקישור. כתבו את השם ונחפש דירוג, כתובת ופרטים.</p>
         <Field label="שם המקום">
           <input value={name} onChange={(e) => setName(e.target.value)} dir="auto" placeholder="למשל: Savoy, אזבו-ג׳ובן" autoFocus enterKeyHint="search" onKeyDown={(e) => e.key === 'Enter' && name.trim() && !busy && research({ name })} />
         </Field>
@@ -402,8 +402,8 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
   return (
     <Sheet title="הצעת מקום" onClose={onClose}>
       <p className="muted small">
-        הדביקו קישור מאינסטגרם, טיקטוק או גוגל מפות, או כתבו את שם המקום. המערכת מוצאת אותו ברשת ובודקת דירוג, כתובת,
-        כשרות והתאמה לתינוק.
+        הדביקו קישור מאינסטגרם, טיקטוק או גוגל מפות, או כתבו שם של מקום. נבדוק דירוג, כתובת, כשרות והתאמה
+        לתינוק.
       </p>
       <Field label="קישור או שם של מקום">
         <input

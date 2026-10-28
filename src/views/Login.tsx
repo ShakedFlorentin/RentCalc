@@ -35,7 +35,7 @@ export default function Login() {
     setMsg('')
     const email = toEmail(name)
     if (!email) {
-      setMsg('לא מכירים את השם הזה. מתחברים בתור שקד, מאור, אלמוג או שניר.')
+      setMsg('לא מכירים את השם. אפשר שקד, מאור, אלמוג או שניר.')
       return
     }
     setBusy(true)
@@ -43,7 +43,7 @@ export default function Login() {
     setBusy(false)
     if (!error) return
     // tell apart the cases a person can act on: no signal, too many tries, and a wrong password
-    if (error.name === 'AuthRetryableFetchError' || !navigator.onLine) setMsg('אין חיבור לאינטרנט. נסו שוב כשיש קליטה.')
+    if (error.name === 'AuthRetryableFetchError' || !navigator.onLine) setMsg('אין אינטרנט. נסו שוב כשיש קליטה.')
     else if (error.status === 429) setMsg('יותר מדי ניסיונות. חכו דקה ונסו שוב.')
     else if (email.endsWith('@japantrip.app')) setMsg('הסיסמה לא נכונה.')
     else setMsg('אימייל או סיסמה לא נכונים.')

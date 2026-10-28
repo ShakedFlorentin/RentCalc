@@ -139,7 +139,7 @@ export default function Places({ trip, me, userId, members }: Props) {
               </button>
             ))}
             <button className={'chip' + (whose === 'together' ? ' on' : '')} onClick={() => setWhose('together')}>
-              רק של כולם
+              של כולם
             </button>
             <button className={'chip' + (whose === 'all' ? ' on' : '')} onClick={() => setWhose('all')}>
               כל הזוגות
@@ -174,18 +174,18 @@ export default function Places({ trip, me, userId, members }: Props) {
           )}
           <p className="small muted">
             {shown.filter((p) => p.lat == null).length > 0 &&
-              `${shown.filter((p) => p.lat == null).length} מקומות בלי מיקום לא מופיעים במפה · `}
-            המיקומים משוערים. בדקו בגוגל מפות לפני שיוצאים
+              `${shown.filter((p) => p.lat == null).length === 1 ? 'מקום אחד בלי מיקום לא מופיע' : `${shown.filter((p) => p.lat == null).length} מקומות בלי מיקום לא מופיעים`} במפה · `}
+            המיקומים משוערים, כדאי לבדוק בגוגל מפות
           </p>
         </>
       ) : (
         <>
           <button className="secondary" onClick={autoPlan} disabled={replanned}>
-            <Icon as={Wand2} /> {replanned ? 'המסלול מתעדכן, זה לוקח כמה שניות' : 'סידור המסלול מחדש'}
+            <Icon as={Wand2} /> {replanned ? 'מעדכנים את המסלול, כמה שניות…' : 'סידור המסלול מחדש'}
           </button>
           {error && <LoadNote onRetry={reload} />}
           {!loading && !error && shown.length === 0 && (
-            <Empty>{rows.length ? 'אין מקומות בסינון הזה' : 'אין עדיין מקומות. מקומות שמקבלים מאצ׳ בגילוי מופיעים כאן'}</Empty>
+            <Empty>{rows.length ? 'אין מקומות בסינון הזה' : 'עוד אין מקומות. מקום שקיבל מאצ׳ בגילוי יופיע כאן'}</Empty>
           )}
           {[...groups].map(([c, areas]) => (
             <section key={c} className="stack">
