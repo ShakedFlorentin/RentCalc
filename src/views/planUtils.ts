@@ -175,6 +175,20 @@ export function nightLines(hotel: string | null, bookings: Booking[], date: stri
   return [...booked, ...hotelLines(hotel, couples).filter((l) => !titles.has(l.text))]
 }
 
+/**
+ * Each hotel once: both couples in the same hotel (two rooms, two bookings) is one line, named for a couple only when
+ * it's that couple's alone.
+ */
+export function hotelNights(lines: { who: string | null; text: string }[]) {
+  const out: { who: string | null; text: string }[] = []
+  for (const l of lines) {
+    const same = out.find((o) => o.text === l.text)
+    if (!same) out.push({ ...l })
+    else if (same.who !== l.who) same.who = null
+  }
+  return out
+}
+
 /** The hotel lines that apply to a couple: its own, or the shared ones when it has none. */
 export function hotelFor(lines: { who: string | null; text: string }[], mine: string | null) {
   const own = lines.filter((l) => l.who && l.who === mine)

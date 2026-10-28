@@ -9,6 +9,7 @@ import {
   ARRIVAL,
   dayEntries,
   tokyoArrival,
+  hotelNights,
   nightLines,
   navUrl,
   visible,
@@ -82,14 +83,12 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
             </>
           )}
         </div>
-        {nightLines(info?.hotel ?? null, bookings, date, couples)
-          .filter((l) => visible(l.who, mode, myCouple))
-          .map((l, n) => (
-            <div key={n}>
-              <Icon as={BedDouble} /> {l.who && mode === 'all' && <span className="muted small">{l.who}: </span>}
-              {l.text}
-            </div>
-          ))}
+        {hotelNights(nightLines(info?.hotel ?? null, bookings, date, couples).filter((l) => visible(l.who, mode, myCouple))).map((l) => (
+          <div key={l.text}>
+            <Icon as={BedDouble} /> {l.who && mode === 'all' && <span className="muted small">{l.who}: </span>}
+            {l.text}
+          </div>
+        ))}
         {info?.notes && <div className="notes">{keepRanges(info.notes)}</div>}
       </section>
 
