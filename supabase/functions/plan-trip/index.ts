@@ -359,8 +359,7 @@ async function run(admin: SupabaseClient, tid: string, dry: boolean) {
     basePt.set(b, { lat: pts.reduce((s, p) => s + p.hotel.lat, 0) / pts.length, lng: pts.reduce((s, p) => s + p.hotel.lng, 0) / pts.length })
   }
 
-  // the Hebrew tip, from the shipped translations for the first cards
-  const tipOf = (c: Cand) => mediaIdx[c.name]?.tip ?? c.tip
+  const tipOf = (c: Cand) => c.tip
   const fixedItems = items.filter((i) => !i.auto || i.done)
   const autoItems = items.filter((i) => i.auto && !i.done)
   const fixedPlaceIds = new Set(fixedItems.map((i) => i.place_id).filter(Boolean))

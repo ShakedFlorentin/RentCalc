@@ -201,23 +201,8 @@ type MediaEntry = {
   tiktok_url?: string
   lat?: number
   lng?: number
-  // Hebrew card texts
-  hype?: string
-  reality?: string
-  tip?: string
-  baby_notes?: string
-  price?: string
-  // what a restaurant, cafe or bar serves
-  serves?: string
-  dishes?: string[]
-  // what you do at an attraction and what sets it apart
-  todo?: string
-  special?: string
-  highlights?: string[]
-  time_needed?: string
   // how easy it is to eat there without pork or seafood
   kosher?: 'friendly' | 'options' | 'hard'
-  kosher_note?: string
 }
 let mediaCache: Promise<Record<string, MediaEntry>> | null = null
 
@@ -258,24 +243,8 @@ export function withMedia<T extends { name: string }>(row: T, index: Record<stri
     lat: m.lat ?? r.lat,
     lng: m.lng ?? r.lng,
     ...('url' in r ? { url: r.url ?? m.maps_url ?? null } : {}),
-    // the Hebrew translation replaces the scouts' English card text
-    ...('hype' in r
-      ? {
-          hype: m.hype ?? r.hype,
-          reality: m.reality ?? r.reality,
-          tip: m.tip ?? r.tip,
-          baby_notes: m.baby_notes ?? r.baby_notes,
-          price: m.price ?? r.price,
-          serves: m.serves ?? r.serves,
-          dishes: m.dishes ?? r.dishes,
-          todo: m.todo ?? r.todo,
-          special: m.special ?? r.special,
-          highlights: m.highlights ?? r.highlights,
-          time_needed: m.time_needed ?? r.time_needed,
-          kosher: m.kosher ?? r.kosher,
-          kosher_note: m.kosher_note ?? r.kosher_note,
-        }
-      : {}),
+    // the card's text lives in the database (place_library → candidates); media.json adds only links, photos and kosher
+    ...('kosher' in r ? { kosher: m.kosher ?? r.kosher } : {}),
   }
 }
 
