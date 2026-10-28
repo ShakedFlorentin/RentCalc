@@ -139,7 +139,22 @@ const byEntryTime = (a: Entry, b: Entry) => (a.time ?? '99').localeCompare(b.tim
 /** A day as one timeline: plan items and bookings merged by time, filtered by whose they are. */
 export function dayEntries(items: PlanItem[], bookings: Booking[], day: number, date: string, mode: WhoMode, mine: string | null) {
   const own = items.filter((i) => i.day === day).sort((a, b) => a.sort - b.sort).map(itemEntry)
-  return [...own, ...bookingEntries(bookings, date)].filter((e) => visible(e.who, mode, mine)).sort(byEntryTime)
+  return [...own, ...bookingEntries(bookings, date)]
+    .filter((e) => visible(e.who, mode, mine) || (mode === 'mine' && !!e.booking && staysWithUs(e.booking, bookings, mine)))
+    .sort(byEntryTime)
+}
+
+const sameHotel = (a: Booking, b: Booking) => a.title.trim().toLowerCase() === b.title.trim().toLowerCase()
+const overlap = (a: Booking, b: Booking) =>
+  !!(a.starts_at && a.ends_at && b.starts_at && b.ends_at) && a.starts_at < b.ends_at && b.starts_at < a.ends_at
+
+/**
+ * Another couple's hotel stay that overlaps one of ours in the same hotel: we're there together, so it shows in
+ * "שלנו" too, under its owner's name (two bookings because the dates differ).
+ */
+export function staysWithUs(b: Booking, bookings: Booking[], mine: string | null) {
+  if (!mine || b.kind !== 'hotel' || !b.who || b.who === mine) return false
+  return bookings.some((o) => o.kind === 'hotel' && o.who === mine && sameHotel(o, b) && overlap(o, b))
 }
 
 /** Hotel lines saved before the icon pass began with a pictograph; drop it. */
