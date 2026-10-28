@@ -473,7 +473,8 @@ function Settings(props: { trip: Trip; me: string; userId: string; onClose: () =
         <input type="number" min={1} max={60} value={numDays} onChange={(e) => setNumDays(+e.target.value)} />
       </Field>
       <p className="muted small">
-        מאצ׳: מקום נכנס לרשימה של זוג כששניהם אוהבים אותו, ולרשימה של כולם כששני הזוגות אוהבים.
+        מאצ׳: כל זוג מצביע יחד, ולייק של אחד מבני הזוג מספיק אם השני לא דילג. מקום נשאל רק אצל הזוגות שישנים לידו, ונכנס
+        למסלול כשכולם אהבו אותו.
       </p>
       <Field label="השם שלי">
         <input value={myName} onChange={(e) => setMyName(e.target.value)} />

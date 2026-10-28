@@ -17,6 +17,18 @@ Vite 6 + React 18 + TS PWA, Hebrew RTL, Leaflet (Esri English tiles), lucide ico
 Offline: `public/sw.js` + localStorage cache in `useTripTable` (`src/lib.ts`).
 
 ## Data model notes (Supabase)
+- Matching and planning (since 2026-10-28, `match_place()` run by the swipes trigger; SQL in
+  `supabase/sql/2026-10-28-match-by-who-is-there.sql`):
+  - A place is for the couples who sleep near it: nearest base city from the hotel bookings (`trip_nights`,
+    `place_base`); within 25 km only that base's couples (Yokohama → only שקד ומאור), a day trip further out →
+    everyone within 150 km. The swipe deck only shows a card to its couples (`trip_place_couples` RPC) and puts cards
+    the other couple liked first ("X אהבו").
+  - A couple votes yes when one partner liked and the other didn't skip. All its couples yes → everyone's (or the one
+    couple's). Some yes, some no → the yes couple's list. Some yes, some not voted → that couple's list, waiting.
+  - Once every couple it's for has voted it goes into the plan once (`itinerary_items.auto`), untimed, on a day its
+    people (and only they) sleep in that city, near same-area items, max 5 items a day; day trips (>25 km) wait for
+    someone to pick a day. An item the match put in and nobody touched is taken back if the match breaks; a person's
+    edit clears `auto` (`plan_item_touched`). `places.auto_planned` stops re-adding after a manual delete.
 - Swipe game: `place_library` (curated cards, `active` flag) → `sync_library(tid)` copies to `candidates` on game open.
   Hebrew text for the original 107 cards lives in `public/media.json` (overlays DB by name via `withMedia`).
   Couple match → `on_swipe` trigger writes `places` (who = couple or null for everyone).

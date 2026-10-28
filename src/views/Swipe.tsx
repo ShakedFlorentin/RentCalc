@@ -2,7 +2,7 @@ import { PointerEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../supabase'
 import { AUDIENCES, CARD_STYLE, CITY_HE, KOSHER, VERDICTS, type Candidate, type Member, type Swipe, type Trip } from '../types'
-import { keepRanges, matchFor, mutate, safeUrl, useMediaIndex, useTripTable, withMedia } from '../lib'
+import { couplesOf, keepRanges, mutate, safeUrl, useMediaIndex, useTripTable, withMedia } from '../lib'
 import AddPlace from './AddPlace'
 import { Empty, Sheet } from '../ui'
 import { MediaActions } from '../media'
@@ -30,6 +30,20 @@ export default function SwipeGame({ trip, userId, members }: Props) {
   const [match, setMatch] = useState<{ c: Candidate; names: string[]; who: string | null } | null>(null)
   const [history, setHistory] = useState<string[]>([])
   const knownMatches = useRef<Set<string> | null>(null)
+  // who each card is for (the couples sleeping near it) and which of them said yes: the database's own rules
+  // (trip_place_couples), fetched again after every change in the votes
+  const [forWhom, setForWhom] = useState<Map<string, { couples: string[]; liked: string[] }> | null>(null)
+  useEffect(() => {
+    let live = true
+    supabase.rpc('trip_place_couples', { tid: trip.id }).then(({ data }) => {
+      if (!live || !data) return
+      const rows = data as { candidate_id: string; couples: string[] | null; liked_by: string[] | null }[]
+      setForWhom(new Map(rows.map((r) => [r.candidate_id, { couples: r.couples ?? [], liked: r.liked_by ?? [] }])))
+    })
+    return () => {
+      live = false
+    }
+  }, [trip.id, swipes, rawCandidates.length])
 
   useEffect(() => {
     supabase.rpc('sync_library', { tid: trip.id })
@@ -40,21 +54,26 @@ export default function SwipeGame({ trip, userId, members }: Props) {
     for (const s of swipes) if (s.liked) m.set(s.candidate_id, [...(m.get(s.candidate_id) ?? []), s.user_id])
     return m
   }, [swipes])
-  // candidate id → whose list it went on (a couple, or null for everyone)
+  // candidate id → whose match it is (a couple, or null for everyone): every couple the place is for said yes
   const matches = useMemo(() => {
     const m = new Map<string, string | null>()
-    for (const [id, us] of likes) {
-      const hit = matchFor(us, members, trip.match_threshold)
-      if (hit) m.set(id, hit.who)
+    const everyone = couplesOf(members)
+    if (!everyone.length) {
+      for (const [id, us] of likes) if (us.length >= trip.match_threshold) m.set(id, null)
+      return m
+    }
+    for (const [id, f] of forWhom ?? []) {
+      if (!f.couples.length || f.liked.length < f.couples.length) continue
+      m.set(id, f.couples.length === everyone.length ? null : f.couples.join(' + '))
     }
     return m
-  }, [likes, members, trip.match_threshold])
+  }, [forWhom, likes, members, trip.match_threshold])
   const matchedIds = useMemo(() => new Set(matches.keys()), [matches])
 
   // announce every new match, whoever made it
   useEffect(() => {
     // wait for everything a match is made of, or the matches that already exist look new
-    if (loading || swipesLoading || !members.length) return
+    if (loading || swipesLoading || !members.length || !forWhom) return
     if (knownMatches.current === null) {
       knownMatches.current = new Set([...matches].map(([id, who]) => id + who))
       return
@@ -69,10 +88,15 @@ export default function SwipeGame({ trip, userId, members }: Props) {
   }, [matches, loading, swipesLoading, candidates, likes, members])
 
   const mine = new Set(swipes.filter((s) => s.user_id === userId).map((s) => s.candidate_id))
+  const myCouple = members.find((m) => m.user_id === userId)?.couple ?? null
+  // a place only the other couple will be near (their hotel city) isn't ours to vote on
+  const forMe = (c: Candidate) => !myCouple || !forWhom || (forWhom.get(c.id)?.couples ?? [myCouple]).includes(myCouple)
+  // the other couple already said yes: it waits on us, so it comes first
+  const othersLiked = (c: Candidate) => (forWhom?.get(c.id)?.liked ?? []).filter((x) => x !== myCouple)
   const cities = Object.keys(CITY_HE).filter((c) => candidates.some((x) => x.city === c))
   const deck = candidates
-    .filter((c) => !mine.has(c.id) && (!city || c.city === city) && (!aud || c.audience === aud))
-    .sort((a, b) => hash(a.id + userId) - hash(b.id + userId))
+    .filter((c) => !mine.has(c.id) && forMe(c) && (!city || c.city === city) && (!aud || c.audience === aud))
+    .sort((a, b) => Number(othersLiked(b).length > 0) - Number(othersLiked(a).length > 0) || hash(a.id + userId) - hash(b.id + userId))
 
   // the card stays up until the reload lands, so a second tap would swipe it again
   const pending = useRef(new Set<string>())
@@ -182,8 +206,8 @@ export default function SwipeGame({ trip, userId, members }: Props) {
             ))}
           </div>
           <p className="small muted">
-            מקום נכנס לרשימה של זוג כששניהם אוהבים אותו, ולרשימה של כולם כששני הזוגות אוהבים. כל לייק או פאס שווה 10 XP, כל
-            מאצ׳ 50 XP.
+            כל זוג מצביע יחד: לייק של אחד מבני הזוג מספיק, אלא אם השני דילג. מקום נשאל רק אצל מי שישן לידו, ונכנס למסלול
+            ביום שכולם שם כשכל הזוגות האלה אהבו אותו. כל לייק או פאס שווה 10 XP, כל מאצ׳ 50 XP.
           </p>
         </Sheet>
       )}
@@ -193,7 +217,7 @@ export default function SwipeGame({ trip, userId, members }: Props) {
           <Empty>
             {!candidates.length
               ? 'עדיין אין מקומות בגילוי'
-              : candidates.some((c) => !mine.has(c.id))
+              : candidates.some((c) => !mine.has(c.id) && forMe(c))
                 ? 'אין מקומות בסינון הזה'
                 : 'עברתם על כל המקומות. אפשר לחכות לחברים או לבדוק את המאצ׳ים בלשונית מקומות'}
           </Empty>
@@ -202,7 +226,7 @@ export default function SwipeGame({ trip, userId, members }: Props) {
           .slice(0, 2)
           .reverse()
           .map((c, i, arr) => (
-            <Card key={c.id} c={c} top={i === arr.length - 1} onSwipe={(liked) => swipe(c, liked)} />
+            <Card key={c.id} c={c} likedBy={othersLiked(c)} top={i === arr.length - 1} onSwipe={(liked) => swipe(c, liked)} />
           ))}
       </div>
       {(deck.length > 0 || history.length > 0) && (
@@ -227,6 +251,7 @@ export default function SwipeGame({ trip, userId, members }: Props) {
             <p>
               <b dir="auto">{match.c.name}</b> נכנס {match.who ? `לרשימה של ${match.who}` : 'לרשימה של כולם'}
             </p>
+            <p className="muted small">הוא נכנס למסלול ביום פנוי בעיר שלו. טיול יום מחכה שתבחרו לו יום.</p>
             <p className="muted">{match.names.join(' · ')} אהבו את המקום</p>
             <button className="primary" onClick={() => setMatch(null)}>
               המשך
@@ -276,7 +301,7 @@ function springTo(
 const project = (v: number) => ((v / 1000) * 0.998) / (1 - 0.998)
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches
 
-function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked: boolean) => Promise<boolean> }) {
+function Card({ c, top, likedBy, onSwipe }: { c: Candidate; top: boolean; likedBy: string[]; onSwipe: (liked: boolean) => Promise<boolean> }) {
   const [dx, setDx] = useState(0)
   const [more, setMore] = useState(false)
   const [photo, setPhoto] = useState(0)
@@ -422,6 +447,11 @@ function Card({ c, top, onSwipe }: { c: Candidate; top: boolean; onSwipe: (liked
           דלג
         </span>
         <div className="card-title">
+          {likedBy.length > 0 && (
+            <span className="liked-by">
+              <Icon as={Heart} /> <bdi>{likedBy.join(', ')}</bdi> אהבו
+            </span>
+          )}
           <h2 dir="auto">{c.name}</h2>
           {c.name_ja && (
             <div className="ja" lang="ja" dir="ltr">

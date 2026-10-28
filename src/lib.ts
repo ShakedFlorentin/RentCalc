@@ -257,18 +257,6 @@ export function couplesOf(members: Member[]) {
   return [...new Set(members.map((m) => m.couple).filter((c): c is string => !!c))].sort()
 }
 
-/**
- * Who a place is matched for, mirroring the on_swipe trigger: both members of a couple liking it puts it on that
- * couple's list, and every couple agreeing makes it the whole group's (who = null). Undefined means no match yet.
- */
-export function matchFor(likers: string[], members: Member[], threshold: number): { who: string | null } | undefined {
-  const couples = couplesOf(members)
-  if (!couples.length) return likers.length >= threshold ? { who: null } : undefined
-  const agreed = couples.filter((c) => members.filter((m) => m.couple === c).every((m) => likers.includes(m.user_id)))
-  if (!agreed.length) return undefined
-  return { who: agreed.length === couples.length ? null : agreed.join(' + ') }
-}
-
 /** Hebrew text for a failed Claude edge-function call, or `fallback` when there is nothing more specific. */
 export async function aiError(error: unknown, fallback: string) {
   const res = (error as { context?: Response } | null)?.context
