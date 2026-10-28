@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { ExternalLink, Globe, MapPin, Play } from 'lucide-react'
 import { Sheet } from './ui'
-import { safeUrl } from './lib'
+import { mapsUrl, safeUrl } from './lib'
 import { Icon, type LucideIcon } from './icons'
 
 type Media = {
@@ -10,6 +10,8 @@ type Media = {
   photos?: string[] | null
   lat?: number | null
   lng?: number | null
+  /** where people navigate to; coordinates are only for the map pins and the planner */
+  address?: string | null
 }
 
 /** Embed URL for an Instagram post/reel or TikTok video; null when the id can't be parsed. */
@@ -50,8 +52,9 @@ export function VideoSheet({ media, title, onClose }: { media: NonNullable<Retur
 export function MediaActions(props: { name: string; maps?: string | null; website?: string | null; m: Media; compact?: boolean; children?: ReactNode }) {
   const [open, setOpen] = useState(false)
   const website = safeUrl(props.website)
+  // the saved Google Maps link, else a search for the address (or the name, for a place with a known spot)
   const maps =
-    safeUrl(props.maps) || (props.m.lat != null && props.m.lng != null ? `https://www.google.com/maps/search/?api=1&query=${props.m.lat},${props.m.lng}` : null)
+    safeUrl(props.maps) || (props.m.address ? mapsUrl(props.m.address) : props.m.lat != null ? mapsUrl(props.name) : null)
   const video = videoEmbed(props.m)
   if (!maps && !website && !video && !props.children) return null
   return (

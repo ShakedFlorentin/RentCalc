@@ -56,6 +56,7 @@ const PlaceList = z.object({ places: z.array(PlaceDraft) })
 // what the trip planner needs, asked in the same call so a new card can be planned without another lookup (the
 // planner itself never calls Claude). Kept apart: if the API ever rejects the bigger schema, the card still comes back.
 const PlanFields = z.object({
+  address: z.string(),
   opens: z.string(),
   closes: z.string(),
   closed_weekdays: z.array(z.number().int()),
@@ -72,6 +73,7 @@ type Plan = z.infer<typeof PlanFields>
 const planColumns = (p: Plan) => {
   const time = (t: string) => (/^\d{1,2}:\d{2}$/.test(t.trim()) ? t.trim().padStart(5, '0') : null)
   return {
+    address: p.address.trim() || null,
     opens: time(p.opens),
     closes: time(p.closes),
     closed_weekdays: [...new Set(p.closed_weekdays.filter((d) => d >= 0 && d <= 6))],
@@ -112,6 +114,7 @@ const EXTRACT = `Turn the research notes into place cards, one per real place th
 - tabelog_score / google_score / lat / lng: only if stated in the notes, else null.
 - audience: "baby" if it works with the baby, otherwise "adults".
 - sources: the URLs the notes relied on.
+- address (when asked for): the street address in English as Google Maps takes it (e.g. "4-2-15 Ginza, Chuo-ku, Tokyo"); for a street or area without one, the best place to navigate to.
 - opens / closes (when asked for): usual opening and closing time "HH:MM" (24h; a bar past midnight closes e.g. "02:00"); "" if it has no hours or unknown. closed_weekdays: weekly closing days, 0 = Sunday ... 6 = Saturday; [] if none or unknown. closed_dates: dates between 2026-12-12 and 2026-12-31 it is closed, "YYYY-MM-DD"; [] if none or unknown.
 - best_time: morning, midday, afternoon, evening (dinner, sunset) or night (bars, night views) when it matters, else any. visit_mins: a typical visit in minutes including the usual queue. booking: required, recommended or no.
 - plan_line: ONE practical Hebrew tip, at most 70 characters, the single thing most worth knowing before going (book ahead, cash only, come before opening); not a description. baby_block: Hebrew, at most 60 characters, only if something blocks a visit with the baby (no strollers, stairs only, no children, smoking inside); otherwise "".
@@ -375,8 +378,8 @@ async function research(admin: SupabaseClient, link: string | undefined, text: s
     const web = (urls: string[]) => urls.filter((u) => /^https?:\/\//i.test(u))
     const fallback = web([...new Set([...cited, ...found])]).slice(0, 5)
     const places = card.parsed_output.places.slice(0, MAX_PLACES).map((full) => {
-      const { opens, closes, closed_weekdays, closed_dates, best_time, visit_mins, booking, plan_line, baby_block, ...p } = full
-      const plan = { opens, closes, closed_weekdays, closed_dates, best_time, visit_mins, booking, plan_line, baby_block }
+      const { address, opens, closes, closed_weekdays, closed_dates, best_time, visit_mins, booking, plan_line, baby_block, ...p } = full
+      const plan = { address, opens, closes, closed_weekdays, closed_dates, best_time, visit_mins, booking, plan_line, baby_block }
       return {
         ...blanksToNull(p as Draft),
         sources: web(p.sources).length ? web(p.sources) : fallback,

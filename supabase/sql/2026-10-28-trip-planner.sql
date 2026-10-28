@@ -173,3 +173,24 @@ $$;
 revoke execute on function public.request_card_facts() from public, anon, authenticated;
 create trigger card_needs_facts after insert on public.candidates
   for each row when (new.facts_at is null) execute function public.request_card_facts();
+
+-- ---- card_address, item_address (same day, last) ----
+-- Itinerary items carry an address to navigate to; coordinates stay in the backend (cards' lat/lng), only for the
+-- planner's distances and the map pins. card_address added address text to place_library and candidates (copied by
+-- sync_library and fill_plan_facts like the other plan columns; card-facts and suggest-place fill it for new cards).
+-- Filled from data/place-addresses-2026-10.json ([{t: lib|cand, id, address, confidence}]) the same way as the facts.
+create or replace function public.item_address()
+returns trigger language plpgsql security definer set search_path = ''
+as $$
+declare a text;
+begin
+  if new.place_id is not null and (tg_op = 'INSERT' or new.place_id is distinct from old.place_id) then
+    select c.address into a from public.places p join public.candidates c on c.id = p.candidate_id where p.id = new.place_id;
+    if a is not null then new.location := a; end if;
+  end if;
+  return new;
+end
+$$;
+revoke execute on function public.item_address() from public, anon, authenticated;
+create trigger itinerary_item_address before insert or update of place_id on public.itinerary_items
+  for each row execute function public.item_address();

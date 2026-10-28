@@ -227,6 +227,8 @@ export type Candidate = {
  * facts_at is the day they were checked; null = never (the planner then goes by the card's kind and time_needed).
  */
 export type PlanFacts = {
+  /** the street address people navigate to (coordinates stay in the backend, for distances) */
+  address?: string | null
   opens?: string | null
   closes?: string | null
   closed_weekdays?: number[] | null

@@ -238,6 +238,7 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
                 visit_mins: d.visit_mins ?? null,
                 booking: d.booking ?? null,
                 plan_line: d.plan_line ?? null,
+                address: d.address ?? null,
                 baby_block: d.baby_block ?? null,
                 facts_at: d.facts_at,
                 facts_sure: d.facts_sure ?? true,

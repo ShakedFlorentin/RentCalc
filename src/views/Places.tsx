@@ -215,7 +215,7 @@ export default function Places({ trip, me, userId, members }: Props) {
 
 function PlaceRow(props: { p: Place; planned: boolean; onEdit: (p: Place) => void; onPlan: (p: Place) => void }) {
   const { p } = props
-  const mapLink = safeUrl(p.url) || (p.lat != null ? `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}` : mapsUrl(p.name + ' ' + (p.city ?? '')))
+  const mapLink = safeUrl(p.url) || mapsUrl([p.name, p.area, p.city].filter(Boolean).join(', '))
   return (
     <div className={'item card place-row' + (p.visited ? ' done' : '')}>
       <button
@@ -380,7 +380,8 @@ function AddToDay(props: { trip: Trip; place: Place; onClose: () => void }) {
         day,
         time: time || null,
         title: p.name,
-        location: p.lat != null ? `${p.lat},${p.lng}` : p.name + ' ' + (p.city ?? ''),
+        // a stand-in: the database puts the card's address here (trigger itinerary_item_address)
+        location: [p.name, p.area, p.city].filter(Boolean).join(', '),
         notes: p.notes,
         category: p.category,
         place_id: p.id,

@@ -57,12 +57,18 @@ Offline: `public/sw.js` + localStorage cache in `useTripTable` (`src/lib.ts`).
   - Deploy both files of `supabase/functions/plan-trip` (index.ts, plan.ts). plan.ts is pure and can be bundled with
     esbuild and run in node for testing.
   - Facts arrive with every new card, at add time, never at planning time:
-    - added by link or name (suggest-place v17): the same extract call returns the plan fields (schema
+    - added by link or name (suggest-place v18): the same extract call returns the plan fields (schema
       PlaceListPlanned; if the API ever rejects it, it retries without them) and AddPlace saves them on the card;
     - same name as a library card: the `candidates_plan_facts` trigger copies the library's facts;
     - anything else (e.g. from the Ptitim map): trigger `card_needs_facts` → pg_net → edge function `card-facts`
       (planner token; one Claude + web search lookup, ~$0.03, ai_calls fn card-facts) fills the card and its
       empty library card, then asks plan-trip to plan again.
+  - Locations: a plan item's `location` is an address to navigate to (the card's `address` column, English, as
+    Google Maps takes it), never coordinates. Coordinates stay in the backend (`candidates.lat/lng`) for the
+    planner's distances and the Places map pins. The planner writes the address on its items; trigger
+    `itinerary_item_address` puts it on items people add for a known place. Addresses for all 155 trip cards and 206
+    library cards came from `data/place-addresses-2026-10.json` (subscription research, 46 of 223 marked guess:
+    street/area-level or an unverified branch); new cards get one from suggest-place (v18) or card-facts (v3).
 - Swipe game: `place_library` (curated cards, `active` flag) → `sync_library(tid)` copies to `candidates` on game open.
   Hebrew text for the original 107 cards lives in `public/media.json` (overlays DB by name via `withMedia`).
   Couple match → `on_swipe` trigger writes `places` (who = couple or null for everyone).

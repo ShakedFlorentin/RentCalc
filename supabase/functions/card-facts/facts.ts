@@ -10,6 +10,7 @@ import { logCall } from './ai-log.ts'
 const MODEL = 'claude-haiku-5-5'
 
 const FactsSchema = z.object({
+  address: z.string(),
   line: z.string(),
   baby: z.string(),
   opens: z.string(),
@@ -25,6 +26,7 @@ const FactsSchema = z.object({
 export type Facts = {
   key: string
   name: string
+  address: string | null
   line_he: string | null
   baby_he: string | null
   opens: string | null
@@ -66,6 +68,7 @@ Search briefly (in English and Japanese) and report:
 Only report what you find or what is well known; say "unknown" otherwise. Be brief.`
 
 const EXTRACT = `Turn the notes into the fields below.
+- address: the street address in English as Google Maps takes it (e.g. "4-2-15 Ginza, Chuo-ku, Tokyo"); for a street or area without one, the best place to navigate to (e.g. "Nishiki Market, Nakagyo-ku, Kyoto").
 - line: ONE short practical tip in natural Hebrew, at most 70 characters, the single thing most worth knowing before going (book ahead, cash only, come before opening, buy the sunset slot, closed on Mondays). Not a description of the place. Keep place and brand names as they are. No emoji, no exclamation marks.
 - baby: in Hebrew, at most 60 characters, ONLY if something there changes the plan with a milk-only baby (strollers not allowed, stairs only, no children, smoking inside). Otherwise "".
 - opens / closes: typical opening and closing time as "HH:MM" (24h); "" if it has no hours (a street, an area) or unknown. A bar open past midnight closes at e.g. "02:00".
@@ -134,6 +137,7 @@ export async function lookUp(admin: SupabaseClient, client: Anthropic, p: PlaceI
     return {
       key: factKey(p.name),
       name: p.name,
+      address: f.address.trim() || null,
       line_he: f.line.trim() || null,
       baby_he: f.baby.trim() || null,
       opens: time(f.opens),

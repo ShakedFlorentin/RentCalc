@@ -230,7 +230,8 @@ function Spare({ trip, day, spare }: { trip: Trip; day: number; spare: PlanSumma
         trip_id: trip.id,
         day,
         title: u.name,
-        location: p?.lat != null ? `${p.lat},${p.lng}` : `${u.name} ${p?.city ?? ''}`.trim(),
+        // a stand-in: the database puts the card's address here (trigger itinerary_item_address)
+        location: [u.name, p?.area, p?.city].filter(Boolean).join(', '),
         category: p?.category ?? 'sight',
         place_id: u.place_id,
         who: u.who,

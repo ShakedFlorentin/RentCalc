@@ -22,6 +22,7 @@ const BASE_POINT: Record<string, Point> = {
   osaka: { lat: 34.686, lng: 135.502 },
   nara: { lat: 34.685, lng: 135.805 },
 }
+const CITY_EN: Record<string, string> = { tokyo: 'Tokyo', kyoto: 'Kyoto', osaka: 'Osaka', nara: 'Nara', yokohama: 'Yokohama' }
 const CITY_HE: Record<string, string> = { tokyo: 'טוקיו', yokohama: 'יוקוהמה', kyoto: 'קיוטו', osaka: 'אוסקה', nara: 'נארה' }
 
 /** The city a hotel is in, from its name and address (same rules as hotel_base in the database). */
@@ -165,6 +166,8 @@ type Facts = {
 type Cand = Facts & {
   id: string
   name: string
+  address: string | null
+  area: string | null
   city: string | null
   category: string | null
   lat: number | null
@@ -237,7 +240,7 @@ function visitMins(f: Facts | undefined, timeNeeded: string | null | undefined, 
 }
 
 const CAND_COLUMNS =
-  'id,name,city,category,lat,lng,tip,time_needed,verdict,local_pick,tabelog_score,' +
+  'id,name,address,area,city,category,lat,lng,tip,time_needed,verdict,local_pick,tabelog_score,' +
   'opens,closes,closed_weekdays,closed_dates,best_time,visit_mins,booking,plan_line,baby_block,facts_at'
 /** The same place under small differences in spelling, case or punctuation gets one key. */
 const factKey = (name: string) => name.toLowerCase().normalize('NFKD').replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
@@ -496,13 +499,13 @@ async function run(admin: SupabaseClient, tid: string, dry: boolean) {
   const desired: Row[] = []
   for (const [id, pl] of out.placed) {
     const u = unitPlace.get(id)!
-    const pt = u.point
     desired.push({
       trip_id: tid,
       day: pl.day,
       time: hhmm(pl.start),
       title: u.p.name,
-      location: pt ? `${pt.lat},${pt.lng}` : `${u.p.name} ${CITY_HE[u.c.city ?? ''] ?? ''}`.trim(),
+      // what people navigate to: the address, else the name where it is; coordinates stay in the backend
+      location: u.c.address ?? [u.p.name, u.c.area, CITY_EN[u.c.city ?? '']].filter(Boolean).join(', '),
       notes: noteOf(u),
       category: itemCategory(u.c.category ?? 'sight'),
       place_id: id,
