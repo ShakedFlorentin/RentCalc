@@ -14,33 +14,42 @@ const MODEL = 'claude-haiku-5-5'
 // Claude calls per user per function in 24 hours; each place lookup costs a few cents
 const DAILY_LIMIT = 30
 
+// Structured outputs allow at most 16 nullable/union fields, so text fields come back as "" when there is nothing to
+// say (turned into null below); only numbers and enums stay nullable
 const PlaceDraft = z.object({
   name: z.string(),
-  name_ja: z.string().nullable(),
+  name_ja: z.string(),
   city: z.enum(['tokyo', 'kyoto', 'osaka', 'nara', 'daytrip']),
-  area: z.string().nullable(),
+  area: z.string(),
   category: z.enum(['food', 'sight', 'shopping', 'nightlife', 'cafe', 'experience']),
   lat: z.number().nullable(),
   lng: z.number().nullable(),
-  hype: z.string().nullable(),
-  reality: z.string().nullable(),
+  hype: z.string(),
+  reality: z.string(),
   verdict: z.enum(['gem', 'worth_it', 'overhyped', 'trap']).nullable(),
   tabelog_score: z.number().nullable(),
   google_score: z.number().nullable(),
-  price: z.string().nullable(),
-  tip: z.string().nullable(),
+  price: z.string(),
+  tip: z.string(),
   audience: z.enum(['baby', 'adults']),
-  baby_notes: z.string().nullable(),
-  serves: z.string().nullable(),
+  baby_notes: z.string(),
+  serves: z.string(),
   dishes: z.array(z.string()),
-  todo: z.string().nullable(),
-  special: z.string().nullable(),
+  todo: z.string(),
+  special: z.string(),
   highlights: z.array(z.string()),
-  time_needed: z.string().nullable(),
+  time_needed: z.string(),
   kosher: z.enum(['friendly', 'options', 'hard']).nullable(),
-  kosher_note: z.string().nullable(),
+  kosher_note: z.string(),
   sources: z.array(z.string()),
 })
+const TEXT_FIELDS = ['name_ja', 'area', 'hype', 'reality', 'price', 'tip', 'baby_notes', 'serves', 'todo', 'special', 'time_needed', 'kosher_note'] as const
+/** "" back to null, so the app sees the same card shape as before */
+type Draft = z.infer<typeof PlaceDraft>
+const blanksToNull = (p: Draft) =>
+  Object.fromEntries(
+    Object.entries(p).map(([k, v]) => [k, (TEXT_FIELDS as readonly string[]).includes(k) && typeof v === 'string' && !v.trim() ? null : v]),
+  ) as { [K in keyof Draft]: Draft[K] | (K extends (typeof TEXT_FIELDS)[number] ? null : never) }
 // a post can be a roundup ("10 ramen spots in Tokyo"), so the answer is a list; empty when nothing was identified
 const PlaceList = z.object({ places: z.array(PlaceDraft) })
 const MAX_PLACES = 10
@@ -63,12 +72,13 @@ Be concise. If you can't identify any specific place, say so.`
 const EXTRACT = `Turn the research notes into place cards, one per real place the notes identified, in the order the post lists them (at most 10). Return an empty list if no specific real place was identified. Rules for each card:
 - city: tokyo, kyoto, osaka, nara, or daytrip for anywhere else.
 - hype, reality, tip, baby_notes, price: one short sentence each in natural, casual Hebrew; keep place names, brand names (Tabelog, Google) and numbers as they are.
-- serves: for a restaurant, cafe or bar, one or two short Hebrew sentences on what it serves, explaining Japanese dish names in plain words (e.g. "אוקונומיאקי (פנקייק כרוב על הפלנצ׳ה)"); null for other places. dishes: 2-4 signature items as short Hebrew labels, or [].
-- todo / special / highlights / time_needed: for sights, experiences and shopping (null / [] for restaurants, cafes and bars). todo: 2-3 Hebrew sentences on what you actually do there, as a visit plays out. special: 1-2 Hebrew sentences on what sets it apart, specific rather than generic praise. highlights: 2-4 short Hebrew labels of what not to miss. time_needed: e.g. "שעה-שעתיים" or "חצי יום".
-- kosher / kosher_note: for a restaurant, cafe or bar only (null for other places). kosher is "friendly" when most of the menu has no pork or seafood (fish with fins and scales is fine), "options" when there are good dishes without them but you must choose, "hard" when the core of the place is pork or seafood. kosher_note: one short Hebrew sentence on what to order or avoid. Never claim kosher certification.
+- serves: for a restaurant, cafe or bar, one or two short Hebrew sentences on what it serves, explaining Japanese dish names in plain words (e.g. "אוקונומיאקי (פנקייק כרוב על הפלנצ׳ה)"); "" for other places. dishes: 2-4 signature items as short Hebrew labels, or [].
+- todo / special / highlights / time_needed: for sights, experiences and shopping ("" / [] for restaurants, cafes and bars). todo: 2-3 Hebrew sentences on what you actually do there, as a visit plays out. special: 1-2 Hebrew sentences on what sets it apart, specific rather than generic praise. highlights: 2-4 short Hebrew labels of what not to miss. time_needed: e.g. "שעה-שעתיים" or "חצי יום".
+- kosher / kosher_note: for a restaurant, cafe or bar only (kosher null and kosher_note "" for other places). kosher is "friendly" when most of the menu has no pork or seafood (fish with fins and scales is fine), "options" when there are good dishes without them but you must choose, "hard" when the core of the place is pork or seafood. kosher_note: one short Hebrew sentence on what to order or avoid. Never claim kosher certification.
 - tabelog_score / google_score / lat / lng: only if stated in the notes, else null.
 - audience: "baby" if it works with the baby, otherwise "adults".
 - sources: the URLs the notes relied on.
+- Any other text field with nothing to say is an empty string "".
 - Plain text only: no emoji, no exclamation marks.`
 
 const decode = (s: string) =>
@@ -226,10 +236,12 @@ Deno.serve(async (req) => {
     const fallback = web([...new Set([...cited, ...found])]).slice(0, 5)
     const places = card.parsed_output.places
       .slice(0, MAX_PLACES)
-      .map((p) => ({ ...p, sources: web(p.sources).length ? web(p.sources) : fallback }))
+      .map((p) => ({ ...blanksToNull(p), sources: web(p.sources).length ? web(p.sources) : fallback }))
     console.log('places', places.length, places.map((p) => p.name).join(' | ') || notes.slice(0, 500))
     return json({ places })
   } catch (error) {
+    // the reason goes to the function log: a 502 alone said nothing when the schema was rejected
+    if (error instanceof Anthropic.APIError) console.error('claude error', error.status, error.message)
     if (error instanceof Anthropic.AuthenticationError) return json({ error: 'ANTHROPIC_API_KEY is missing or invalid' }, 500)
     if (error instanceof Anthropic.RateLimitError) return json({ error: 'busy, try again in a minute' }, 429)
     if (error instanceof Anthropic.APIError) return json({ error: `Claude API error ${error.status}` }, 502)

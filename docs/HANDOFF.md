@@ -40,8 +40,9 @@ Offline: `public/sw.js` + localStorage cache in `useTripTable` (`src/lib.ts`).
   columns and read their trip's reports; `status` ('open'|'fixed'|'wontfix') and `reply` are backend-only and show
   in the app under "דיווחים קודמים". Open ones: `select * from reports where status = 'open' order by created_at`.
   After a fix: `update reports set status = 'fixed', reply = '…', resolved_at = now() where id = …`.
-- Edge functions (`supabase/functions/*`, deploy via MCP): `suggest-place` (v13, link/name → up to 10 place cards
-  with kosher fields) and `parse-booking` (v8). Model `claude-haiku-5-5`, key in Vault `anthropic_api_key`,
+- Edge functions (`supabase/functions/*`, deploy via MCP): `suggest-place` (v14, link/name → up to 10 place cards
+  with kosher fields; structured outputs allow at most 16 nullable fields, so its text fields return "" and are
+  turned into null in the function — v13 had 18 and every call failed with a 400) and `parse-booking` (v8). Model `claude-haiku-5-5`, key in Vault `anthropic_api_key`,
   30 calls/user/day. Both validate the body before charging quota and only pass http(s) links.
 - Edge function `translate` (v4, deployed 2026-10-26; plain three-line reply, no structured output): one spoken sentence he↔ja with Haiku, thinking off, effort low,
   200 calls/user/day (own `ai_usage` fn). Used by the voice translator in More → Important (`src/views/Translator.tsx`):
