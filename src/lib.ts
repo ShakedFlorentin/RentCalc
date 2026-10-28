@@ -277,7 +277,7 @@ export async function aiError(error: unknown, fallback: string) {
     // the same status means either today's cap or Claude being busy for a minute
     const body = await res?.clone().json().catch(() => null)
     return /daily limit/.test(body?.error ?? '')
-      ? 'הגעתם למגבלה היומית (30 בדיקות ביום לכל אחד). אפשר להוסיף ידנית או לנסות מחר.'
+      ? 'הגעתם למגבלה היומית (30 בדיקות ביום לכל אחד). נסו שוב מחר.'
       : 'השירות עמוס כרגע. נסו שוב בעוד דקה.'
   }
   if (status === 413) return 'הטקסט או הקובץ ארוכים מדי.'

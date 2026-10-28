@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { supabase } from '../supabase'
 import { AUDIENCES, CARD_STYLE, CITY_HE, VERDICTS, type Candidate } from '../types'
 import { aiError, mutate, safeUrl, samePlace } from '../lib'
-import { ArrowRight, Heart, List, PencilLine, Search, Star } from 'lucide-react'
+import { ArrowRight, Heart, List, Search, Star } from 'lucide-react'
 import { Field, Sheet } from '../ui'
 import { Icon } from '../icons'
 
@@ -27,11 +27,16 @@ function existingIn(trip: TripPlaces, d: Draft): Existing | null {
 
 type Props = { tripId: string; userId: string; me: string; defaultTo: 'deck' | 'list'; onClose: () => void }
 
-/** Suggest a place from an Instagram/TikTok/Maps link (researched by Claude) or by hand. */
+/**
+ * Suggest a place from an Instagram/TikTok/Maps link or just its name; Claude finds it on the web and fills in the
+ * card. Nobody types details by hand: when a link can't be read, the place's name is searched instead.
+ */
 export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Props) {
-  const [mode, setMode] = useState<'link' | 'manual'>('link')
-  const [link, setLink] = useState('')
-  const [note, setNote] = useState('')
+  // one field: a link or a place's name
+  const [query, setQuery] = useState('')
+  // a link that couldn't be read: kept for the card, while the place's name is searched instead
+  const [failedLink, setFailedLink] = useState('')
+  const [name, setName] = useState('')
   const [draft, setDraft] = useState<Draft | null>(null)
   const [to, setTo] = useState(defaultTo)
   const [busy, setBusy] = useState(false)
@@ -65,18 +70,31 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
     onClose()
   }
 
-  const research = async () => {
-    if (!link.trim() && !note.trim()) return
+  /** Looks a place up by link or by name; a link that fails moves on to asking for the name. */
+  const research = async (by: { link?: string; name?: string }) => {
+    const link = by.link?.trim() ?? ''
+    const text = by.name?.trim() ?? ''
+    if (!link && !text) return
     setBusy(true)
     setErr('')
-    const { data, error } = await supabase.functions.invoke('suggest-place', { body: { link: link.trim(), text: note.trim() } })
+    const { data, error } = await supabase.functions.invoke('suggest-place', { body: link ? { link } : { text } })
     setBusy(false)
-    if (error || !data) {
-      setErr(await aiError(error, 'החיפוש לא הצליח. אפשר לנסות שוב או למלא ידנית.'))
+    // the card keeps the post it came from, also when it was found by name
+    const from = link || failedLink
+    // older function versions return one place; newer ones a list
+    const found: Draft[] = error || !data ? [] : ((data.places ?? (data.found ? [data] : [])) as Draft[]).map((p) => ({ ...p, link: from }))
+    if (!found.length) {
+      const status = (error as { context?: Response } | null)?.context?.status
+      // out of lookups or offline: searching by name won't help either, so say why
+      if (error && (status === 429 || status === 413 || !navigator.onLine)) return setErr(await aiError(error, ''))
+      if (link) {
+        setFailedLink(link)
+        setErr('')
+      } else {
+        setErr('לא מצאנו מקום כזה. נסו לכתוב את השם כמו שהוא מופיע במפות, אפשר עם העיר או השכונה.')
+      }
       return
     }
-    // older function versions return one place; newer ones a list
-    const found: Draft[] = ((data.places ?? (data.found ? [data] : [])) as Draft[]).map((p) => ({ ...p, link: link.trim() }))
     if (found.length > 1) {
       const trip = await loadTrip()
       setMany(found.map((d) => {
@@ -85,8 +103,13 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
       }))
       return
     }
-    if (!found.length) setErr('לא זוהה מקום מסוים. בדקו את הפרטים או השלימו ידנית.')
-    setDraft(found[0] ?? { found: false, link: link.trim(), city: 'tokyo', category: 'food', audience: 'baby' } as Draft)
+    setDraft(found[0])
+  }
+
+  /** What was typed in the one field: a web address is a link, anything else a place's name. */
+  const lookUp = () => {
+    const q = query.trim()
+    research(/^https?:\/\//i.test(q) || /^(www\.)?(instagram|tiktok|vm\.tiktok|maps\.app\.goo|goo)\./i.test(q) ? { link: /^https?:/i.test(q) ? q : 'https://' + q } : { name: q })
   }
 
   /** Adds the ticked places; ones already in the game get my like, ones already on the list are skipped. */
@@ -305,18 +328,35 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
     )
   }
 
-  if (draft || mode === 'manual') {
+  if (draft) {
     return (
-      <Sheet title={draft ? 'זה המקום?' : 'הוספת מקום'} onClose={onClose}>
+      <Sheet title="זה המקום?" onClose={onClose}>
         <DraftForm
-          draft={typed ?? draft ?? { city: 'tokyo', category: 'food', audience: 'baby', link: '' }}
-          researched={!!draft}
+          draft={typed ?? draft}
           busy={busy}
           err={err}
           destination={destination}
           onSave={save}
-          onBack={() => (setTyped(null), draft ? setDraft(null) : setMode('link'))}
+          onBack={() => (setTyped(null), setDraft(null))}
         />
+      </Sheet>
+    )
+  }
+
+  if (failedLink) {
+    return (
+      <Sheet title="מה שם המקום?" onClose={onClose}>
+        <p className="muted small">לא הצלחנו לזהות את המקום מהקישור. כתבו את שם המקום, ונחפש אותו ברשת עם הדירוגים, הכתובת וכל השאר.</p>
+        <Field label="שם המקום">
+          <input value={name} onChange={(e) => setName(e.target.value)} dir="auto" placeholder="למשל: Savoy, אזבו-ג׳ובן" autoFocus enterKeyHint="search" onKeyDown={(e) => e.key === 'Enter' && name.trim() && !busy && research({ name })} />
+        </Field>
+        {err && <p className="msg">{err}</p>}
+        <button className="primary" onClick={() => research({ name })} disabled={busy || !name.trim()}>
+          {busy ? 'מחפש, עד דקה…' : (<><Icon as={Search} /> חיפוש לפי שם</>)}
+        </button>
+        <button className="link" onClick={() => (setErr(''), setFailedLink(''))}>
+          <Icon as={ArrowRight} /> חזרה
+        </button>
       </Sheet>
     )
   }
@@ -324,21 +364,22 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
   return (
     <Sheet title="הצעת מקום" onClose={onClose}>
       <p className="muted small">
-        הדביקו קישור מאינסטגרם, טיקטוק או גוגל מפות, או כתבו שם של מקום. המערכת מזהה את המקום ובודקת דירוג, כתובת והתאמה
-        לתינוק.
+        הדביקו קישור מאינסטגרם, טיקטוק או גוגל מפות, או כתבו את שם המקום. המערכת מוצאת אותו ברשת ובודקת דירוג, כתובת,
+        כשרות והתאמה לתינוק.
       </p>
-      <Field label="קישור">
-        <input type="url" value={link} onChange={(e) => setLink(e.target.value)} dir="ltr" placeholder="https://www.instagram.com/reel/…" />
-      </Field>
-      <Field label="או שם / הערה (לא חובה)">
-        <input value={note} onChange={(e) => setNote(e.target.value)} dir="auto" placeholder="למשל: הראמן מהסרטון, בשינג׳וקו" />
+      <Field label="קישור או שם של מקום">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          dir="auto"
+          placeholder="קישור, או שם כמו Ichiran Shibuya"
+          enterKeyHint="search"
+          onKeyDown={(e) => e.key === 'Enter' && query.trim() && !busy && lookUp()}
+        />
       </Field>
       {err && <p className="msg">{err}</p>}
-      <button className="primary" onClick={research} disabled={busy || (!link.trim() && !note.trim())}>
-        {busy ? 'מחפש פרטים, עד דקה' : (<><Icon as={Search} /> זיהוי ובדיקה</>)}
-      </button>
-      <button className="link" onClick={() => setMode('manual')}>
-        <Icon as={PencilLine} /> הוספה ידנית
+      <button className="primary" onClick={lookUp} disabled={busy || !query.trim()}>
+        {busy ? 'מחפש, עד דקה…' : (<><Icon as={Search} /> זיהוי ובדיקה</>)}
       </button>
     </Sheet>
   )
@@ -346,7 +387,6 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
 
 function DraftForm(props: {
   draft: Draft
-  researched: boolean
   busy: boolean
   err: string
   destination: React.ReactNode
@@ -360,7 +400,7 @@ function DraftForm(props: {
   return (
     <>
       {props.err && <p className="msg">{props.err}</p>}
-      {props.researched && (verdict || d.tabelog_score != null || d.google_score != null) && (
+      {(verdict || d.tabelog_score != null || d.google_score != null) && (
         <div className="row">
           {verdict && <span className={'verdict ' + verdict.tone}>{verdict.label}</span>}
           {d.tabelog_score != null && <span className="small muted">Tabelog <Icon as={Star} /> <bdi>{d.tabelog_score}</bdi></span>}
@@ -368,7 +408,7 @@ function DraftForm(props: {
         </div>
       )}
       <Field label="שם">
-        <input value={d.name ?? ''} onChange={set('name')} dir="auto" autoFocus={!props.researched} />
+        <input value={d.name ?? ''} onChange={set('name')} dir="auto" />
       </Field>
       <div className="row">
         <Field label="עיר">
@@ -404,32 +444,32 @@ function DraftForm(props: {
           </select>
         </Field>
       </div>
-      {props.researched && d.serves && (
+      {d.serves && (
         <div className="small">
           <b>מה מגישים:</b> <span dir="auto">{d.serves}</span>
         </div>
       )}
-      {props.researched && d.kosher_note && (
+      {d.kosher_note && (
         <div className="small">
           <b>כשרות:</b> <span dir="auto">{d.kosher_note}</span>
         </div>
       )}
-      {props.researched && d.todo && (
+      {d.todo && (
         <div className="small">
           <b>מה עושים שם:</b> <span dir="auto">{d.todo}</span>
         </div>
       )}
-      {props.researched && d.special && (
+      {d.special && (
         <div className="small">
           <b>מה מיוחד:</b> <span dir="auto">{d.special}</span>
         </div>
       )}
-      {props.researched && d.reality && (
+      {d.reality && (
         <div className="small">
           <b>בביקורות:</b> <span dir="auto">{d.reality}</span>
         </div>
       )}
-      {props.researched && d.baby_notes && (
+      {d.baby_notes && (
         <div className="small">
           <b>עם תינוק:</b> <span dir="auto">{d.baby_notes}</span>
         </div>
@@ -437,11 +477,6 @@ function DraftForm(props: {
       <Field label="טיפ / הערה">
         <textarea value={d.tip ?? ''} onChange={set('tip')} rows={2} dir="auto" />
       </Field>
-      {!props.researched && (
-        <Field label="קישור (אינסטגרם, טיקטוק או מפות, לא חובה)">
-          <input type="url" value={d.link ?? ''} onChange={set('link')} dir="ltr" />
-        </Field>
-      )}
       {props.destination}
       <button className="primary" onClick={() => props.onSave(d)} disabled={props.busy || !d.name?.trim()}>
         {props.busy ? 'שומר…' : 'הוספה'}
