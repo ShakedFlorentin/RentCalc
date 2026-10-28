@@ -71,7 +71,6 @@ titles, iPhone system font). Swipe card moves on springs (`springTo` in `Swipe.t
 finger's speed, and likes/skips by where the flick projects, not where it was let go.
 
 ## Open / ideas
-- Almog to add his own Shinjuku booking (who = אלמוג ושניר) → his missing nights drop 13 → 9.
 - "דרכונים בתוקף" was reset when it became per-couple; each couple should tick it again.
 - Facebook research is done by the Claude session on Shaked's Mac (Claude in Chrome); it can't message back, so
   results are read from its transcript (list_events). Unread posts worth a look: the 19-day and 30-day recaps and
