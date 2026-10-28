@@ -286,9 +286,20 @@ export function metresBetween(a: { lat: number; lng: number }, b: { lat: number;
   return Math.sqrt(x * x + y * y) * 6371000
 }
 
+const FILLER = new Set(['the', 'and', 'main', 'store', 'shop', 'honten', 'branch', 'sohonten'])
+const GENERIC = new Set([
+  'aquarium', 'museum', 'temple', 'shrine', 'park', 'market', 'tower', 'station', 'cafe', 'coffee', 'ramen', 'sushi',
+  'garden', 'street', 'shopping', 'tempura', 'onsen', 'castle', 'hotel', 'tokyo', 'kyoto', 'osaka', 'nara', 'japan',
+  'yokocho', 'depachika', 'food', 'restaurant', 'izakaya', 'kitchen',
+])
+const nameWords = (s: string) =>
+  [...new Set(s.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w) => w.length >= 3 && !FILLER.has(w)))]
+
 /**
- * Whether two places look like the same one: the same name, one name inside the other ("Fuunji" and
- * "Fuunji Shinjuku"), or pins within 60 m of each other.
+ * Whether two places look like the same one: the same name, every word of one name in the other in any order
+ * ("Kaiyukan Aquarium" and "Osaka Aquarium Kaiyukan", "Fuunji" and "Fuunji Shinjuku") as long as the shorter name has
+ * a distinctive word of its own (so "Kyoto Aquarium" and "Sumida Aquarium" stay two), or pins within 60 m of each
+ * other. Mirrors same_place_name() in the database.
  */
 export function samePlace(
   a: { name: string; lat?: number | null; lng?: number | null },
@@ -298,6 +309,9 @@ export function samePlace(
   const y = normName(b.name)
   if (x && x === y) return 'exact'
   if (Math.min(x.length, y.length) >= 5 && (x.includes(y) || y.includes(x))) return 'similar'
+  const [wa, wb] = [nameWords(a.name), nameWords(b.name)]
+  const [short, long] = wa.length <= wb.length ? [wa, wb] : [wb, wa]
+  if (short.length && short.every((w) => long.includes(w)) && short.some((w) => w.length >= 4 && !GENERIC.has(w))) return 'similar'
   if (a.lat != null && a.lng != null && b.lat != null && b.lng != null) {
     if (metresBetween({ lat: a.lat, lng: a.lng }, { lat: b.lat, lng: b.lng }) < 60) return 'similar'
   }
