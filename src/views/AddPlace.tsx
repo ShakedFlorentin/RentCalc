@@ -227,6 +227,22 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
           kosher: d.kosher ?? null,
           kosher_note: d.kosher_note || null,
           sources: d.sources ? d.sources.filter((u) => safeUrl(u)) : l ? [l] : [],
+          // the lookup's hours and plan line, so the planner places the card without looking anything up
+          ...(d.facts_at
+            ? {
+                opens: d.opens ?? null,
+                closes: d.closes ?? null,
+                closed_weekdays: d.closed_weekdays ?? [],
+                closed_dates: d.closed_dates ?? [],
+                best_time: d.best_time ?? 'any',
+                visit_mins: d.visit_mins ?? null,
+                booking: d.booking ?? null,
+                plan_line: d.plan_line ?? null,
+                baby_block: d.baby_block ?? null,
+                facts_at: d.facts_at,
+                facts_sure: d.facts_sure ?? true,
+              }
+            : {}),
         })
         .select('id')
         .single()

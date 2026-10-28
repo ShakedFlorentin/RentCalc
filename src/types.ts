@@ -237,6 +237,8 @@ export type PlanFacts = {
   plan_line?: string | null
   baby_block?: string | null
   facts_at?: string | null
+  /** true: confirmed from a source; false: estimated */
+  facts_sure?: boolean | null
 }
 
 export type Swipe = { trip_id: string; candidate_id: string; user_id: string; liked: boolean; created_at: string }

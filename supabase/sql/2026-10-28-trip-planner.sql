@@ -149,3 +149,27 @@ create trigger bookings_replan after insert or update on public.bookings
 --   update public.place_library l set ... from src s where s."table" = 'lib' and l.id = s.id;   -- and candidates:
 --   ... where (s."table" = 'cand' and c.id = s.id) or (s."table" = 'lib' and c.library_id = s.id)
 -- place_facts (looked up through the API earlier the same day) is no longer read; its rows were copied onto the cards.
+
+-- ---- card_needs_facts (same day, last) ----
+-- A card inserted without facts (and that no library card of the same name filled) is looked up once in the
+-- background: trigger card_needs_facts → pg_net → edge function card-facts (planner token) → Claude + web search
+-- (~$0.03, ai_calls fn card-facts) → the card's plan columns (and its library card's, if empty) → plan-trip.
+create or replace function public.request_card_facts()
+returns trigger language plpgsql security definer set search_path = ''
+as $$
+declare tok text;
+begin
+  select decrypted_secret into tok from vault.decrypted_secrets where name = 'planner_token' limit 1;
+  if tok is not null then
+    perform net.http_post(
+      url := 'https://wbofjfwbdewgnwjmcpnv.supabase.co/functions/v1/card-facts',
+      body := jsonb_build_object('candidate_id', new.id),
+      headers := jsonb_build_object('Content-Type', 'application/json', 'x-plan-token', tok),
+      timeout_milliseconds := 5000);
+  end if;
+  return null;
+end
+$$;
+revoke execute on function public.request_card_facts() from public, anon, authenticated;
+create trigger card_needs_facts after insert on public.candidates
+  for each row when (new.facts_at is null) execute function public.request_card_facts();

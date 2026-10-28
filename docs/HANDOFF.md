@@ -56,8 +56,13 @@ Offline: `public/sw.js` + localStorage cache in `useTripTable` (`src/lib.ts`).
     translated to Hebrew on 2026-10-28 (one-off, through the API, before the no-API rule).
   - Deploy both files of `supabase/functions/plan-trip` (index.ts, plan.ts). plan.ts is pure and can be bundled with
     esbuild and run in node for testing.
-  - Adding a place by link (suggest-place) does not return hours yet: such a card is planned from defaults until a
-    session fills it (or until its schema gets the plan fields; that needs one live API test before deploying).
+  - Facts arrive with every new card, at add time, never at planning time:
+    - added by link or name (suggest-place v17): the same extract call returns the plan fields (schema
+      PlaceListPlanned; if the API ever rejects it, it retries without them) and AddPlace saves them on the card;
+    - same name as a library card: the `candidates_plan_facts` trigger copies the library's facts;
+    - anything else (e.g. from the Ptitim map): trigger `card_needs_facts` → pg_net → edge function `card-facts`
+      (planner token; one Claude + web search lookup, ~$0.03, ai_calls fn card-facts) fills the card and its
+      empty library card, then asks plan-trip to plan again.
 - Swipe game: `place_library` (curated cards, `active` flag) → `sync_library(tid)` copies to `candidates` on game open.
   Hebrew text for the original 107 cards lives in `public/media.json` (overlays DB by name via `withMedia`).
   Couple match → `on_swipe` trigger writes `places` (who = couple or null for everyone).

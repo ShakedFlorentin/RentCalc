@@ -53,6 +53,38 @@ const blanksToNull = (p: Draft) =>
   ) as { [K in keyof Draft]: Draft[K] | (K extends (typeof TEXT_FIELDS)[number] ? null : never) }
 // a post can be a roundup ("10 ramen spots in Tokyo"), so the answer is a list; empty when nothing was identified
 const PlaceList = z.object({ places: z.array(PlaceDraft) })
+// what the trip planner needs, asked in the same call so a new card can be planned without another lookup (the
+// planner itself never calls Claude). Kept apart: if the API ever rejects the bigger schema, the card still comes back.
+const PlanFields = z.object({
+  opens: z.string(),
+  closes: z.string(),
+  closed_weekdays: z.array(z.number().int()),
+  closed_dates: z.array(z.string()),
+  best_time: z.enum(['morning', 'midday', 'afternoon', 'evening', 'night', 'any']),
+  visit_mins: z.number().int(),
+  booking: z.enum(['required', 'recommended', 'no']),
+  plan_line: z.string(),
+  baby_block: z.string(),
+})
+const PlaceListPlanned = z.object({ places: z.array(PlaceDraft.extend(PlanFields.shape)) })
+type Plan = z.infer<typeof PlanFields>
+/** The plan fields as the card columns want them ("" → null, odd values dropped); facts_at marks them checked. */
+const planColumns = (p: Plan) => {
+  const time = (t: string) => (/^\d{1,2}:\d{2}$/.test(t.trim()) ? t.trim().padStart(5, '0') : null)
+  return {
+    opens: time(p.opens),
+    closes: time(p.closes),
+    closed_weekdays: [...new Set(p.closed_weekdays.filter((d) => d >= 0 && d <= 6))],
+    closed_dates: p.closed_dates.filter((d) => /^2026-12-(1[2-9]|2\d|3[01])$/.test(d)),
+    best_time: p.best_time,
+    visit_mins: p.visit_mins > 0 && p.visit_mins <= 720 ? p.visit_mins : null,
+    booking: p.booking,
+    plan_line: p.plan_line.trim() || null,
+    baby_block: p.baby_block.trim() || null,
+    facts_at: new Date().toISOString().slice(0, 10),
+    facts_sure: true,
+  }
+}
 const MAX_PLACES = 10
 
 const RESEARCH = `You help two Israeli couples plan a December trip to Japan (Tokyo, Kyoto, Osaka and day trips). One couple brings a 5-month-old baby who only drinks milk.
@@ -67,6 +99,7 @@ If the post names several places (a list or roundup), identify each one (up to 1
 - for food, cafes and bars: whether you can eat there without pork (incl. pork broth, lard, chashu) or seafood (shellfish, shrimp, crab, octopus, squid, eel, sea urchin); fish with fins and scales is fine. Name what to order or what to avoid
 - with a milk-only baby: stroller access, a quiet spot or private room to nurse, nursing room nearby, smoking; or why it's better as an adults-only outing
 - honest verdict: hidden gem, worth it, overhyped, or tourist trap
+- opening hours, weekly closing days, closures between 12 and 31 December 2026 (year-end holidays), whether to book, how long a visit takes and the best time of day
 If you only have a link with no caption, search for the post itself (its URL, its code and the account) to find which places it shows.
 Be concise. If you can't identify any specific place, say so.`
 
@@ -79,6 +112,9 @@ const EXTRACT = `Turn the research notes into place cards, one per real place th
 - tabelog_score / google_score / lat / lng: only if stated in the notes, else null.
 - audience: "baby" if it works with the baby, otherwise "adults".
 - sources: the URLs the notes relied on.
+- opens / closes (when asked for): usual opening and closing time "HH:MM" (24h; a bar past midnight closes e.g. "02:00"); "" if it has no hours or unknown. closed_weekdays: weekly closing days, 0 = Sunday ... 6 = Saturday; [] if none or unknown. closed_dates: dates between 2026-12-12 and 2026-12-31 it is closed, "YYYY-MM-DD"; [] if none or unknown.
+- best_time: morning, midday, afternoon, evening (dinner, sunset) or night (bars, night views) when it matters, else any. visit_mins: a typical visit in minutes including the usual queue. booking: required, recommended or no.
+- plan_line: ONE practical Hebrew tip, at most 70 characters, the single thing most worth knowing before going (book ahead, cash only, come before opening); not a description. baby_block: Hebrew, at most 60 characters, only if something blocks a visit with the baby (no strollers, stairs only, no children, smoking inside); otherwise "".
 - Any other text field with nothing to say is an empty string "".
 - Plain text only: no emoji, no exclamation marks.`
 
@@ -307,13 +343,25 @@ async function research(admin: SupabaseClient, link: string | undefined, text: s
 
     step = 'extract'
     t = performance.now()
-    const card = await client.messages.parse({
-      model: MODEL,
-      max_tokens: 12000,
-      output_config: { effort: 'low', format: zodOutputFormat(PlaceList) },
-      system: EXTRACT,
-      messages: [{ role: 'user', content: `${ask}\n\nResearch notes:\n${notes}` }],
-    })
+    const extract = <T extends z.ZodType>(schema: T) =>
+      client.messages.parse({
+        model: MODEL,
+        max_tokens: 12000,
+        output_config: { effort: 'low', format: zodOutputFormat(schema) },
+        system: EXTRACT,
+        messages: [{ role: 'user', content: `${ask}\n\nResearch notes:\n${notes}` }],
+      })
+    let card: { parsed_output: { places: (Draft & Partial<Plan>)[] } | null } & Anthropic.Message
+    try {
+      card = await extract(PlaceListPlanned)
+    } catch (error) {
+      // a rejected schema must not cost the card: ask again without the plan fields
+      if (!(error instanceof Anthropic.BadRequestError)) throw error
+      console.error('plan fields rejected, asking without them', error.message)
+      logCall(admin, { fn: 'suggest-place', step, userId, lookupId, model: MODEL, ms: performance.now() - t, error: 'plan fields: ' + error.message })
+      t = performance.now()
+      card = await extract(PlaceList)
+    }
     log(card)
     if (!card.parsed_output) return { error: 'could not read the research', status: 422 }
     // the notes are prose, so take the sources from the search itself: cited pages first, then results
@@ -326,9 +374,16 @@ async function research(admin: SupabaseClient, link: string | undefined, text: s
     // sources become links in the app, so keep real web addresses only
     const web = (urls: string[]) => urls.filter((u) => /^https?:\/\//i.test(u))
     const fallback = web([...new Set([...cited, ...found])]).slice(0, 5)
-    const places = card.parsed_output.places
-      .slice(0, MAX_PLACES)
-      .map((p) => ({ ...blanksToNull(p), sources: web(p.sources).length ? web(p.sources) : fallback }))
+    const places = card.parsed_output.places.slice(0, MAX_PLACES).map((full) => {
+      const { opens, closes, closed_weekdays, closed_dates, best_time, visit_mins, booking, plan_line, baby_block, ...p } = full
+      const plan = { opens, closes, closed_weekdays, closed_dates, best_time, visit_mins, booking, plan_line, baby_block }
+      return {
+        ...blanksToNull(p as Draft),
+        sources: web(p.sources).length ? web(p.sources) : fallback,
+        // the planner's columns, ready for the card (absent when the plan fields were rejected)
+        ...(plan_line !== undefined ? planColumns(plan as Plan) : {}),
+      }
+    })
     console.log('places', places.length, places.map((p) => p.name).join(' | ') || notes.slice(0, 500))
     return { places }
   } catch (error) {
