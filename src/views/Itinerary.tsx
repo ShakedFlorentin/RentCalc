@@ -2,7 +2,7 @@ import { Fragment, useEffect, useRef, useState } from 'react'
 import { BedDouble, Check, CircleAlert, Navigation, Pencil, PlaneLanding, Plus, Users } from 'lucide-react'
 import { supabase } from '../supabase'
 import { CATEGORIES, TOGETHER, WHO_OPTIONS, type Booking, type DayInfo, type Member, type Place, type PlanSummary, type Trip } from '../types'
-import { couplesOf, dayDate, keepRanges, fmtDay, mutate, replan, useTripTable } from '../lib'
+import { couplesOf, dayDate, keepRanges, dayOption, dayParts, fmtDayLong, mutate, replan, useTripTable } from '../lib'
 import { Empty, Field, Sheet, useRemembered } from '../ui'
 import { Icon } from '../icons'
 import {
@@ -61,27 +61,30 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
   return (
     <div className="stack">
       <div className="day-strip" ref={stripRef}>
-        {Array.from({ length: trip.num_days }, (_, i) => i + 1).map((d) => (
-          <button
-            key={d}
-            className={'day-chip' + (d === day ? ' active' : '') + (days.find((x) => x.day === d)?.who ? ' apart' : '')}
-            onClick={() => setDay(d)}
-          >
-            <b>{d}</b>
-            <span>{days.find((x) => x.day === d)?.city ?? ''}</span>
-            <span className="small">{fmtDay(dayDate(trip.start_date, d))}</span>
-          </button>
-        ))}
+        {Array.from({ length: trip.num_days }, (_, i) => i + 1).map((d) => {
+          // the date and weekday lead; the trip's day number only stands in when there is no start date
+          const parts = dayParts(dayDate(trip.start_date, d))
+          return (
+            <button
+              key={d}
+              className={'day-chip' + (d === day ? ' active' : '') + (days.find((x) => x.day === d)?.who ? ' apart' : '')}
+              onClick={() => setDay(d)}
+            >
+              <span className="day-chip-weekday">{parts?.weekday ?? ''}</span>
+              <b>{parts?.date ?? d}</b>
+              <span className="small">{days.find((x) => x.day === d)?.city ?? ''}</span>
+            </button>
+          )
+        })}
       </div>
 
       <section className="card day-head" onClick={() => setEditDay(true)}>
         <div className="row spread">
           <h2>
-            יום {day} {info?.city ? `· ${info.city}` : ''}
+            {trip.start_date ? fmtDayLong(dayDate(trip.start_date, day)) : `יום ${day}`} {info?.city ? `· ${info.city}` : ''}
           </h2>
           <Icon className="muted" as={Pencil} />
         </div>
-        {trip.start_date && <div className="muted">{fmtDay(dayDate(trip.start_date, day))}</div>}
         <div className={'who-tag' + (info?.who ? ' apart' : '')}>{info?.who ? (
             `רק ${info.who}`
           ) : (
@@ -142,9 +145,17 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
       </button>
 
       {editItem && (
-        <ItemForm tripId={trip.id} numDays={trip.num_days} couples={couples} item={editItem} onClose={() => setEditItem(null)} />
+        <ItemForm tripId={trip.id} start={trip.start_date} numDays={trip.num_days} couples={couples} item={editItem} onClose={() => setEditItem(null)} />
       )}
-      {editDay && <DayForm tripId={trip.id} day={day} info={info} onClose={() => setEditDay(false)} />}
+      {editDay && (
+        <DayForm
+          tripId={trip.id}
+          day={day}
+          title={trip.start_date ? fmtDayLong(dayDate(trip.start_date, day)) : `יום ${day}`}
+          info={info}
+          onClose={() => setEditDay(false)}
+        />
+      )}
     </div>
   )
 }
@@ -284,7 +295,7 @@ function ArrivalCard({ entry }: { entry: Entry }) {
   )
 }
 
-function ItemForm(props: { tripId: string; numDays: number; couples: string[]; item: Partial<PlanItem>; onClose: () => void }) {
+function ItemForm(props: { tripId: string; start: string | null; numDays: number; couples: string[]; item: Partial<PlanItem>; onClose: () => void }) {
   const [f, setF] = useState<Partial<PlanItem>>(props.item)
   const set = (k: keyof PlanItem) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value })
 
@@ -324,7 +335,7 @@ function ItemForm(props: { tripId: string; numDays: number; couples: string[]; i
           <select value={f.day} onChange={set('day')}>
             {Array.from({ length: props.numDays }, (_, i) => (
               <option key={i + 1} value={i + 1}>
-                יום {i + 1}
+                {dayOption(props.start, i + 1)}
               </option>
             ))}
           </select>
@@ -369,7 +380,7 @@ function ItemForm(props: { tripId: string; numDays: number; couples: string[]; i
   )
 }
 
-function DayForm(props: { tripId: string; day: number; info?: DayInfo; onClose: () => void }) {
+function DayForm(props: { tripId: string; day: number; title: string; info?: DayInfo; onClose: () => void }) {
   const [city, setCity] = useState(props.info?.city ?? '')
   const [hotel, setHotel] = useState(props.info?.hotel ?? '')
   const [notes, setNotes] = useState(props.info?.notes ?? '')
@@ -390,7 +401,7 @@ function DayForm(props: { tripId: string; day: number; info?: DayInfo; onClose: 
   }
 
   return (
-    <Sheet title={`יום ${props.day}`} onClose={props.onClose}>
+    <Sheet title={props.title} onClose={props.onClose}>
       <Field label="עיר">
         <input value={city} onChange={(e) => setCity(e.target.value)} />
       </Field>

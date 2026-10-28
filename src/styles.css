@@ -398,7 +398,8 @@ button.chip { min-height: 36px; }
   font-size: 0.75rem;
   scroll-snap-align: center;
 }
-.day-chip b { font-size: 1.0625rem; }
+.day-chip b { font-size: 1.0625rem; direction: ltr; unicode-bidi: isolate; }
+.day-chip-weekday { font-size: 0.8125rem; font-weight: 600; }
 .day-chip.active { background: var(--accent-fill); border-color: var(--accent-fill); color: var(--on-accent); }
 .day-head { cursor: pointer; }
 

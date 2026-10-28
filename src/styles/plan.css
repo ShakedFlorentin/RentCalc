@@ -58,26 +58,31 @@
   gap: 2px;
   padding: 12px 14px;
   border-radius: 14px;
-  color: #fff;
+  background: var(--tile-soft);
+  color: var(--tile-ink);
   text-align: start;
   transition: transform 100ms ease-out;
 }
 .city-tile:active { transform: scale(0.97); }
 .city-tile b { font-size: 1.375rem; font-weight: 700; letter-spacing: -0.015em; line-height: 1.1; }
 .city-tile .small { opacity: 0.92; }
-/* Music's category look: a greyscale photo multiplied into the tile colour, darkened toward the label.
-   Multiply only darkens, so white text stays at least as readable as on the plain colour */
-.city-tile img { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; object-fit: cover; filter: grayscale(1) contrast(1.15) brightness(1.08); mix-blend-mode: multiply; pointer-events: none; }
-.city-tile.has-photo::after { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(transparent 45%, rgba(0, 0, 0, 0.35)); pointer-events: none; }
-.tile.neutral { background: var(--fill); }
-.tile.neutral .ic { color: var(--accent); }
-.city-tile.c0 { background: #c2253f; }
-.city-tile.c1 { background: #b4501a; }
-.city-tile.c2 { background: #1f7a73; }
-.city-tile.c3 { background: #5b3fa0; }
-.city-tile.c4 { background: #2f64b0; }
-.city-tile.c5 { background: #a3346f; }
-.city-tile.c6 { background: #7a600a; }
+/* Music's category look: a greyscale photo multiplied into the tile colour. In light mode the tile is a pale tint
+   with a faded photo and dark text, washing toward white at the label; in dark mode the deep colour, white text */
+.city-tile img { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; object-fit: cover; filter: grayscale(1) contrast(0.9) brightness(1.3); opacity: 0.6; mix-blend-mode: multiply; pointer-events: none; }
+.city-tile.has-photo::after { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(transparent 35%, rgba(255, 255, 255, 0.75)); pointer-events: none; }
+.city-tile.c0 { --tile: #c2253f; --tile-soft: #f2cfd5; --tile-ink: #781727; }
+.city-tile.c1 { --tile: #b4501a; --tile-soft: #eed8cd; --tile-ink: #703210; }
+.city-tile.c2 { --tile: #1f7a73; --tile-soft: #cee2e0; --tile-ink: #134c47; }
+.city-tile.c3 { --tile: #5b3fa0; --tile-soft: #dbd5ea; --tile-ink: #382763; }
+.city-tile.c4 { --tile: #2f64b0; --tile-soft: #d1ddee; --tile-ink: #1d3e6d; }
+.city-tile.c5 { --tile: #a3346f; --tile-soft: #ebd2df; --tile-ink: #652045; }
+.city-tile.c6 { --tile: #7a600a; --tile-soft: #e2dcc9; --tile-ink: #4c3c06; }
+@media (prefers-color-scheme: dark) {
+  /* multiply only darkens, so white text stays at least as readable as on the plain colour */
+  .city-tile { background: var(--tile); color: #fff; }
+  .city-tile img { filter: grayscale(1) contrast(1.15) brightness(1.08); opacity: 1; }
+  .city-tile.has-photo::after { background: linear-gradient(transparent 45%, rgba(0, 0, 0, 0.35)); }
+}
 /* iOS Settings-style icon squares */
 .tile { flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 7px; color: #fff; }
 .tile .ic { width: 18px; height: 18px; color: #fff; }

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabase'
 import { AUDIENCES, CATEGORIES, VERDICTS, type DayInfo, type GuidePlace, type ItineraryItem, type Member, type Place, type Trip } from '../types'
-import { couplesOf, errorText, keepRanges, mapsUrl, mutate, normName, replan, safeUrl, useMediaIndex, useTripTable, withMedia } from '../lib'
+import { couplesOf, dayOption, errorText, keepRanges, mapsUrl, mutate, normName, replan, safeUrl, useMediaIndex, useTripTable, withMedia } from '../lib'
 import { BookOpen, CalendarCheck, CalendarPlus, Check, Heart, List, Map as MapIcon, MapPin, Plus, Users, Wand2 } from 'lucide-react'
 import { Empty, Field, LoadNote, Sheet, useRemembered } from '../ui'
 import { AUDIENCE_ICON, CATEGORY_ICON, Icon } from '../icons'
@@ -398,7 +398,7 @@ function AddToDay(props: { trip: Trip; place: Place; onClose: () => void }) {
           <select value={day} onChange={(e) => setDay(+e.target.value)}>
             {Array.from({ length: props.trip.num_days }, (_, i) => (
               <option key={i + 1} value={i + 1}>
-                יום {i + 1}
+                {dayOption(props.trip.start_date, i + 1)}
               </option>
             ))}
           </select>

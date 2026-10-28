@@ -144,6 +144,25 @@ export function fmtDay(d: Date | null) {
   return d ? d.toLocaleDateString('he-IL', { weekday: 'short', day: 'numeric', month: 'numeric' }) : ''
 }
 
+/** "יום שלישי, 15.12": how a plan day is named; the trip's day number matters to nobody. */
+export function fmtDayLong(d: Date | null) {
+  return d ? d.toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'numeric' }) : ''
+}
+
+/** A day as a picker option names it: "יום שלישי, 15.12", or "יום 3" for a trip without a start date. */
+export function dayOption(start: string | null, day: number) {
+  return start ? fmtDayLong(dayDate(start, day)) : `יום ${day}`
+}
+
+/** A day chip's two lines: the weekday ("ג׳") and the date ("15.12"). */
+export function dayParts(d: Date | null) {
+  if (!d) return null
+  return {
+    weekday: d.toLocaleDateString('he-IL', { weekday: 'narrow' }),
+    date: d.toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' }),
+  }
+}
+
 /** Today's trip day (1-based) by the date in Japan, or null when not currently on the trip. */
 export function currentDay(start: string | null, numDays: number): number | null {
   if (!start) return null
