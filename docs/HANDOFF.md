@@ -40,13 +40,18 @@ Offline: `public/sw.js` + localStorage cache in `useTripTable` (`src/lib.ts`).
   columns and read their trip's reports; `status` ('open'|'fixed'|'wontfix') and `reply` are backend-only and show
   in the app under "דיווחים קודמים". Open ones: `select * from reports where status = 'open' order by created_at`.
   After a fix: `update reports set status = 'fixed', reply = '…', resolved_at = now() where id = …`.
-- Edge functions (`supabase/functions/*`, deploy via MCP): `suggest-place` (v15, link/name → up to 10 place cards; every lookup is saved in `place_lookups` (by the app's id,
+- Claude cost/time log: every Claude call from the three edge functions writes a row to `ai_calls` (fn, step, tokens,
+  web searches, list-price `cost_usd`, `ms`, stop reason, error); place lookups answered from saved results log
+  step `cached` at $0. Summary per day/function/step: `select * from ai_costs_daily order by day desc`. Backend only
+  (no grants to app users). Prices live in `ai-log.ts`, an identical copy in each function folder (deploy it with
+  the function's index.ts).
+- Edge functions (`supabase/functions/*`, deploy via MCP): `suggest-place` (v16, link/name → up to 10 place cards; every lookup is saved in `place_lookups` (by the app's id,
   with a key per post/name): the search finishes even if the phone stops waiting and the app reads the result back,
   and the same post or name within 30 days is answered from there for free
   with kosher fields; structured outputs allow at most 16 nullable fields, so its text fields return "" and are
-  turned into null in the function — v13 had 18 and every call failed with a 400) and `parse-booking` (v8). Model `claude-haiku-5-5`, key in Vault `anthropic_api_key`,
+  turned into null in the function — v13 had 18 and every call failed with a 400) and `parse-booking` (v9). Model `claude-haiku-5-5`, key in Vault `anthropic_api_key`,
   30 calls/user/day. Both validate the body before charging quota and only pass http(s) links.
-- Edge function `translate` (v4, deployed 2026-10-26; plain three-line reply, no structured output): one spoken sentence he↔ja with Haiku, thinking off, effort low,
+- Edge function `translate` (v5, deployed 2026-10-26; plain three-line reply, no structured output): one spoken sentence he↔ja with Haiku, thinking off, effort low,
   200 calls/user/day (own `ai_usage` fn). Used by the voice translator in More → Important (`src/views/Translator.tsx`):
   the phone's speech recognition (webkitSpeechRecognition) writes it down, the phone's voices read the result.
 

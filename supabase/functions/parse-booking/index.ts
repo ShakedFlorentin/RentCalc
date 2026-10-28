@@ -4,6 +4,7 @@ import Anthropic from 'npm:@anthropic-ai/sdk@1.1.0'
 import { zodOutputFormat } from 'npm:@anthropic-ai/sdk@1.1.0/helpers/zod'
 import { z } from 'npm:zod@4'
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
+import { logCall } from './ai-log.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -36,6 +37,7 @@ Return one entry per separate booking (e.g. an outbound and a return flight are 
 - notes: a short Hebrew summary of what matters on the trip: room type or table/course, number of guests, breakfast, cancellation deadline, total price and currency, baggage. Max 3 lines, plain text, no emoji.
 Only use information that is in the document. If it is not a booking, return an empty list.`
 
+const MODEL = 'claude-haiku-5-5'
 const MAX_BYTES = 15 * 1024 * 1024
 // Claude calls per user per function in 24 hours
 const DAILY_LIMIT = 30
@@ -50,7 +52,7 @@ async function anthropicKey(admin: SupabaseClient) {
 
 /**
  * Lets a request spend the Claude key only for a signed-in member of a trip who is under today's cap, and records
- * the call. Returns the client for the key lookup, or the response to send instead.
+ * the call. Returns the service client and the user, or the response to send instead.
  */
 async function admit(req: Request, fn: string, json: (body: unknown, status?: number) => Response) {
   // the anon key is also a valid JWT, so check there is a signed-in user behind the request
@@ -75,7 +77,7 @@ async function admit(req: Request, fn: string, json: (body: unknown, status?: nu
     .gte('at', since)
   if ((used ?? 0) >= DAILY_LIMIT) return json({ error: 'daily limit reached' }, 429)
   await admin.from('ai_usage').insert({ user_id: auth.user.id, fn })
-  return admin
+  return { admin, userId: auth.user.id }
 }
 
 Deno.serve(async (req) => {
@@ -94,8 +96,11 @@ Deno.serve(async (req) => {
   if ((text?.length ?? 0) > 50_000) return json({ error: 'text too long' }, 413)
   if (file && file.data.length * 0.75 > MAX_BYTES) return json({ error: 'file too large' }, 413)
 
-  const admin = await admit(req, 'parse-booking', json)
-  if (admin instanceof Response) return admin
+  const admitted = await admit(req, 'parse-booking', json)
+  if (admitted instanceof Response) return admitted
+  const { admin, userId } = admitted
+  // what was read, so the log shows whether PDFs, screenshots or pasted text cost the most
+  const step = file ? (file.media_type === 'application/pdf' ? 'pdf' : 'image') : 'text'
 
   const content: Anthropic.ContentBlockParam[] = []
   if (file?.media_type === 'application/pdf') {
@@ -111,14 +116,16 @@ Deno.serve(async (req) => {
   content.push({ type: 'text', text: text?.trim() ? text : 'Extract the bookings from the attached document.' })
 
   const client = new Anthropic({ apiKey: await anthropicKey(admin) })
+  const t = performance.now()
   try {
     const response = await client.messages.parse({
-      model: 'claude-haiku-5-5',
+      model: MODEL,
       max_tokens: 4000,
       output_config: { effort: 'low', format: zodOutputFormat(BookingList) },
       system: SYSTEM,
       messages: [{ role: 'user', content }],
     })
+    logCall(admin, { fn: 'parse-booking', step, userId, model: MODEL, usage: response.usage, ms: performance.now() - t, stopReason: response.stop_reason })
     if (response.stop_reason === 'refusal' || !response.parsed_output) {
       return json({ error: 'could not read this confirmation' }, 422)
     }
@@ -126,6 +133,7 @@ Deno.serve(async (req) => {
     const bookings = response.parsed_output.bookings.map((b) => ({ ...b, url: b.url && /^https?:\/\//i.test(b.url) ? b.url : null }))
     return json({ bookings })
   } catch (error) {
+    logCall(admin, { fn: 'parse-booking', step, userId, model: MODEL, ms: performance.now() - t, error: String(error instanceof Error ? error.message : error) })
     if (error instanceof Anthropic.AuthenticationError) return json({ error: 'ANTHROPIC_API_KEY is missing or invalid' }, 500)
     if (error instanceof Anthropic.RateLimitError) return json({ error: 'busy, try again in a minute' }, 429)
     if (error instanceof Anthropic.APIError) return json({ error: `Claude API error ${error.status}` }, 502)

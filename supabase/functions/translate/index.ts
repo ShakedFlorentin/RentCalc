@@ -2,6 +2,7 @@
 // The Claude key comes from the ANTHROPIC_API_KEY secret or Supabase Vault (anthropic_api_key).
 import Anthropic from 'npm:@anthropic-ai/sdk@1.1.0'
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
+import { logCall } from './ai-log.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -27,6 +28,7 @@ function parse(reply: string) {
   return { translation: line('TRANSLATION') || reply.trim(), romaji: line('ROMAJI'), back: line('BACK') }
 }
 
+const MODEL = 'claude-haiku-5-5'
 // one utterance; a long one is a stuck recording, not a sentence
 const MAX_CHARS = 600
 // Claude calls per user per 24 hours; translation is a conversation, so it gets more room than the other tools
@@ -77,7 +79,7 @@ async function admit(req: Request, fn: string, json: (body: unknown, status?: nu
   if ((used ?? 0) >= DAILY_LIMIT) return json({ error: 'daily limit reached' }, 429)
   // recorded alongside the Claude call rather than before it; the caller awaits it with the call
   const record = admin.from('ai_usage').insert({ user_id: claimed, fn })
-  return { key, record }
+  return { key, record, admin, userId: claimed }
 }
 
 Deno.serve(async (req) => {
@@ -100,7 +102,7 @@ Deno.serve(async (req) => {
   const client = new Anthropic({ apiKey: admitted.key })
   try {
     const [response] = await Promise.all([client.messages.create({
-      model: 'claude-haiku-5-5',
+      model: MODEL,
       max_tokens: 1000,
       // a translation needs no reasoning: thinking off keeps it fast and cheap (Haiku allows it at effort low)
       thinking: { type: 'disabled' },
@@ -109,6 +111,7 @@ Deno.serve(async (req) => {
       messages: [{ role: 'user', content: `${from === 'he' ? 'Hebrew to Japanese' : 'Japanese to Hebrew'}:\n${text}` }],
     }), admitted.record])
     const t2 = performance.now()
+    logCall(admitted.admin, { fn: 'translate', step: from, userId: admitted.userId, model: MODEL, usage: response.usage, ms: t2 - t1, stopReason: response.stop_reason })
     const reply = response.content.map((b) => (b.type === 'text' ? b.text : '')).join('')
     if (response.stop_reason === 'refusal' || !reply.trim()) return json({ error: 'could not translate' }, 422)
     const { translation, romaji, back } = parse(reply)
@@ -116,6 +119,7 @@ Deno.serve(async (req) => {
     const ms = { checks: Math.round(t1 - t0), claude: Math.round(t2 - t1) }
     return json({ translation, romaji: from === 'he' ? romaji : '', back: from === 'he' ? back : '', ms })
   } catch (error) {
+    logCall(admitted.admin, { fn: 'translate', step: from, userId: admitted.userId, model: MODEL, ms: performance.now() - t1, error: String(error instanceof Error ? error.message : error) })
     if (error instanceof Anthropic.AuthenticationError) return json({ error: 'ANTHROPIC_API_KEY is missing or invalid' }, 500)
     if (error instanceof Anthropic.RateLimitError) return json({ error: 'busy, try again in a minute' }, 429)
     if (error instanceof Anthropic.APIError) return json({ error: `Claude API error ${error.status}` }, 502)

@@ -4,6 +4,7 @@ import Anthropic from 'npm:@anthropic-ai/sdk@1.1.0'
 import { zodOutputFormat } from 'npm:@anthropic-ai/sdk@1.1.0/helpers/zod'
 import { z } from 'npm:zod@4'
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
+import { logCall } from './ai-log.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -244,6 +245,7 @@ Deno.serve(async (req) => {
     if (places?.length) {
       console.log('cached', key, places.length)
       await track({ status: 'done', places, finished_at: new Date().toISOString() })
+      logCall(admin, { fn: 'suggest-place', step: 'cached', userId, lookupId: id })
       return json({ places, cached: true })
     }
   }
@@ -253,7 +255,7 @@ Deno.serve(async (req) => {
   await track({ status: 'running' })
 
   // the search runs on its own, so it finishes and saves its result even if the phone stops waiting
-  const work = research(admin, link, text).then(async (r) => {
+  const work = research(admin, link, text, userId, id).then(async (r) => {
     const finished_at = new Date().toISOString()
     await admin
       .from('place_lookups')
@@ -267,7 +269,7 @@ Deno.serve(async (req) => {
 })
 
 /** Finds the place(s) a link or name is about and turns them into cards; or an error with its status. */
-async function research(admin: SupabaseClient, link: string | undefined, text: string | undefined): Promise<
+async function research(admin: SupabaseClient, link: string | undefined, text: string | undefined, userId: string, lookupId: string): Promise<
   { places: Record<string, unknown>[] } | { error: string; status: number }
 > {
   const caption = link ? await postContext(link) : ''
@@ -275,10 +277,16 @@ async function research(admin: SupabaseClient, link: string | undefined, text: s
   const ask = [link && `Link: ${link}`, caption, text && `Note from the member: ${text}`].filter(Boolean).join('\n')
 
   const client = new Anthropic({ apiKey: await anthropicKey(admin) })
+  // each Claude call goes to ai_calls with its tokens, searches, cost and time
+  let step = 'research'
+  let t = performance.now()
+  const log = (r: Anthropic.Message) =>
+    logCall(admin, { fn: 'suggest-place', step, userId, lookupId, model: MODEL, usage: r.usage, ms: performance.now() - t, stopReason: r.stop_reason })
   try {
     const messages: Anthropic.MessageParam[] = [{ role: 'user', content: ask }]
     let research: Anthropic.Message | null = null
     for (let i = 0; i < 4; i++) {
+      t = performance.now()
       research = await client.messages.create({
         model: MODEL,
         max_tokens: 8000,
@@ -287,6 +295,7 @@ async function research(admin: SupabaseClient, link: string | undefined, text: s
         tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 10 }],
         messages,
       })
+      log(research)
       if (research.stop_reason !== 'pause_turn') break
       messages.push({ role: 'assistant', content: research.content })
     }
@@ -296,6 +305,8 @@ async function research(admin: SupabaseClient, link: string | undefined, text: s
       .map((b) => b.text)
       .join('\n')
 
+    step = 'extract'
+    t = performance.now()
     const card = await client.messages.parse({
       model: MODEL,
       max_tokens: 12000,
@@ -303,6 +314,7 @@ async function research(admin: SupabaseClient, link: string | undefined, text: s
       system: EXTRACT,
       messages: [{ role: 'user', content: `${ask}\n\nResearch notes:\n${notes}` }],
     })
+    log(card)
     if (!card.parsed_output) return { error: 'could not read the research', status: 422 }
     // the notes are prose, so take the sources from the search itself: cited pages first, then results
     const cited = research.content.flatMap((b) =>
@@ -322,6 +334,7 @@ async function research(admin: SupabaseClient, link: string | undefined, text: s
   } catch (error) {
     // the reason goes to the function log: a 502 alone said nothing when the schema was rejected
     if (error instanceof Anthropic.APIError) console.error('claude error', error.status, error.message)
+    logCall(admin, { fn: 'suggest-place', step, userId, lookupId, model: MODEL, ms: performance.now() - t, error: String(error instanceof Error ? error.message : error) })
     if (error instanceof Anthropic.AuthenticationError) return { error: 'ANTHROPIC_API_KEY is missing or invalid', status: 500 }
     if (error instanceof Anthropic.RateLimitError) return { error: 'busy, try again in a minute', status: 429 }
     if (error instanceof Anthropic.APIError) return { error: `Claude API error ${error.status}`, status: 502 }
