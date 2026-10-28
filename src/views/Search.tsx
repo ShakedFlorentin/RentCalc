@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { CalendarDays, Heart, ListChecks, MapPin, Search as SearchIcon, Ticket } from 'lucide-react'
 import { BOOKING_ICON, Icon, type LucideIcon } from '../icons'
 import { BOOKING_TABS, CITY_HE, type Booking, type Candidate, type ChecklistItem, type ItineraryItem, type Place } from '../types'
-import { useTripTable } from '../lib'
+import { dayDate, fmtDay, useTripTable } from '../lib'
 import { Sheet } from '../ui'
 
 /** Where a result leads: the screen that shows it. */
@@ -23,7 +23,17 @@ const norm = (s: string | null | undefined) =>
     .replace(/[֑-ׇ'׳"״`]/g, '')
 
 /** Search across everything in the trip: places, the swipe deck, bookings, the day plan and the lists. */
-export default function Search({ tripId, onClose, onPick }: { tripId: string; onClose: () => void; onPick: (to: SearchTarget) => void }) {
+export default function Search({
+  tripId,
+  start,
+  onClose,
+  onPick,
+}: {
+  tripId: string
+  start: string | null
+  onClose: () => void
+  onPick: (to: SearchTarget) => void
+}) {
   const [q, setQ] = useState('')
   const input = useRef<HTMLInputElement>(null)
   const { rows: places } = useTripTable<Place>('places', tripId)
@@ -70,7 +80,7 @@ export default function Search({ tripId, onClose, onPick }: { tripId: string; on
         label: 'מסלול',
         hits: items
           .filter((i) => has(i.title, i.location, i.notes))
-          .map((i) => ({ key: 'i' + i.id, title: i.title, sub: `יום ${i.day}${i.time ? ` · ${i.time}` : ''}`, icon: CalendarDays, to: { tab: 'plan', day: i.day } })),
+          .map((i) => ({ key: 'i' + i.id, title: i.title, sub: `${fmtDay(dayDate(start, i.day)) || `יום ${i.day}`}${i.time ? ` · ${i.time.slice(0, 5)}` : ''}`, icon: CalendarDays, to: { tab: 'plan', day: i.day } })),
       },
       {
         label: 'רשימות',

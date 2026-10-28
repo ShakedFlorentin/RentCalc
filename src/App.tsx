@@ -243,7 +243,7 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
           <path d="M10.5 18a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15ZM21 21l-5.2-5.2" />
         </svg>
       </button>
-      {searching && <Search tripId={trip.id} onClose={() => setSearching(false)} onPick={openResult} />}
+      {searching && <Search tripId={trip.id} start={trip.start_date} onClose={() => setSearching(false)} onPick={openResult} />}
     </div>
   )
 }

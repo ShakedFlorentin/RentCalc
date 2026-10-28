@@ -34,7 +34,7 @@ import {
   type Swipe,
   type Trip,
 } from '../types'
-import { couplesOf, currentDay, dayDate, fmtDay, mutate, useTripTable } from '../lib'
+import { couplesOf, currentDay, dayDate, dayParts, fmtDay, fmtDayLong, mutate, useTripTable } from '../lib'
 import { Field, Sheet } from '../ui'
 import { cityPhoto } from '../cities'
 import { BOOKING_ICON, Icon } from '../icons'
@@ -104,9 +104,9 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
       <section className={'hero card' + (today ? ' trip-line' : '')}>
         {today ? (
           <>
-            <div className="muted hero-date">{fmtDay(dayDate(trip.start_date, today))}</div>
+            <div className="muted hero-date">היום</div>
             <div className="big">
-              יום {today}
+              {fmtDayLong(dayDate(trip.start_date, today))}
               {todayInfo?.city && ` · ${todayInfo.city}`}
             </div>
           </>
@@ -225,7 +225,17 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
           <div className="city-grid">
             {cities.map((c, i) => (
               <CityTile key={c.from} name={c.value || '—'} i={i} onClick={() => onOpenDay(c.from)}>
-                {c.from === c.to ? `יום ${c.from}` : <>ימים <bdi dir="ltr">{c.from}–{c.to}</bdi></>}
+                {c.from === c.to ? (
+                  fmtDay(dayDate(trip.start_date, c.from)) || `יום ${c.from}`
+                ) : trip.start_date ? (
+                  <bdi dir="ltr">
+                    {dayParts(dayDate(trip.start_date, c.from))!.date}–{dayParts(dayDate(trip.start_date, c.to))!.date}
+                  </bdi>
+                ) : (
+                  <>
+                    ימים <bdi dir="ltr">{c.from}–{c.to}</bdi>
+                  </>
+                )}
               </CityTile>
             ))}
           </div>
