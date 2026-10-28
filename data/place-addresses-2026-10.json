@@ -1,0 +1,1340 @@
+[
+ {
+  "t": "cand",
+  "id": "31513bc8-1d37-4cf5-adc1-0b453754ec62",
+  "address": "Amanohashidate View Land, Monju, Miyazu, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "cand",
+  "id": "3e6372ac-7eda-49bc-9342-44dbdd70828d",
+  "address": "Daimaru Tokyo 12F, 1-9-1 Marunouchi, Chiyoda-ku, Tokyo",
+  "confidence": "guess"
+ },
+ {
+  "t": "cand",
+  "id": "5ae04b6b-4e0a-4fda-a6b0-3fab9ab51454",
+  "address": "Oi Racecourse, 2-1-2 Katsushima, Shinagawa-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "cand",
+  "id": "7cb4de07-fd3e-4669-aaf6-bc57bb60307a",
+  "address": "16-8 Oyama Kanai-cho, Itabashi-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "cand",
+  "id": "7f9cca0c-781f-4889-ba90-725556b5845d",
+  "address": "3-3-13 Azabujuban, Minato-ku, Tokyo",
+  "confidence": "guess"
+ },
+ {
+  "t": "cand",
+  "id": "9a1045fe-fff4-4d49-b6d5-27ea2f12dc33",
+  "address": "1-1-10 Kaigandori, Minato-ku, Osaka",
+  "confidence": "checked"
+ },
+ {
+  "t": "cand",
+  "id": "9b3ab5ce-2ca5-473f-b8f9-22e6a0aeb87d",
+  "address": "7-13 Soemon-cho, Chuo-ku, Osaka",
+  "confidence": "checked"
+ },
+ {
+  "t": "cand",
+  "id": "aa21e8bc-ca54-44f3-a8ba-55199533130f",
+  "address": "Junpu-cho 312-1, Shimogyo-ku, Kyoto",
+  "confidence": "guess"
+ },
+ {
+  "t": "cand",
+  "id": "c398f596-6ef6-48f1-a0a6-af0c218ca9e1",
+  "address": "5-50-3 Nakano, Nakano-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "cand",
+  "id": "cda08e21-199b-4651-81df-e5866afe7470",
+  "address": "Decks Tokyo Beach 3-5F, 1-6-1 Daiba, Minato-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "cand",
+  "id": "d47b2ed5-2155-4df8-9d89-18e28d7cb8ba",
+  "address": "Shibuya Scramble Crossing, Dogenzaka 2-chome, Shibuya-ku, Tokyo",
+  "confidence": "guess"
+ },
+ {
+  "t": "cand",
+  "id": "dc68b1d5-1a03-460a-ab16-65cee092bb5a",
+  "address": "165 Tokiwa-cho, Higashiyama-ku, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "cand",
+  "id": "e3949668-b3bb-419e-a797-3f1862f2545f",
+  "address": "Azabudai Hills Tower Plaza 3F, 1-3-1 Azabudai, Minato-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "cand",
+  "id": "ef62ec0e-04a7-441c-bea4-6dc6b254a24e",
+  "address": "1-5-26 Shinsaibashisuji, Chuo-ku, Osaka",
+  "confidence": "checked"
+ },
+ {
+  "t": "cand",
+  "id": "f73b6960-93dc-4003-b884-79d894803b22",
+  "address": "1-11-13 Ebisu-minami, Shibuya-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "cand",
+  "id": "fb6b0bcf-55ee-4bfb-95a1-97efcfcd7e05",
+  "address": "1-24-11 Ginza, Chuo-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "cand",
+  "id": "fcd24a57-e623-4850-b234-1fc6daea2a32",
+  "address": "107-13 Tori-machi, Kurume, Fukuoka",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "0004294f-c1f5-49d0-86b5-368a0587b1d4",
+  "address": "1-7-16 Shibakoen, Minato-ku, Tokyo",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "01c92d69-351d-4f6d-8709-17a7dae336fb",
+  "address": "Owakudani, Sengokuhara, Hakone-machi, Ashigarashimo-gun, Kanagawa",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "02ed6763-91d1-45bb-ab7a-6d216a2f64e5",
+  "address": "Nishi-Ikebukuro 1-chome, Toshima-ku, Tokyo (opposite Tokyo Metropolitan Theatre)",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "05e75aa3-17ac-42bb-a62a-f83f76058b27",
+  "address": "Tokyo Skytree Town Solamachi 5-6F, 1-1-2 Oshiage, Sumida-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "0626debc-90b7-455f-93af-23d9d2d2a6da",
+  "address": "1-294 Kiyomizu, Higashiyama-ku, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "06ffab59-49dc-42eb-966b-c43ecb9e4cf0",
+  "address": "Shinjuku, Shinjuku-ku, Tokyo",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "07954797-6ead-4133-b14c-6eba2b2ac63e",
+  "address": "Yanaka Ginza, 3-13-1 Yanaka, Taito-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "0a24a5eb-a755-4173-82c1-027f1ddf7f09",
+  "address": "3-1-22 Shinjuku, Shinjuku-ku, Tokyo",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "0aa83687-59f2-49db-9c1b-4231c903ee80",
+  "address": "349 Masuya-cho, Kodaiji, Higashiyama-ku, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "0b47c0e6-d396-48b9-ba05-ade98ad9e3fd",
+  "address": "1-1-2 Shimomeguro, Meguro-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "0b646436-3f75-45ed-8098-5c2f84b4137f",
+  "address": "1-4-17 Higashi-Shinkoiwa, Katsushika-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "1064a93f-1fc0-4317-835e-eea361d9421f",
+  "address": "3-3-9 Kiyosumi, Koto-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "119b663d-5290-489f-922f-afc3312d0697",
+  "address": "3-15-12 Tsukishima, Chuo-ku, Tokyo",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "12fe30b0-b24f-4c81-88a5-b588a1b0971c",
+  "address": "Shinjuku Marui Annex 4F, 3-1-26 Shinjuku, Shinjuku-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "13d1976a-7842-447a-aa33-fe256cbaa864",
+  "address": "Marunouchi Brick Square B1F, 2-6-1 Marunouchi, Chiyoda-ku, Tokyo",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "13eea38a-8459-4304-b5ad-3841dc691bc5",
+  "address": "560 Honeyanocho, Tominokoji-dori Rokkaku-sagaru, Nakagyo-ku, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "149645db-667d-4342-8929-1aa842929a03",
+  "address": "1-13-21 Jingumae, Shibuya-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "15566b81-565a-4039-aae3-32dc535dee95",
+  "address": "2-14-3 Yoyogi, Shibuya-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "15bc74ec-f2f8-434e-a670-4d1ec7367d3f",
+  "address": "5-13-13 Mita, Minato-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "1707f4a3-3a26-45ce-91df-ae6df38d4c3b",
+  "address": "1-2-11 Ryusen, Taito-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "17304259-24fa-408e-b87f-c9ab48546485",
+  "address": "Tachiuri Nishimachi 79, Shijo-dori Takakura Nishi-iru, Shimogyo-ku, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "1788669b-752f-47a2-8386-c53a70783067",
+  "address": "5-5-2 Sotokanda, Chiyoda-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "179f554d-54bb-44d3-87c4-c0b9b901971d",
+  "address": "4-3 Rokubancho, Chiyoda-ku, Tokyo",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "1aa58c96-7f44-4ce2-b0bb-0457b1131efa",
+  "address": "1312 Fukazawa, Gotemba, Shizuoka",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "1db0d3d0-dbaf-4076-97eb-f39da40af845",
+  "address": "6-13-2 Ueno, Taito-ku, Tokyo",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "2260e1a4-39c7-4880-839f-803adcf458de",
+  "address": "Ebisunocho 542, Teramachi-dori Bukkoji-sagaru, Shimogyo-ku, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "24607b31-e108-4c60-9e16-81dcd6c79f2f",
+  "address": "Tokyo Station Ichibangai B1F, 1-9-1 Marunouchi, Chiyoda-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "24bb824a-c50c-46e8-8413-8d48625575eb",
+  "address": "Koyo Building B1F, 1-3-3 Sonezakishinchi, Kita-ku, Osaka",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "251c9e22-ec53-4bec-8530-43ebfd1f0dd1",
+  "address": "35-1 Kankiji-cho, Shimogyo-ku, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "261bf0fa-0593-4e93-8eb8-90612982cd11",
+  "address": "Kiyohara Building B1F, 4-9-3 Jingumae, Shibuya-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "26807e86-6f95-47e3-8737-a489bc60fa31",
+  "address": "16-15 Sarugakucho, Shibuya-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "2715c22b-b402-4b19-b113-fd858d907c7c",
+  "address": "Tsukamoto Sogyo Building B1F, 4-2-15 Ginza, Chuo-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "285d2bb7-14cd-4d26-ae1c-270a5fba0f6e",
+  "address": "1-1-88 Oyodonaka, Kita-ku, Osaka",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "28dc8383-3175-4bff-b97e-07a347294f85",
+  "address": "22 Higashimukikita-machi, Nara",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "2b0b2fa2-88e1-415e-8f41-983d8eea140b",
+  "address": "Shinjuku 3-chome, Shinjuku-ku, Tokyo",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "2b2dfc6c-af27-4846-b582-81fcadd5b275",
+  "address": "Toji Temple, 1 Kujo-cho, Minami-ku, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "2dec279a-1613-4634-ac5b-010ef89e6901",
+  "address": "526 Kodaiji Shimokawara-cho, Higashiyama-ku, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "2e49004c-c521-490d-910d-3719585bd6b5",
+  "address": "4-1-13 Yushima, Bunkyo-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "2f3fb9fb-aece-4e76-a44f-4d3f84ce2628",
+  "address": "Hozenji Yokocho, Namba 1-chome, Chuo-ku, Osaka",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "2fe4d805-f50b-4183-b221-ece47071c417",
+  "address": "Sakaguchi Building 9F, 5-5-13 Ginza, Chuo-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "3183fbfb-472c-43e9-88ba-8024a54bf150",
+  "address": "Umeda Sky Building, 1-1-88 Oyodo-naka, Kita-ku, Osaka",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "325e246d-2554-4147-bdd4-6a6c60169548",
+  "address": "DIS Ebisu Building 102, 1-5-8 Ebisu-Nishi, Shibuya-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "32f375ec-ccca-4e57-9896-a09da009e000",
+  "address": "4-9-16 Tsukiji, Chuo-ku, Tokyo",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "33673010-2a66-46f1-8b13-c70991f0ff14",
+  "address": "Shibuya Scramble Square, 2-24-12 Shibuya, Shibuya-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "338ee62d-7ce1-40e4-b3cc-75a4273951a6",
+  "address": "Kappabashi Dougu Street, Matsugaya 3-chome, Taito-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "347ae71b-c5f8-48f1-af55-32b02633ce42",
+  "address": "4-9-12 Tsukiji, Chuo-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "35e7849a-0dfb-4df9-8de2-34e0c6f55af5",
+  "address": "Shibuya PARCO B1F, 15-1 Udagawacho, Shibuya-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "365637d6-c8ef-4499-8904-9a54ac64e617",
+  "address": "1-1 Senribanpakukoen, Suita, Osaka",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "380169da-a597-4edf-8b24-579362a2e2c2",
+  "address": "Daikan Plaza Business Kiyoda Bldg 1F, 7-9-15 Nishi-Shinjuku, Shinjuku-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "3d16b8aa-f225-4d60-9200-3b21d27d0ad0",
+  "address": "Sanjokai Shopping Street, Sanjo-dori, Nakagyo-ku, Kyoto",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "3e074c4e-ba65-4951-a915-42c9a9340482",
+  "address": "Shin Matsu Linden Building 1F, 1-2-6 Sonezakishinchi, Kita-ku, Osaka",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "3ff02e69-e437-4d83-837f-adf66827ca96",
+  "address": "6-12-15 Ginza, Chuo-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "40d106ca-fc4b-4e1d-a93b-04a5d3c4e6c1",
+  "address": "Motomachi Shopping Street, Motomachi-dori, Chuo-ku, Kobe",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "417afdae-73d7-4424-acb1-0fb91f56d89f",
+  "address": "Mark City East 4F, 1-12-3 Dogenzaka, Shibuya-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "4336d981-5df3-45f3-bcf4-9d209d76a3ca",
+  "address": "53 Murasakino Daitokuji-cho, Kita-ku, Kyoto",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "46388788-2d33-4547-bb1a-a0890ee77fb5",
+  "address": "459 Shimokawara-cho, Yasaka Torii-mae-sagaru, Higashiyama-ku, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "49f84d3d-238f-45fa-a926-9f6dd97d82b3",
+  "address": "219 Kajiya-cho, Nishikikoji-dori Gokomachi nishi-iru, Nakagyo-ku, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "4deea2fa-431f-4be0-8056-3d8289a0f11a",
+  "address": "15-778 Honmachi, Higashiyama-ku, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "4e106d40-cb84-4aa4-8920-5982abd1e667",
+  "address": "Omoide Yokocho, 1-2 Nishi-Shinjuku, Shinjuku-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "4e284d34-b251-434e-8744-79f025830f00",
+  "address": "2-7-2 Marunouchi, Chiyoda-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "4ff4c0d9-f56a-4872-89a8-2bb37b485269",
+  "address": "Roppongi Hills Mori Tower 53F, 6-10-1 Roppongi, Minato-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "512d48f9-1a8d-4658-8f2d-9e9157bb0e11",
+  "address": "35-1 Matsuya-cho, Nijo-dori Higashinotoin higashi-iru, Nakagyo-ku, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "523f3605-6d58-45a6-b0ac-f97b4c3c1f74",
+  "address": "3-4-3 Asakusa, Taito-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "5296a48b-9d9e-4092-ace9-22f67c05c941",
+  "address": "2-8-6 Azabu-juban, Minato-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "556ad80f-f1ea-4c68-a300-64e805fe3ccb",
+  "address": "1-3-16 Fukushima, Fukushima-ku, Osaka",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "55c0bd25-53f8-4bc3-99a6-457af20ca853",
+  "address": "Osaka Ekimae Daiichi Building B2-70, 1-3-1 Umeda, Kita-ku, Osaka",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "5653dd77-e55d-4a38-a159-85fd2b95a894",
+  "address": "Tsukiji Outer Market, 4-16-2 Tsukiji, Chuo-ku, Tokyo",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "5ae66caa-3c83-4fc1-a893-3620fd0c2c9b",
+  "address": "Ura-Tenma Chochin-dori, Tenma 2-chome, Kita-ku, Osaka",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "5b9c7ead-e288-4f0c-be8c-4108e6a76c35",
+  "address": "Sugata Bldg B1F, 3-3-1 Namba, Chuo-ku, Osaka",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "5c3d5c45-ea7f-41b4-a477-b1267e89a12f",
+  "address": "Shimogamo Hangi-cho, Sakyo-ku, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "601befba-bc5c-44c5-b560-127acdd940bd",
+  "address": "2-24-14 Nishiazabu, Minato-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "63976f59-6407-494c-b17b-522f6107d459",
+  "address": "Hanamikoji-dori, Gion-machi Minamigawa, Higashiyama-ku, Kyoto",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "648416e3-3c73-445e-87af-7a584cf6fafb",
+  "address": "2-10-5 Nagatacho, Chiyoda-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "66163c27-1090-4209-84e1-a399a52ca7f8",
+  "address": "Shimbashi Station area, Shimbashi 2-chome, Minato-ku, Tokyo",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "665edf3d-326e-4511-8d48-ba979d3cfb5e",
+  "address": "Yamatoya Building 9F, 1-13-7 Nishi-Shinjuku, Shinjuku-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "69b5dcef-d9be-49c3-9fbe-9fc91755bedb",
+  "address": "3-21-10 Akasaka, Minato-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "6b941ce3-cde1-4347-a219-9a5cae0329e8",
+  "address": "Golden Gai G2 Street 2F, 1-1-10 Kabukicho, Shinjuku-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "6d3112bd-ba28-43cc-bcc1-70e63673df98",
+  "address": "Tsukamoto Sozan Bldg B1F, 4-2-15 Ginza, Chuo-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "6e37cb1a-c344-445e-b6bb-15ce749c2f08",
+  "address": "3-1-11 Kagurazaka, Shinjuku-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "6e847ac9-b19e-4d41-9040-b5ae04114366",
+  "address": "2-13-16 Nishi-Shinbashi, Minato-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "6ea30d38-bdf9-47e5-b23f-94616d515be8",
+  "address": "1663 Arima-cho, Kita-ku, Kobe, Hyogo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "6fd8c791-6ea7-423e-8866-234d82d56264",
+  "address": "706 Yumoto, Hakone-machi, Ashigarashimo-gun, Kanagawa",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "7571b7e9-13cb-48be-b195-0c1dd06b1eb0",
+  "address": "3-10-20 Minami-Aoyama, Minato-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "75f1d94c-91f9-47ca-8b52-4250558876e7",
+  "address": "1-18-6 Ebisuhigashi, Naniwa-ku, Osaka",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "760d0c93-ef3f-4b3d-9553-589ec6165224",
+  "address": "22 Genrinin-cho, Nara",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "76f4dc7d-e3d9-4893-a63a-16deb31579c8",
+  "address": "11 Naito-machi, Shinjuku-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "77b4e99a-d016-46a9-bc9c-fbe384d85844",
+  "address": "ARISTO Minamiaoyama 1F, 2-11-11 Minami-Aoyama, Minato-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "7b0490d1-54e8-498f-b8f6-e29449f2bb09",
+  "address": "1-4-15 Dotonbori, Chuo-ku, Osaka",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "7b1a11b3-cb43-4fb3-b72a-ca3c85f3e6d0",
+  "address": "5-52-15 Nakano, Nakano-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "7c984ca4-6dd8-447d-857e-87ea107f3bdc",
+  "address": "4-15-3 Jingumae, Shibuya-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "7f586957-6006-42d9-a1e7-b7cda5fb9813",
+  "address": "Yotsuya Hiroba, 4-20 Yotsuya, Shinjuku-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "7f757c5a-d1b9-4e6d-9161-72672f3d9db2",
+  "address": "405 Nambacho, Nishikiyamachi-dori Matsubara-sagaru, Shimogyo-ku, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "802121a1-901f-44c2-b1c6-9ef3a4b5623b",
+  "address": "Amerikamura (Triangle Park), Nishishinsaibashi 1-chome, Chuo-ku, Osaka",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "8055d7e3-c2de-4bd4-8adb-991d5ce629b5",
+  "address": "580-2 Nakanocho, Nakagyo-ku, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "81a05821-6669-432d-8c0b-b7ab5558fb90",
+  "address": "5-1-6 Jingumae, Shibuya-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "82f8be82-2b64-44ec-8ed4-2e578e97a867",
+  "address": "5-27-12 Higashi-Gotanda, Shinagawa-ku, Tokyo",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "845c6074-d7d0-443d-a488-50413e0bab5f",
+  "address": "60 Nanzenji Kusagawacho, Sakyo-ku, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "86e74d08-322d-48b2-ab30-f4927445edf0",
+  "address": "13-1 Daikanyamacho, Shibuya-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "888bfa38-2529-4825-a073-5d88f85685b2",
+  "address": "Tokyo Midtown Yaesu 3F, 2-2-1 Yaesu, Chuo-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "8a69e926-bfbd-4360-bb32-b0ddbc22a9e5",
+  "address": "29 Hashimotocho, Nara",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "8ad5486d-5ce2-4d0f-b4f2-8b3836f57558",
+  "address": "Nishiki Market, Nishikikoji-dori, Nakagyo-ku, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "8bedc8cd-0bb8-41ad-9e61-e16aa4940011",
+  "address": "602 Takabatacho, Higashioji-dori Furumonzen-agaru, Higashiyama-ku, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "8c8fa7a1-2c28-4f63-8706-6466d2cbabe7",
+  "address": "3-14-2 Ginza, Chuo-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "912c0156-a13e-4eec-8f7e-9d59e1b090d8",
+  "address": "2-1-13 Kaminarimon, Taito-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "91cb31ee-204b-4f58-8cd1-2d45ff98cc63",
+  "address": "7-19-32 Shibamata, Katsushika-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "946c3417-0464-4b87-93e6-111ae8ef66f0",
+  "address": "Gionmachi Minamigawa 570-167, Higashiyama-ku, Kyoto",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "954acfa8-2915-464f-a9a5-7269e7da6028",
+  "address": "Spiral Building 5F, 5-6-23 Minamiaoyama, Minato-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "95962411-1288-4af5-82e9-9163f74531f8",
+  "address": "Koenji Pal Shopping Street, Koenji-minami 3-chome, Suginami-ku, Tokyo",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "961cbb9f-6cde-432e-a30a-f28b20199c9f",
+  "address": "92 Tonosawa, Hakone-machi, Ashigarashimo-gun, Kanagawa",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "985fdb84-5916-48c9-8bb4-c30e5d718845",
+  "address": "679 Marukizaimokucho, Sakaimachi-dori Anegakoji-agaru, Nakagyo-ku, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "986c012a-9871-4db5-b006-b5901717bc48",
+  "address": "185-5 Zaimokucho, Kiyamachi-dori Sanjo-sagaru, Nakagyo-ku, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "9893891b-0b1e-4e3b-b672-f10e0867374d",
+  "address": "3-22-7 Koenji-kita, Suginami-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "99922051-b3c9-480e-b4b0-c70ef6d6cdf1",
+  "address": "Fukushima, Fukushima-ku, Osaka",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "9a0cda89-4687-4c40-b684-4f9ae147c056",
+  "address": "2-2-8 Shikitsuhigashi, Naniwa-ku, Osaka",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "9a31092d-f9da-41a5-a0f0-2cf6942821d7",
+  "address": "Shoen Kumihimo, 146-2 Uji Myoraku, Uji, Kyoto",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "9b7f26ec-6ef7-4564-b40f-877564d0b238",
+  "address": "Kitazawa 2-chome, Setagaya-ku, Tokyo",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "9c454e26-325e-4577-b9f0-c7b4f3650314",
+  "address": "833 Arimacho, Kita-ku, Kobe, Hyogo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "9c5a2fd4-76b4-4dc4-807a-fbd9720970da",
+  "address": "351 Arimacho, Kita-ku, Kobe, Hyogo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "9c634f2a-5197-442a-8de5-3ce041d21be6",
+  "address": "52 Tokiwagicho, Teramachi-dori Nijo-agaru, Nakagyo-ku, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "9dd504be-7564-437e-873a-885bc794c06c",
+  "address": "3-14-1 Shinjuku, Shinjuku-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "a0d3ef47-39ff-4171-9603-f9c03d0ba50d",
+  "address": "Ginza Tokiden Building 6F, 8-3-1 Ginza, Chuo-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "a0efcf2d-ef20-47ae-859a-0b0f93391aca",
+  "address": "1-1-7 Ebisu, Shibuya-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "a126dde4-7bb0-483f-ba27-ced3ef886211",
+  "address": "10 Uji-renge, Uji, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "a2ceaf79-2e76-4fb8-a172-c4cd30a59eee",
+  "address": "2-14-1 Kamimeguro, Meguro-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "a6096b55-1da3-4920-a478-51beec0edaff",
+  "address": "5-7-19 Tenjinbashi, Kita-ku, Osaka",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "a67dfd63-cd17-45e8-af65-1f37d945fdc4",
+  "address": "6-1-16 Toyosu, Koto-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "a8a3a5ca-5aeb-4c46-8c8d-308a4856c163",
+  "address": "Hotaka Building 1F, 4-12-12 Roppongi, Minato-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "a998891d-687e-4383-a14d-0a0018b360be",
+  "address": "6-2-4 Jingumae, Shibuya-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "a9a2d59f-fb39-448c-a68a-6893924a7baa",
+  "address": "3-18-7 Shimbashi, Minato-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "a9cd237f-26f3-47b3-b9e6-90c746d3a2c5",
+  "address": "68 Fukakusa Yabunouchicho, Fushimi-ku, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "a9ea1256-8735-4cff-aed1-4839e0ea48e6",
+  "address": "1007 Kami-Hatsuishimachi, Nikko, Tochigi",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "ab91d5a4-183c-4da8-aecf-3d9111d10362",
+  "address": "8-7 Kakudacho, Kita-ku, Osaka",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "aba8e6a8-c038-487a-8244-735dfb231793",
+  "address": "6-13-7 Jingumae, Shibuya-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "acbef20d-4bc1-4ea2-9c59-88be8161381e",
+  "address": "1-17-2 Ebisuminami, Shibuya-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "ad4da60f-6cc5-4628-b9bb-91d086b80237",
+  "address": "Menki Yashima, Maruyamacho, Shibuya-ku, Tokyo",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "ae4d484e-47e1-4b44-a556-3af082fb8867",
+  "address": "Nihonbashi Kayabacho, Chuo-ku, Tokyo",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "b036924b-8553-4251-8578-2d55a90d3118",
+  "address": "Yanaka Ginza, Yanaka 3-chome, Taito-ku, Tokyo",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "b076f289-dbde-46fb-8ca0-66d9b42dea71",
+  "address": "1 Uji-higashiuchi, Uji, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "b0bd4099-c207-4aae-852b-00b7d6151fcf",
+  "address": "Amanohashidate, Monju, Miyazu, Kyoto",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "b0fd1a0a-bf5c-4eca-a6cd-589a3d0a244a",
+  "address": "Tsukiji Outer Market, 4-chome Tsukiji, Chuo-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "b1209e51-e699-43af-bc70-b607f36e7563",
+  "address": "3-17-8 Takada, Toshima-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "b1b6f48e-b99e-4a7b-bcfa-a0aa28efa94a",
+  "address": "Sennichimae Doguyasuji Shopping Street, Namba Sennichimae, Chuo-ku, Osaka",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "b20f75fa-50b1-4fa9-9c65-85973a650856",
+  "address": "5F, 4-2-2 Akasaka, Minato-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "b2436dcd-5c82-40ef-b886-1b619ce0c4cd",
+  "address": "553-1 Yaoyacho, Nakagyo-ku, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "b28b7ba2-7390-443e-be19-18d6582222a8",
+  "address": "2-21-15 Jiyugaoka, Meguro-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "b2a34597-9696-4907-8ccc-f8b60840e7b8",
+  "address": "2-8-1 Nishi-Shinjuku, Shinjuku-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "b2f11466-e304-49ab-a84b-02a6bb494239",
+  "address": "Akachan Honpo Ario Kasai, Kasai, Edogawa-ku, Tokyo",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "b74fa8e2-53e2-4355-87d0-0366f8feb20f",
+  "address": "Koenji, Suginami-ku, Tokyo",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "b9f2da33-151d-4a80-8c71-057f28d9ef10",
+  "address": "4-10-10 Tsukiji, Chuo-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "bbc026ac-39ed-476a-be02-0af58a15ed12",
+  "address": "Shirokane, Minato-ku, Tokyo",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "bd62588a-eccf-4bda-8220-22e39e46775b",
+  "address": "Shinkyogoku Shopping Street, Nakagyo-ku, Kyoto",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "be47b880-0f52-41e5-9a39-09312b8d95b5",
+  "address": "1-7-16 Namba, Chuo-ku, Osaka",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "bfde0302-1972-4ea2-a4c7-0db2d4447412",
+  "address": "30-1 Imimikado-cho, Nara",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "c03342f5-22b8-4a0f-a16b-650878f338e5",
+  "address": "5-15-11 Minami-Azabu, Minato-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "c1058772-49e1-4d13-a982-6afd0ac46c8a",
+  "address": "1-2-34 Abenosuji, Abeno-ku, Osaka",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "c30f595b-064b-403f-b270-4800ffcedeee",
+  "address": "3-13-7 Shibuya, Shibuya-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "c32f3586-a30e-406b-9834-a635bd3a90d7",
+  "address": "2-24-7 Gotokuji, Setagaya-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "c9b77b35-726f-4b52-a9b5-3b432f331d05",
+  "address": "3-16-1 Kanda-Ogawamachi, Chiyoda-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "c9d29e17-1030-4f78-9a50-fc2271a786e1",
+  "address": "6-10-1 Roppongi, Minato-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "ca330747-6951-4b29-8701-f7865a0c9641",
+  "address": "Kiyomizu 2-258, Higashiyama-ku, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "cc0af807-6f26-4a4a-bf68-90db39c546b1",
+  "address": "Higashimuki Shopping Street, Konishi-cho, Nara",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "ccc322f2-d4e8-4fa8-800d-e490db42bc7a",
+  "address": "4-2-55 Nakanoshima, Kita-ku, Osaka",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "ccd23688-8e19-4083-bf75-bd9613273f24",
+  "address": "Kankiji-cho, Shimogyo-ku, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "cd0cfa2d-582f-4dc3-a96a-cc5457ca2e0e",
+  "address": "4-5 Kagurazaka, Shinjuku-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "d0adb245-be28-40f1-a8a9-246cf4c7e2a3",
+  "address": "4-2-15 Nishi-Azabu, Minato-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "d3438309-1a00-4466-8d46-684e32e7e6cb",
+  "address": "Tenjinbashisuji Shopping Street, Tenma, Kita-ku, Osaka",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "d358fcfc-68ed-49f1-8c3b-e24a5fec37da",
+  "address": "1-1-10 Kaigandori, Minato-ku, Osaka",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "d3d5c588-144d-45d4-aac3-f733dcd8e8b9",
+  "address": "Ameya Yokocho, 6-10-7 Ueno, Taito-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "d43e6f61-dad5-4fc7-9073-62fb161a870d",
+  "address": "28-6 Udagawacho, Shibuya-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "d538fc82-48f7-46b6-a2a1-7e8fbc08b407",
+  "address": "17 Entomi-cho, Shogoin, Sakyo-ku, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "d65c6b20-3613-4548-b339-5424d74f59b9",
+  "address": "3-3-5 Ginza, Chuo-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "d7a2efc0-3af8-41d9-9bc8-5feb66ef47f5",
+  "address": "1-1-43 Abenosuji, Abeno-ku, Osaka",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "d7b5adde-18e0-4fbe-9759-83f60dc6a75a",
+  "address": "Kurama-dera, 1074 Kurama Honmachi, Sakyo-ku, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "d879474a-c437-4793-a99a-4d0ed70d149c",
+  "address": "3-27-9 Hongo, Bunkyo-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "dc56a2fb-e3f4-4400-90fc-137de1bf12c0",
+  "address": "276 Ogisakaya-cho, Ayanokoji-sagaru, Higashinotoin-dori, Shimogyo-ku, Kyoto",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "ddb76c73-ca82-42a7-804a-4354b663ed64",
+  "address": "Yoyogi 2-chome (Shinjuku Station South Exit), Shibuya-ku, Tokyo",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "ddf43891-6674-49c1-ad66-7f37cd46e767",
+  "address": "Philosopher's Path, Ginkakuji-cho, Sakyo-ku, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "de7ce4b4-d614-48cf-af9f-60ae770193eb",
+  "address": "3-14-23 Shinjuku, Shinjuku-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "df84a73f-b5ea-455a-9173-4d8ad54ac83d",
+  "address": "1-25-3 Kabukicho, Shinjuku-ku, Tokyo",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "e0efb977-aeca-476a-93bb-2ad0b5fc72bd",
+  "address": "1-28-9 Nezu, Bunkyo-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "e191326e-eeb2-4af5-8588-228236840975",
+  "address": "Ine no Funaya, Hirata, Ine-cho, Yosa-gun, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "e2e53179-a028-4f1c-86aa-4b382935e1c7",
+  "address": "6-2-3 Rinkai-cho, Edogawa-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "e3894f10-d880-4a4c-ab49-4664bbb33512",
+  "address": "4 Tonosawa, Hakone-machi, Ashigarashimo-gun, Kanagawa",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "e74454af-cf4d-46d9-9460-505e87f2fc55",
+  "address": "Den Den Town, Nipponbashi 4-chome, Naniwa-ku, Osaka",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "ea4b8ca7-b145-403c-8f2d-59ff6d92ad28",
+  "address": "Golden Gai, 1-1 Kabukicho 1-chome, Shinjuku-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "ed5ac94b-fd60-4aa9-b691-1c886c784f84",
+  "address": "68 Honmachi, Himeji, Hyogo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "f0448cd2-b377-4b64-845c-45777d0ee6d1",
+  "address": "2-3-9 Ebisuhigashi, Naniwa-ku, Osaka",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "f077efd6-d339-4cf6-808b-d8db4b4a20af",
+  "address": "32 Sagano Kozaka-cho, Ukyo-ku, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "f1de27bf-4f12-4e48-b78f-3ac36ceba892",
+  "address": "2-7-15 Ginza, Chuo-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "f264e05c-8c2a-48a7-be74-246a1b27fc5e",
+  "address": "8-6-3 Ginza, Chuo-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "f6b9352f-f35a-41b3-902b-13dbe22edaf2",
+  "address": "Takeshita-dori, Jingumae 1-chome, Shibuya-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "f6ffa198-b7ae-4d7f-a4e4-e24784af7aef",
+  "address": "Chidorigafuchi Greenway, Kudan-minami 2-chome, Chiyoda-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "f8a7768a-ec6b-4849-befb-6e61a6a84dc6",
+  "address": "Oshiage, Sumida-ku, Tokyo",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "f8c603f3-5184-4907-87ca-4216418c6ffb",
+  "address": "6-12-13 Ueno, Taito-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "f8d42689-9f41-4839-b759-9fdeed3b736d",
+  "address": "Shinsaibashi-suji Shopping Street, Shinsaibashisuji, Chuo-ku, Osaka",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "f922af9d-f0c3-4212-b148-30e02550dcad",
+  "address": "5 Shimogamo Morimoto-cho, Sakyo-ku, Kyoto",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "f97be00f-0c38-4afb-baa8-ea769e4cef85",
+  "address": "2-3-12 Nakazaki, Kita-ku, Osaka",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "f9ab829f-f9e7-48cb-a02c-abca62f58298",
+  "address": "Lake Shoji, Shoji, Fujikawaguchiko-machi, Minamitsuru-gun, Yamanashi",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "f9b2b13f-73ef-4b2f-943c-13c0c85bfae3",
+  "address": "Jan Jan Yokocho, Ebisuhigashi 3-chome, Naniwa-ku, Osaka",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "fa0479d1-7a36-4ea0-97e0-79fabbd5c10c",
+  "address": "teamLab Planets TOKYO, 6-1-16 Toyosu, Koto-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "fb09b4e9-3774-459f-9d03-ed4aae4ff72f",
+  "address": "1-30-10 Asakusabashi, Taito-ku, Tokyo",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "fba39b66-24f8-4bec-959a-332d3c701443",
+  "address": "1-3-1 Fukuzumi, Koto-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "fc67774a-bd7a-492f-94e6-07116f787055",
+  "address": "2-2-1 Nihonbashi Muromachi, Chuo-ku, Tokyo",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "fce79c14-7864-4648-a180-8657cd483629",
+  "address": "1-18-8 Tateishi, Katsushika-ku, Tokyo",
+  "confidence": "guess"
+ },
+ {
+  "t": "lib",
+  "id": "fe4190cf-c317-4195-8bbf-ad88a7d8cabf",
+  "address": "Misono Building, 2-3-9 Sennichimae, Chuo-ku, Osaka",
+  "confidence": "checked"
+ },
+ {
+  "t": "lib",
+  "id": "ffbbff53-300d-455f-b21c-98f76c64ee3b",
+  "address": "Tsuruhashi Station area, Tsuruhashi, Ikuno-ku, Osaka",
+  "confidence": "checked"
+ }
+]
