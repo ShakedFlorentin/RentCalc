@@ -67,7 +67,27 @@ const PlanFields = z.object({
   plan_line: z.string(),
   baby_block: z.string(),
 })
-const PlaceListPlanned = z.object({ places: z.array(PlaceDraft.extend(PlanFields.shape)) })
+// the same card text in English, for the app in English ("" / [] where the Hebrew has nothing)
+const EnText = z.object({
+  hype: z.string(),
+  reality: z.string(),
+  tip: z.string(),
+  baby_notes: z.string(),
+  price: z.string(),
+  serves: z.string(),
+  dishes: z.array(z.string()),
+  todo: z.string(),
+  special: z.string(),
+  highlights: z.array(z.string()),
+  time_needed: z.string(),
+  kosher_note: z.string(),
+  plan_line: z.string(),
+  baby_block: z.string(),
+})
+type En = z.infer<typeof EnText>
+const PlaceListPlanned = z.object({ places: z.array(PlaceDraft.extend(PlanFields.shape).extend({ en: EnText })) })
+/** The English as the card's en column keeps it: "" → null. */
+const enColumn = (e: En) => Object.fromEntries(Object.entries(e).map(([k, v]) => [k, typeof v === 'string' ? v.trim() || null : v]))
 type Plan = z.infer<typeof PlanFields>
 /** The plan fields as the card columns want them ("" → null, odd values dropped); facts_at marks them checked. */
 const planColumns = (p: Plan) => {
@@ -119,6 +139,7 @@ const EXTRACT = `Turn the research notes into place cards, one per real place th
 - opens / closes (when asked for): usual opening and closing time "HH:MM" (24h; a bar past midnight closes e.g. "02:00"); "" if it has no hours or unknown. closed_weekdays: weekly closing days, 0 = Sunday ... 6 = Saturday; [] if none or unknown. closed_dates: dates between 2026-12-12 and 2026-12-31 it is closed, "YYYY-MM-DD"; [] if none or unknown.
 - best_time: morning, midday, afternoon, evening (dinner, sunset) or night (bars, night views) when it matters, else any. visit_mins: a typical visit in minutes including the usual queue. booking: required, recommended or no.
 - plan_line: ONE practical Hebrew tip, at most 70 characters, the single thing most worth knowing before going (book ahead, cash only, come before opening); not a description. baby_block: Hebrew, at most 60 characters, only if something blocks a visit with the baby (no strollers, stairs only, no children, smoking inside); otherwise "".
+- en (when asked for): the same card in plain, everyday English, field by field (hype, reality, tip, baby_notes, price, serves, dishes, todo, special, highlights, time_needed, kosher_note, plan_line, baby_block): same facts, same length or shorter, like a friend texting the useful bit. No marketing words ("hidden gem", "must-see", "vibrant", "nestled", "experience"), no talk about sources, no exclamation marks, no em dashes. plan_line at most 70 characters; baby_block at most 60 and only when the Hebrew has one, saying the block in words like "no stroller", "stairs only", "smoky", "adults only", "not suitable". "" or [] where the Hebrew field is empty.
 - Any other text field with nothing to say is an empty string "".
 - Hebrew style for every Hebrew field: short, everyday spoken Israeli Hebrew, like a friend who has been there texting the useful bit ("כדאי להגיע מוקדם", "אין מקום לעגלה", "תור ארוך בצהריים"). Concrete (times, prices, what to eat or do) and each fact once across the card, never repeated in another field. Never talk about sources or who said it ("לפי…", "מבקרים מציינים", "בלוגרים", "מדווחים"): state the fact, or leave out what is too unsure. No translation-ese or marketing words (חוויה, מושלם, בלתי נשכח, פנינה, "לא רק X אלא גם Y", מציע, "ניתן ל"), no em dashes. Address readers in the plural or impersonally, never in a gendered singular.
 - Plain text only: no emoji, no exclamation marks.`
@@ -351,12 +372,12 @@ async function research(admin: SupabaseClient, link: string | undefined, text: s
     const extract = <T extends z.ZodType>(schema: T) =>
       client.messages.parse({
         model: MODEL,
-        max_tokens: 12000,
+        max_tokens: 20000,
         output_config: { effort: 'low', format: zodOutputFormat(schema) },
         system: EXTRACT,
         messages: [{ role: 'user', content: `${ask}\n\nResearch notes:\n${notes}` }],
       })
-    let card: { parsed_output: { places: (Draft & Partial<Plan>)[] } | null } & Anthropic.Message
+    let card: { parsed_output: { places: (Draft & Partial<Plan> & { en?: En })[] } | null } & Anthropic.Message
     try {
       card = await extract(PlaceListPlanned)
     } catch (error) {
@@ -380,13 +401,14 @@ async function research(admin: SupabaseClient, link: string | undefined, text: s
     const web = (urls: string[]) => urls.filter((u) => /^https?:\/\//i.test(u))
     const fallback = web([...new Set([...cited, ...found])]).slice(0, 5)
     const places = card.parsed_output.places.slice(0, MAX_PLACES).map((full) => {
-      const { address, opens, closes, closed_weekdays, closed_dates, best_time, visit_mins, booking, plan_line, baby_block, ...p } = full
+      const { address, opens, closes, closed_weekdays, closed_dates, best_time, visit_mins, booking, plan_line, baby_block, en, ...p } = full
       const plan = { address, opens, closes, closed_weekdays, closed_dates, best_time, visit_mins, booking, plan_line, baby_block }
       return {
         ...blanksToNull(p as Draft),
         sources: web(p.sources).length ? web(p.sources) : fallback,
         // the planner's columns, ready for the card (absent when the plan fields were rejected)
         ...(plan_line !== undefined ? planColumns(plan as Plan) : {}),
+        ...(en ? { en: enColumn(en) } : {}),
       }
     })
     console.log('places', places.length, places.map((p) => p.name).join(' | ') || notes.slice(0, 500))

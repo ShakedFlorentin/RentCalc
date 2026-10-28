@@ -244,6 +244,8 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
                 facts_sure: d.facts_sure ?? true,
               }
             : {}),
+          // the same card in English, for whoever uses the app in English
+          ...(d.en ? { en: d.en } : {}),
         })
         .select('id')
         .single()
@@ -360,7 +362,7 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
           {busy ? 'מוסיף…' : picked === 1 ? 'הוספת מקום אחד' : `הוספת ${picked} מקומות`}
         </button>
         <button className="link" onClick={() => (setErr(''), setMany(null))}>
-          <Icon as={ArrowRight} /> חזרה
+          <Icon as={ArrowRight} className="flip-ltr" /> חזרה
         </button>
       </Sheet>
     )
@@ -393,7 +395,7 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
           {busy ? 'מחפש, עד דקה…' : (<><Icon as={Search} /> חיפוש לפי שם</>)}
         </button>
         <button className="link" onClick={() => (setErr(''), setFailedLink(''))}>
-          <Icon as={ArrowRight} /> חזרה
+          <Icon as={ArrowRight} className="flip-ltr" /> חזרה
         </button>
       </Sheet>
     )
@@ -520,7 +522,7 @@ function DraftForm(props: {
         {props.busy ? 'שומר…' : 'הוספה'}
       </button>
       <button className="link" onClick={props.onBack}>
-        <Icon as={ArrowRight} /> חזרה
+        <Icon as={ArrowRight} className="flip-ltr" /> חזרה
       </button>
     </>
   )

@@ -1,0 +1,20 @@
+/* The app in English: left to right. Most of the layout follows the text direction by itself (flex, grid, inline-start
+   and inline-end); these are the places that were set for right to left by hand. */
+
+/* arrows that point "forward" (left) or "back" (right) in Hebrew turn around */
+html[dir='ltr'] .flip-ltr { transform: scaleX(-1); }
+
+/* the tab bar's round search button and the add button sit on the right */
+html[dir='ltr'] .tabbar { left: max(12px, calc(50% - 308px)); right: max(84px, calc(50% - 308px + 72px)); }
+html[dir='ltr'] .search-fab { left: auto; right: max(12px, calc(50% - 308px)); }
+html[dir='ltr'] .fab { left: auto; right: max(16px, calc(50% - 304px)); }
+
+/* swipe card photos: tap the left side for the previous one */
+html[dir='ltr'] .photo-tap.prev { right: auto; left: 0; }
+html[dir='ltr'] .photo-tap.next { left: auto; right: 0; }
+html[dir='ltr'] .left-count { direction: ltr; }
+
+/* a name in another script lines up with the text around it: on the left */
+html[dir='ltr'] :is(h2, h3, p, div, b, span)[dir="auto"]:not(.show-sub, .show-small, .turn-heard, .turn-text, .turn-back) { text-align: left; }
+html[dir='ltr'] .phrase-ja, html[dir='ltr'] .phrase-ro { text-align: left; }
+html[dir='ltr'] .voice-report { direction: ltr; text-align: left; }

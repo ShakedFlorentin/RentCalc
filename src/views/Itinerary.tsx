@@ -2,7 +2,8 @@ import { Fragment, useEffect, useRef, useState } from 'react'
 import { BedDouble, Check, CircleAlert, Navigation, Pencil, PlaneLanding, Plus, Users } from 'lucide-react'
 import { supabase } from '../supabase'
 import { CATEGORIES, TOGETHER, WHO_OPTIONS, type Booking, type DayInfo, type Member, type Place, type PlanSummary, type Trip } from '../types'
-import { couplesOf, dayDate, keepRanges, dayOption, dayParts, fmtDayLong, mutate, replan, useTripTable } from '../lib'
+import { cityLabel, couplesOf, dayDate, keepRanges, dayOption, dayParts, fmtDayLong, mutate, replan, useTripTable } from '../lib'
+import { isEn } from '../i18n'
 import { Empty, Field, Sheet, useRemembered } from '../ui'
 import { Icon } from '../icons'
 import {
@@ -51,7 +52,7 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
   const arrivals = entries.filter((e) => e.key.endsWith(':arr'))
   // a day only one couple is in Japan is that couple's plan by default
   const defaultWho = info?.who ?? null
-  const warnings = new Map(summary?.warnings.map((w) => [w.item_id, w.text]))
+  const warnings = new Map(summary?.warnings.map((w) => [w.item_id, warningText(w)]))
   // places you liked in today's city that didn't fit into any day: ready to swap in
   const dayCities = (info?.city ?? '').split(' / ').filter(Boolean)
   const spare = (summary?.unplanned ?? []).filter(
@@ -72,7 +73,7 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
             >
               <span className="day-chip-weekday">{parts?.weekday ?? ''}</span>
               <b>{parts?.date ?? d}</b>
-              <span className="small">{days.find((x) => x.day === d)?.city ?? ''}</span>
+              <span className="small">{cityLabel(days.find((x) => x.day === d)?.city)}</span>
             </button>
           )
         })}
@@ -81,7 +82,7 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
       <section className="card day-head" onClick={() => setEditDay(true)}>
         <div className="row spread">
           <h2>
-            {trip.start_date ? fmtDayLong(dayDate(trip.start_date, day)) : `יום ${day}`} {info?.city ? `· ${info.city}` : ''}
+            {trip.start_date ? fmtDayLong(dayDate(trip.start_date, day)) : `יום ${day}`} {info?.city ? `· ${cityLabel(info.city)}` : ''}
           </h2>
           <Icon className="muted" as={Pencil} />
         </div>
@@ -426,4 +427,12 @@ function DayForm(props: { tripId: string; day: number; title: string; info?: Day
       </button>
     </Sheet>
   )
+}
+
+/** A planner warning in the app's language: the Hebrew text, or English words built from what it found. */
+function warningText(w: PlanSummary['warnings'][number]) {
+  if (!isEn || !w.kind) return w.text
+  if (w.kind === 'closed_date') return 'Closed on this date'
+  if (w.kind === 'closed_weekday') return `Closed on ${new Date(Date.UTC(2026, 10, 1 + (w.weekday ?? 0))).toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'UTC' })}s`
+  return `Open only ${w.opens}–${w.closes}`
 }

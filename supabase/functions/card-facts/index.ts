@@ -6,7 +6,15 @@ import Anthropic from 'npm:@anthropic-ai/sdk@1.1.0'
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
 import { lookUp, type PlaceInfo } from './facts.ts'
 
-type Card = PlaceInfo & { id: string; trip_id: string; library_id: string | null; lat: number | null; address: string | null; facts_at: string | null }
+type Card = PlaceInfo & {
+  id: string
+  trip_id: string
+  library_id: string | null
+  lat: number | null
+  address: string | null
+  facts_at: string | null
+  en: Record<string, unknown> | null
+}
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const edge = (globalThis as { EdgeRuntime?: { waitUntil(p: Promise<unknown>): void } }).EdgeRuntime
@@ -31,7 +39,7 @@ Deno.serve(async (req) => {
 async function fill(admin: SupabaseClient, cid: string, token: string) {
   const { data: c } = await admin
     .from('candidates')
-    .select('id,trip_id,library_id,name,name_ja,city,area,category,lat,address,tip,baby_notes,hype,reality,time_needed,facts_at')
+    .select('id,trip_id,library_id,name,name_ja,city,area,category,lat,address,tip,baby_notes,hype,reality,time_needed,facts_at,en')
     .eq('id', cid)
     .maybeSingle<Card>()
   if (!c) return { skipped: 'no card' }
@@ -53,18 +61,27 @@ async function fill(admin: SupabaseClient, cid: string, token: string) {
     facts_at: new Date().toISOString().slice(0, 10),
     facts_sure: true,
   }
+  // the English plan line goes into the card's English text, next to whatever English it already has
+  const english = { plan_line: f.line_en, baby_block: f.baby_en }
   await admin
     .from('candidates')
     .update({
       ...columns,
+      en: { ...(c.en ?? {}), ...english },
       ...(c.address == null && f.address ? { address: f.address } : {}),
       // coordinates are kept in the backend only, for the planner's distances and the map pins
       ...(c.lat == null && f.lat != null ? { lat: f.lat, lng: f.lng } : {}),
     })
     .eq('id', cid)
   // the library card it came from: every other trip's copy gets it on its next sync
-  if (c.library_id)
-    await admin.from('place_library').update({ ...columns, address: f.address }).eq('id', c.library_id).is('facts_at', null)
+  if (c.library_id) {
+    const { data: lib } = await admin.from('place_library').select('en').eq('id', c.library_id).maybeSingle<{ en: Record<string, unknown> | null }>()
+    await admin
+      .from('place_library')
+      .update({ ...columns, address: f.address, en: { ...(lib?.en ?? {}), ...english } })
+      .eq('id', c.library_id)
+      .is('facts_at', null)
+  }
   // a card already matched waits in the plan on defaults: plan again with the real hours
   await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/plan-trip`, {
     method: 'POST',

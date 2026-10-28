@@ -10,11 +10,17 @@
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <title>הטיול ליפן</title>
-    <!-- light or dark picked in settings, applied before the first paint so the page never flashes the other one -->
+    <!-- light or dark and the language picked in settings, applied before the first paint so the page never flashes the other -->
     <script>
       try {
         var theme = localStorage.getItem('theme')
         if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme
+        // English picked in settings: left to right from the first paint
+        if (localStorage.getItem('lang') === 'en') {
+          document.documentElement.lang = 'en'
+          document.documentElement.dir = 'ltr'
+          document.title = 'Japan trip'
+        }
       } catch (e) {}
     </script>
   </head>

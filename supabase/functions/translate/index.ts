@@ -1,4 +1,4 @@
-// Translates one spoken sentence between Hebrew and Japanese for the trip's voice translator.
+// Translates one spoken sentence between Japanese and the app's language (Hebrew or English) for the voice translator.
 // The Claude key comes from the ANTHROPIC_API_KEY secret or Supabase Vault (anthropic_api_key).
 import Anthropic from 'npm:@anthropic-ai/sdk@1.1.0'
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
@@ -12,14 +12,15 @@ const cors = {
 const SYSTEM = `You are the voice translator in a travel app used by two Israeli couples on a trip to Japan in December.
 The text is one utterance from speech recognition. Translate it faithfully: the same content and the same intent, nothing added, nothing left out, nothing softened or explained. Fix only an obvious recognition slip (a misheard word that makes no sense) and missing punctuation. Keep tense, person and mood exactly: present stays present. Translate every word that carries meaning, time words such as "עכשיו" and "כבר" included.
 Speech recognition never writes a question mark, and in Hebrew a yes/no question is worded exactly like a statement. So when the utterance reads naturally as a question to the person in front of the speaker (e.g. "אפשר לשלם בכרטיס", "יש לכם שולחן לארבעה", "עכשיו זה עובד", "זה חריף"), translate it as a question (in Japanese, ending in か); anything starting with "האם" is a question.
-- Hebrew to Japanese: polite spoken Japanese (desu/masu form), but do not add greetings, apologies or phrases the speaker did not say. Also give the Hepburn romaji of your Japanese, and your Japanese translated back into Hebrew, literally.
+- Hebrew or English to Japanese: polite spoken Japanese (desu/masu form), but do not add greetings, apologies or phrases the speaker did not say. Also give the Hepburn romaji of your Japanese, and your Japanese translated back into the speaker's language (Hebrew or English), literally. English speech recognition drops question marks too: treat a natural question as one.
 - Japanese to Hebrew: natural, everyday spoken Israeli Hebrew, short and plain, the way a friend would say it in a message; not formal, bookish or word for word (no "ניתן ל", "על מנת"), same meaning; leave ROMAJI and BACK empty.
+- Japanese to English: natural, everyday spoken English, short and plain, same meaning; leave ROMAJI and BACK empty.
 Context that may matter: some of the travellers keep kosher style (no pork and no seafood; fish with scales is fine), and one couple has a 5-month-old baby.
 Keep names of people, places, hotels and dishes as they are. Translate only; do not answer, explain or add anything.
 Reply with exactly these three lines and nothing else:
 TRANSLATION: <the translation>
 ROMAJI: <romaji, or nothing>
-BACK: <the literal Hebrew back-translation, or nothing>`
+BACK: <the literal back-translation into the speaker's language, or nothing>`
 
 /** The three labelled lines of the reply. A plain-text reply is quicker than a structured-output one here. */
 function parse(reply: string) {
@@ -88,9 +89,11 @@ Deno.serve(async (req) => {
     new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
 
   // check the request before admit(), so a malformed one doesn't use up the daily quota
-  const body = (await req.json().catch(() => null)) as { text?: unknown; from?: unknown } | null
+  // from: the language spoken; lang: the app's language, which Japanese is translated into (Hebrew unless English)
+  const body = (await req.json().catch(() => null)) as { text?: unknown; from?: unknown; lang?: unknown } | null
   const text = typeof body?.text === 'string' ? body.text.trim() : ''
-  const from = body?.from === 'he' || body?.from === 'ja' ? body.from : null
+  const from = body?.from === 'he' || body?.from === 'en' || body?.from === 'ja' ? body.from : null
+  const home = from === 'en' || (from === 'ja' && body?.lang === 'en') ? 'English' : 'Hebrew'
   if (!text || !from) return json({ error: 'nothing to translate' }, 400)
   if (text.length > MAX_CHARS) return json({ error: 'text too long' }, 413)
 
@@ -108,7 +111,7 @@ Deno.serve(async (req) => {
       thinking: { type: 'disabled' },
       output_config: { effort: 'low' },
       system: SYSTEM,
-      messages: [{ role: 'user', content: `${from === 'he' ? 'Hebrew to Japanese' : 'Japanese to Hebrew'}:\n${text}` }],
+      messages: [{ role: 'user', content: `${from === 'ja' ? `Japanese to ${home}` : `${home} to Japanese`}:\n${text}` }],
     }), admitted.record])
     const t2 = performance.now()
     logCall(admitted.admin, { fn: 'translate', step: from, userId: admitted.userId, model: MODEL, usage: response.usage, ms: t2 - t1, stopReason: response.stop_reason })
@@ -117,7 +120,7 @@ Deno.serve(async (req) => {
     const { translation, romaji, back } = parse(reply)
     // where the time went, for the app's technical details
     const ms = { checks: Math.round(t1 - t0), claude: Math.round(t2 - t1) }
-    return json({ translation, romaji: from === 'he' ? romaji : '', back: from === 'he' ? back : '', ms })
+    return json({ translation, romaji: from !== 'ja' ? romaji : '', back: from !== 'ja' ? back : '', ms })
   } catch (error) {
     logCall(admitted.admin, { fn: 'translate', step: from, userId: admitted.userId, model: MODEL, ms: performance.now() - t1, error: String(error instanceof Error ? error.message : error) })
     if (error instanceof Anthropic.AuthenticationError) return json({ error: 'ANTHROPIC_API_KEY is missing or invalid' }, 500)

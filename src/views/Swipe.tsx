@@ -153,7 +153,7 @@ export default function SwipeGame({ trip, userId, members }: Props) {
           <Icon as={Heart} /> <b>{matchedIds.size}</b>
         </span>
         <span className="hud-chevron" aria-hidden="true">
-          <Icon as={ChevronLeft} size="1.3em" />
+          <Icon as={ChevronLeft} size="1.3em" className="flip-ltr" />
         </span>
       </button>
 

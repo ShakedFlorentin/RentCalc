@@ -131,6 +131,7 @@ type Item = {
   title: string
   location: string | null
   notes: string | null
+  notes_en: string | null
   category: string
   sort: number
   place_id: string | null
@@ -177,6 +178,8 @@ type Cand = Facts & {
   verdict: string | null
   local_pick: boolean | null
   tabelog_score: number | null
+  // the card's text in English (same keys as the Hebrew columns)
+  en: { tip?: string | null; plan_line?: string | null; baby_block?: string | null } | null
 }
 type Media = { lat?: number; lng?: number; hype?: string; reality?: string; tip?: string; baby_notes?: string; time_needed?: string }
 
@@ -241,7 +244,7 @@ function visitMins(f: Facts | undefined, timeNeeded: string | null | undefined, 
 
 const CAND_COLUMNS =
   'id,name,address,area,city,category,lat,lng,tip,time_needed,verdict,local_pick,tabelog_score,' +
-  'opens,closes,closed_weekdays,closed_dates,best_time,visit_mins,booking,plan_line,baby_block,facts_at'
+  'opens,closes,closed_weekdays,closed_dates,best_time,visit_mins,booking,plan_line,baby_block,facts_at,en'
 /** The same place under small differences in spelling, case or punctuation gets one key. */
 const factKey = (name: string) => name.toLowerCase().normalize('NFKD').replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
 
@@ -251,6 +254,8 @@ const VERDICT: Record<string, number> = { gem: 4, worth_it: 3, overhyped: 1.5, t
 // strollers" on every place made people stop reading the notes
 const BABY_BLOCKER = /אסור|לא מתאים|לא מומלץ|לא נכנס|אין גישה|אין מקום לעגלה|קשה לעגלה|קשה להכניס עגלה|רק מדרגות|מדרגות בלבד|עשן|מעושן|מעשנים|למבוגרים|לא לילדים|מתחת לגיל/
 const babyLine = (b: string | null) => (b && BABY_BLOCKER.test(b) ? b : null)
+const BABY_BLOCKER_EN = /no stroller|not suitable|not recommended|stairs only|smok|adults only|no children|no kids|under age|not allowed|no access|hard with a stroller/i
+const babyLineEn = (b: string | null | undefined) => (b && BABY_BLOCKER_EN.test(b) ? b : null)
 // when a card was never checked: when its kind is usually best
 const DEFAULT_TIME: Record<string, BestTime> = { nightlife: 'night' }
 /** The facts of a card that has them; undefined for one never checked. */
@@ -267,7 +272,7 @@ async function run(admin: SupabaseClient, tid: string, dry: boolean) {
     q<{ couple: string | null }[]>(admin.from('members').select('couple').eq('trip_id', tid)),
     q<Booking[]>(admin.from('bookings').select('id,kind,title,starts_at,ends_at,who,location').eq('trip_id', tid)),
     q<{ day: number; city: string | null; who: string | null }[]>(admin.from('day_info').select('day,city,who').eq('trip_id', tid)),
-    q<Item[]>(admin.from('itinerary_items').select('id,day,time,title,location,notes,category,sort,place_id,who,auto,done').eq('trip_id', tid).gt('day', 0)),
+    q<Item[]>(admin.from('itinerary_items').select('id,day,time,title,location,notes,notes_en,category,sort,place_id,who,auto,done').eq('trip_id', tid).gt('day', 0)),
     q<Place[]>(
       admin.from('places').select('id,candidate_id,name,city,area,lat,lng,who,visited,auto_planned').eq('trip_id', tid).not('candidate_id', 'is', null),
     ),
@@ -493,6 +498,14 @@ async function run(admin: SupabaseClient, tid: string, dry: boolean) {
     const first = tip!.split(/(?<=[.!?])\s/)[0]
     return first.length > 90 ? first.slice(0, 88) + '…' : first
   }
+  // the same note in English, for the app in English
+  const noteOfEn = (u: { c: Cand; f?: Facts }) => {
+    const en = u.c.en
+    if (!en) return null
+    if (u.f && en.plan_line) return [en.plan_line, babyLineEn(en.baby_block)].filter(Boolean).join('\n')
+    const first = en.tip?.split(/(?<=[.!?])\s/)[0]
+    return first ? (first.length > 90 ? first.slice(0, 88) + '…' : first) : null
+  }
   const itemCategory = (cat: string) =>
     cat === 'food' || cat === 'cafe' ? 'food' : cat === 'shopping' ? 'shopping' : cat === 'sight' || cat === 'experience' ? 'sight' : 'other'
   const desired: Row[] = []
@@ -506,6 +519,7 @@ async function run(admin: SupabaseClient, tid: string, dry: boolean) {
       // what people navigate to: the address, else the name where it is; coordinates stay in the backend
       location: u.c.address ?? [u.p.name, u.c.area, CITY_EN[u.c.city ?? '']].filter(Boolean).join(', '),
       notes: noteOf(u),
+      notes_en: noteOfEn(u),
       category: itemCategory(u.c.category ?? 'sight'),
       place_id: id,
       who: u.p.who,
@@ -525,7 +539,7 @@ async function run(admin: SupabaseClient, tid: string, dry: boolean) {
       continue
     }
     keep.add(first.id)
-    const changed = (['day', 'time', 'title', 'location', 'notes', 'category', 'who', 'sort'] as const).some(
+    const changed = (['day', 'time', 'title', 'location', 'notes', 'notes_en', 'category', 'who', 'sort'] as const).some(
       (k) => (first[k] ?? null) !== (row[k] ?? null) && !(k === 'time' && first.time?.slice(0, 5) === row.time),
     )
     if (changed) toUpdate.push({ id: first.id, row })
@@ -536,21 +550,22 @@ async function run(admin: SupabaseClient, tid: string, dry: boolean) {
   }
 
   // ---- warnings on items people fixed: closed that day, or outside opening hours
-  const warnings: { item_id: string; text: string }[] = []
+  // text is the Hebrew; kind and its details let the app word it in English
+  const warnings: { item_id: string; text: string; kind: string; weekday?: number; opens?: string; closes?: string }[] = []
   const WEEKDAY = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת']
   for (const i of fixedItems) {
     if (i.done) continue
     const f = factsOfItem(i)
     const d = days[i.day - 1]
     if (!f || !d) continue
-    if ((f.closed_dates ?? []).some((x) => x.slice(0, 10) === d.date)) warnings.push({ item_id: i.id, text: 'סגור בתאריך הזה' })
-    else if ((f.closed_weekdays ?? []).includes(d.weekday)) warnings.push({ item_id: i.id, text: `סגור ב${WEEKDAY[d.weekday]}` })
+    if ((f.closed_dates ?? []).some((x) => x.slice(0, 10) === d.date)) warnings.push({ item_id: i.id, text: 'סגור בתאריך הזה', kind: 'closed_date' })
+    else if ((f.closed_weekdays ?? []).includes(d.weekday)) warnings.push({ item_id: i.id, text: `סגור ב${WEEKDAY[d.weekday]}`, kind: 'closed_weekday', weekday: d.weekday })
     else {
       const t = mins(i.time)
       const o = mins(f.opens)
       let c = mins(f.closes)
       if (o != null && c != null && c <= o) c = 24 * 60
-      if (t != null && o != null && c != null && (t < o || t >= c)) warnings.push({ item_id: i.id, text: `פתוח רק ${f.opens}–${f.closes}` })
+      if (t != null && o != null && c != null && (t < o || t >= c)) warnings.push({ item_id: i.id, text: `פתוח רק ${f.opens}–${f.closes}`, kind: 'hours', opens: f.opens!, closes: f.closes! })
     }
   }
   for (const [id, why] of out.unplanned) {

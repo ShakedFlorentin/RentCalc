@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { supabase } from './supabase'
-import type { Member } from './types'
+import type { CardText, Member } from './types'
+import { isEn, locale, t } from './i18n'
 
 const CACHE_PREFIX = 'cache:'
 
@@ -141,12 +142,12 @@ export function dayDate(start: string | null, day: number): Date | null {
 }
 
 export function fmtDay(d: Date | null) {
-  return d ? d.toLocaleDateString('he-IL', { weekday: 'short', day: 'numeric', month: 'numeric' }) : ''
+  return d ? d.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'numeric' }) : ''
 }
 
 /** "יום שלישי, 15.12": how a plan day is named; the trip's day number matters to nobody. */
 export function fmtDayLong(d: Date | null) {
-  return d ? d.toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'numeric' }) : ''
+  return d ? d.toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'numeric' }) : ''
 }
 
 /** A day as a picker option names it: "יום שלישי, 15.12", or "יום 3" for a trip without a start date. */
@@ -158,8 +159,8 @@ export function dayOption(start: string | null, day: number) {
 export function dayParts(d: Date | null) {
   if (!d) return null
   return {
-    weekday: d.toLocaleDateString('he-IL', { weekday: 'narrow' }),
-    date: d.toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' }),
+    weekday: d.toLocaleDateString(locale, { weekday: isEn ? 'short' : 'narrow' }),
+    date: d.toLocaleDateString(locale, { day: 'numeric', month: 'numeric' }),
   }
 }
 
@@ -184,7 +185,7 @@ export function fmtDateTime(iso: string | null) {
   if (!iso) return ''
   // a booking with a date but no time is stored at midnight; show just the date
   const dateOnly = iso.slice(11, 16) === '00:00'
-  return new Date(iso).toLocaleString('he-IL', {
+  return new Date(iso).toLocaleString(locale, {
     timeZone: 'UTC',
     weekday: 'short',
     day: 'numeric',
@@ -229,11 +230,11 @@ export function useMediaIndex() {
 /** Fill a row's missing media fields from the index; values already in the database win. */
 export function withMedia<T extends { name: string }>(row: T, index: Record<string, MediaEntry>): T {
   const m = index[row.name]
-  if (!m) return row
+  if (!m) return localizeCard(row)
   const r = row as Record<string, unknown>
   const pick = (k: keyof MediaEntry) => (r[k] == null || (Array.isArray(r[k]) && !(r[k] as unknown[]).length) ? m[k] : r[k])
   return {
-    ...row,
+    ...localizeCard(row),
     maps_url: pick('maps_url'),
     website_url: pick('website_url'),
     photos: pick('photos') ?? [],
@@ -246,6 +247,20 @@ export function withMedia<T extends { name: string }>(row: T, index: Record<stri
     // the card's text lives in the database (place_library → candidates); media.json adds only links, photos and kosher
     ...('kosher' in r ? { kosher: m.kosher ?? r.kosher } : {}),
   }
+}
+
+/** A card's text in the app's language: in English, its English (`en`) over the Hebrew columns. */
+export function localizeCard<T extends object>(row: T): T {
+  const en = (row as { en?: CardText | null }).en
+  if (!isEn || !en) return row
+  const out: Record<string, unknown> = { ...(row as Record<string, unknown>) }
+  for (const [k, v] of Object.entries(en)) if (v != null && k in out) out[k] = v
+  return out as T
+}
+
+/** A city as the app shows it: the Hebrew names the database keeps ("טוקיו / קיוטו"), in the app's language. */
+export function cityLabel(city: string | null | undefined) {
+  return city ? city.split(' / ').map((c) => t(c.trim())).join(' / ') : ''
 }
 
 /** The couples in the trip, in a stable order. */

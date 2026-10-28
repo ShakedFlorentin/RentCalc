@@ -35,6 +35,7 @@ import {
   type Trip,
 } from '../types'
 import { couplesOf, currentDay, dayDate, dayParts, fmtDay, fmtDayLong, mutate, useTripTable } from '../lib'
+import { lang, locale, setLang } from '../i18n'
 import { Field, Sheet } from '../ui'
 import { cityPhoto } from '../cities'
 import { BOOKING_ICON, Icon } from '../icons'
@@ -80,7 +81,7 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
   // count on Tokyo's calendar, not the phone's: abroad the local date can differ from Japan's
   const tokyoDate = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Tokyo' })
   const daysLeft = trip.start_date ? Math.round((Date.parse(trip.start_date) - Date.parse(tokyoDate)) / 86400000) : null
-  const tokyoTime = now.toLocaleTimeString('he-IL', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit' })
+  const tokyoTime = now.toLocaleTimeString(locale, { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit' })
   const couples = couplesOf(members)
   const myCouple = members.find((m) => m.user_id === userId)?.couple ?? null
   const todayInfo = days.find((d) => d.day === today)
@@ -161,7 +162,7 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
                 <TodayRow key={e.key} e={e} past={!!e.time && e.time < nowHM} />
               ))}
               <button className="link" onClick={() => onOpenDay(today)}>
-                לתוכנית המלאה <Icon as={ChevronLeft} />
+                לתוכנית המלאה <Icon as={ChevronLeft} className="flip-ltr" />
               </button>
             </section>
           )}
@@ -327,7 +328,7 @@ function NextCard(props: { next?: Entry; nowHM: string; hasPlan: boolean; leftCo
             : 'אפשר להוסיף מקום מלשונית מקומות, או לכתוב פעילות בתוכנית.'}
         </p>
         <button className="link" onClick={props.onOpenDay}>
-          לתוכנית של היום <Icon as={ChevronLeft} />
+          לתוכנית של היום <Icon as={ChevronLeft} className="flip-ltr" />
         </button>
       </section>
     )
@@ -493,6 +494,7 @@ function Settings(props: { trip: Trip; me: string; userId: string; onClose: () =
       <button className="primary" onClick={save}>
         שמירה
       </button>
+      <LangPicker />
       <ThemePicker />
       <button className="secondary" onClick={props.onReport}>
         <Icon as={MessageSquareWarning} /> דיווח על בעיה או טעות
@@ -555,6 +557,26 @@ function ThemePicker() {
     </div>
   )
 }
+
+/** Hebrew or English for the whole app, on this phone. Each option is written in its own language. */
+function LangPicker() {
+  return (
+    <div className="field">
+      <span id="lang-label">שפה · Language</span>
+      <div className="segmented" role="radiogroup" aria-labelledby="lang-label">
+        {LANGS.map((l) => (
+          <button key={l.id} role="radio" lang={l.id} aria-checked={lang === l.id} className={lang === l.id ? 'on' : ''} onClick={() => l.id !== lang && setLang(l.id)}>
+            {l.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+const LANGS = [
+  { id: 'he', label: 'עברית' }, // he-only
+  { id: 'en', label: 'English' },
+] as const
 
 /** "יום אחד" / "יומיים" / "5 ימים" */
 function daysLabel(n: number) {

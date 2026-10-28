@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import './styles.css'
+import './styles/ltr.css'
 
 // relative path: the site lives under /<repo>/ on GitHub Pages; dev has no worker so it never serves stale files
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {

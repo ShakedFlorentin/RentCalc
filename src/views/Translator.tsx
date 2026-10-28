@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Copy, Languages, Mic, Square, Volume2 } from 'lucide-react'
 import { supabase } from '../supabase'
 import { Icon } from '../icons'
+import { isEn } from '../i18n'
 
 /*
  * Voice translator between Hebrew and Japanese. Tap the language you are speaking, speak, tap again: the phone's
@@ -10,10 +11,12 @@ import { Icon } from '../icons'
  * to the server.
  */
 
-type Lang = 'he-IL' | 'ja-JP'
+type Lang = 'he-IL' | 'en-US' | 'ja-JP'
+// the traveller's side speaks the app's language
+const HOME: Lang = isEn ? 'en-US' : 'he-IL'
 const LANGS: { id: Lang; label: string; other: Lang }[] = [
-  { id: 'he-IL', label: 'עברית', other: 'ja-JP' },
-  { id: 'ja-JP', label: '日本語', other: 'he-IL' },
+  { id: HOME, label: isEn ? 'English' : 'עברית', other: 'ja-JP' }, // he-only
+  { id: 'ja-JP', label: '日本語', other: HOME },
 ]
 
 // the Web Speech API still ships prefixed in Safari and has no TypeScript types in lib.dom
@@ -71,7 +74,7 @@ async function translateError(error: unknown) {
 }
 
 export default function Translator() {
-  const [lang, setLang] = useState<Lang>('he-IL')
+  const [lang, setLang] = useState<Lang>(HOME)
   const [listening, setListening] = useState(false)
   const [heard, setHeard] = useState('')
   const [interim, setInterim] = useState('')
@@ -122,7 +125,7 @@ export default function Translator() {
   // voice (ja-JP), then any voice of the language; without one Safari reads in the phone's own language
   const say = (text: string) => {
     if (!text || !('speechSynthesis' in window)) return
-    const as: Lang = /[぀-ヿ一-鿿]/.test(text) ? 'ja-JP' : 'he-IL'
+    const as: Lang = /[぀-ヿ一-鿿]/.test(text) ? 'ja-JP' : HOME
     const norm = (v: SpeechSynthesisVoice) => v.lang.replace('_', '-')
     const all = speechSynthesis.getVoices()
     const v = all.find((x) => norm(x) === as) ?? all.find((x) => norm(x).startsWith(as.slice(0, 2)))
@@ -138,7 +141,7 @@ export default function Translator() {
     setBusy(true)
     note('שולח לתרגום')
     const sent = performance.now()
-    const { data, error } = await supabase.functions.invoke('translate', { body: { text, from: from.slice(0, 2) } })
+    const { data, error } = await supabase.functions.invoke('translate', { body: { text, from: from.slice(0, 2), lang: isEn ? 'en' : 'he' } })
     setBusy(false)
     const took = Math.round(performance.now() - sent)
     if (error || !data?.translation) {
@@ -255,7 +258,7 @@ export default function Translator() {
   const report = [
     `זיהוי דיבור: ${Recognizer ? 'קיים' : 'לא קיים'}`,
     `נפתח מ: ${standalone() ? 'מסך הבית' : 'ספארי'}`,
-    `קול בעברית: ${voiceFor('he')}`,
+    `קול בעברית: ${voiceFor(HOME.slice(0, 2))}`,
     `קול ביפנית: ${voiceFor('ja')}`,
     `שפה אחרונה: ${lang}`,
     `נשמע: ${heard || turns[0]?.heard || '(ריק)'}`,
@@ -299,7 +302,7 @@ export default function Translator() {
         )}
         {(listening || busy || heard || interim) && (
           // the exchange in progress: what is being heard, then the wait for its translation
-          <div className={'turn pending ' + (lang === 'he-IL' ? 'he' : 'ja')} aria-live="polite">
+          <div className={'turn pending ' + (lang === HOME ? 'he' : 'ja')} aria-live="polite">
             <span className="turn-heard" lang={lang} dir="auto">
               {heard || interim ? `${heard}${interim ? ` ${interim}` : ''}` : 'מקשיב…'}
             </span>
@@ -314,12 +317,12 @@ export default function Translator() {
         {turns.length > 0 ? (
           <div className="turns">
             {turns.map((t) => {
-              const to: Lang = t.from === 'he-IL' ? 'ja-JP' : 'he-IL'
+              const to: Lang = t.from === HOME ? 'ja-JP' : HOME
               return (
                 // the bubble is the replay button: tap to hear the translation again
                 <button
                   key={t.id}
-                  className={'turn ' + (t.from === 'he-IL' ? 'he' : 'ja')}
+                  className={'turn ' + (t.from === HOME ? 'he' : 'ja')}
                   disabled={listening}
                   aria-label={`השמעה שוב: ${t.text}`}
                   onClick={() => say(t.text)}

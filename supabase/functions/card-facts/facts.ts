@@ -1,5 +1,5 @@
 // What the planner needs to know about a place that the swipe card doesn't say: opening hours, closed days around the
-// trip, how long a visit takes, and one short practical line in Hebrew. Looked up once per card with Claude and a
+// trip, how long a visit takes, and one short practical line in Hebrew (and the same in English). Looked up once per card with Claude and a
 // few web searches; card-facts writes it onto the card's plan columns.
 import Anthropic from 'npm:@anthropic-ai/sdk@1.1.0'
 import { zodOutputFormat } from 'npm:@anthropic-ai/sdk@1.1.0/helpers/zod'
@@ -13,6 +13,8 @@ const FactsSchema = z.object({
   address: z.string(),
   line: z.string(),
   baby: z.string(),
+  line_en: z.string(),
+  baby_en: z.string(),
   opens: z.string(),
   closes: z.string(),
   closed_weekdays: z.array(z.number().int()),
@@ -29,6 +31,8 @@ export type Facts = {
   address: string | null
   line_he: string | null
   baby_he: string | null
+  line_en: string | null
+  baby_en: string | null
   opens: string | null
   closes: string | null
   closed_weekdays: number[]
@@ -72,6 +76,7 @@ const EXTRACT = `Turn the notes into the fields below.
 - line: ONE short practical tip in natural Hebrew, at most 70 characters, the single thing most worth knowing before going (book ahead, cash only, come before opening, buy the sunset slot, closed on Mondays). Not a description of the place. Keep place and brand names as they are. No emoji, no exclamation marks.
 - baby: in Hebrew, at most 60 characters, ONLY if something there changes the plan with a milk-only baby (strollers not allowed, stairs only, no children, smoking inside). Otherwise "".
 - Hebrew style for line and baby: short, everyday spoken Israeli Hebrew, like a friend texting the useful bit ("כדאי להגיע מוקדם", "אין מקום לעגלה"). No talk about sources ("לפי…", "מבקרים מציינים"), no marketing words or translation-ese, no em dashes; plural or impersonal, never a gendered singular.
+- line_en / baby_en: the same two lines in plain, everyday English (same limits; baby_en "" when baby is ""). Short and practical ("Book ahead", "Cash only", "No room for a stroller"), no marketing words, no exclamation marks, no em dashes. baby_en must say the block in words like "no stroller", "stairs only", "smoky", "adults only", "not suitable".
 - opens / closes: typical opening and closing time as "HH:MM" (24h); "" if it has no hours (a street, an area) or unknown. A bar open past midnight closes at e.g. "02:00".
 - closed_weekdays: weekly closing days as numbers, 0 = Sunday ... 6 = Saturday; [] if none or unknown.
 - closed_dates: dates between 2026-12-12 and 2026-12-31 it is closed as "YYYY-MM-DD" (year-end holidays included); [] if none or unknown.
@@ -141,6 +146,8 @@ export async function lookUp(admin: SupabaseClient, client: Anthropic, p: PlaceI
       address: f.address.trim() || null,
       line_he: f.line.trim() || null,
       baby_he: f.baby.trim() || null,
+      line_en: f.line_en.trim() || null,
+      baby_en: f.baby_en.trim() || null,
       opens: time(f.opens),
       closes: time(f.closes),
       closed_weekdays: [...new Set(f.closed_weekdays.filter((d) => d >= 0 && d <= 6))],

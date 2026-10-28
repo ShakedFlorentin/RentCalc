@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { CATEGORY_ICON, BOOKING_ICON, type LucideIcon } from '../icons'
 import { WHO_OPTIONS, type Booking, type ItineraryItem } from '../types'
+import { isEn } from '../i18n'
 
 /** itinerary_items.who is a new column (couple, or null for everyone); types.ts doesn't have it yet. */
 // ItineraryItem carries `who` now; the alias keeps the plan code's name for it
@@ -126,7 +127,8 @@ export function itemEntry(i: PlanItem): Entry {
     time: i.time ? i.time.slice(0, 5) : null,
     icon: CATEGORY_ICON[i.category] ?? CATEGORY_ICON.other,
     title: i.title,
-    sub: i.notes,
+    // the planner's note in English when the app is in English (people's own notes stay as written)
+    sub: (isEn && i.notes_en) || i.notes,
     location: i.location,
     who: i.who ?? null,
     done: i.done,

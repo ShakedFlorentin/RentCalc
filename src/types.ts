@@ -42,12 +42,15 @@ export type ItineraryItem = {
   who?: string | null
   /** put there by the planner and not touched since: its time is a rough guess and it may still move */
   auto?: boolean
+  /** the planner's note in English (notes is the Hebrew) */
+  notes_en?: string | null
 }
 
 /** What the planner (plan-trip) last said about the trip: places it left out, and plan items that clash with opening days. */
 export type PlanSummary = {
   unplanned: { place_id: string; name: string; reason: 'waiting' | 'full' | 'closed' | 'no_day'; who: string | null; city?: string | null }[]
-  warnings: { item_id: string; text: string }[]
+  // text is the Hebrew; kind (and weekday or hours) lets the app word it in English
+  warnings: { item_id: string; text: string; kind?: 'closed_date' | 'closed_weekday' | 'hours'; weekday?: number; opens?: string; closes?: string }[]
   facts_pending: number
 }
 
@@ -218,7 +221,27 @@ export type Candidate = {
   instagram_url?: string | null
   tiktok_url?: string | null
   photos?: string[] | null
+  /** the card's text in English, shown when the app is in English */
+  en?: CardText | null
 } & PlanFacts
+
+/** The card text fields, as kept in English in `en` (same keys as the Hebrew columns). */
+export type CardText = Partial<{
+  hype: string | null
+  reality: string | null
+  tip: string | null
+  baby_notes: string | null
+  price: string | null
+  serves: string | null
+  dishes: string[] | null
+  todo: string | null
+  special: string | null
+  highlights: string[] | null
+  time_needed: string | null
+  kosher_note: string | null
+  plan_line: string | null
+  baby_block: string | null
+}>
 
 /**
  * What the trip planner needs about a place, carried by the card (library → trip copy) so planning needs no lookup:
