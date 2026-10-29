@@ -116,7 +116,11 @@ async function candidates(admin: SupabaseClient, c: Card): Promise<Found[]> {
     ((trip ?? []) as { instagram_url: string | null; tiktok_url: string | null; sources: string[] | null }[]).filter((x) => [x.instagram_url, x.tiktok_url, ...((x.sources as string[] | null) ?? [])].some((u) => u?.includes(key))).length
   for (const link of [...new Set(social)].slice(0, 3)) {
     const key = link.match(/\/(?:p|reel|reels|tv|video)\/([\w-]+)/)?.[1]
-    if (key && usedBy(key) > 1) continue
+    if (key && usedBy(key) > 1) {
+      // its slides, though, are often one place each, with the name on them: Claude keeps the ones of this place
+      if (/instagram\.com/i.test(link)) out.push(...(await instagramSlides(key)).map((url) => ({ url, from: 'post slide' })))
+      continue
+    }
     const cover = /tiktok\.com/i.test(link) ? await tiktokCover(link) : key ? await instagramCover(key) : null
     if (cover) out.push({ url: cover, from: 'post' })
   }
@@ -199,20 +203,16 @@ async function instagramCover(code: string) {
   return v ? decode(v) : null
 }
 
-/** A restaurant's photos on Tabelog: its page from the card's sources, or the first search hit that matches its name. */
-async function tabelogPhotos(c: Card, sources: string[]): Promise<Found[]> {
-  let base = sources.map((s) => s.match(/^(https:\/\/(?:[a-z]+\.)?tabelog\.com\/(?:en\/)?[a-z]+\/A\d+\/A\d+\/\d{8})/i)?.[1]).find(Boolean)
-  if (!base) {
-    const hit = await fetchText(`https://tabelog.com/en/rstLst/?sk=${encodeURIComponent(c.name.replace(/\(.*?\)/g, '').trim())}`)
-    const named = significant(c.name)
-    for (const m of hit?.html.matchAll(/<a[^>]+href="(https:\/\/tabelog\.com\/en\/[a-z]+\/A\d+\/A\d+\/\d{8})\/?"[^>]*>([^<]{2,80})<\/a>/gi) ?? []) {
-      const title = new Set(significant(m[2]))
-      if (named.length && named.every((w) => title.has(w))) {
-        base = m[1]
-        break
-      }
-    }
-  }
+/** The slides of an Instagram carousel, from the data in its public embed page. */
+async function instagramSlides(code: string) {
+  const got = await fetchText(`https://www.instagram.com/p/${code}/embed/captioned/`)
+  const urls = [...(got?.html.matchAll(/display_url\\*"\s*:\s*\\*"(https:[^"]+?)\\*"/g) ?? [])].map((m) => m[1].replace(/\\+\//g, '/').replace(/\\+u0026/g, '&'))
+  return [...new Set(urls)].slice(0, MAX_CHECKED)
+}
+
+/** A restaurant's photos on Tabelog, from its page among the card's sources (Tabelog's own search can't be read). */
+async function tabelogPhotos(_c: Card, sources: string[]): Promise<Found[]> {
+  const base = sources.map((s) => s.match(/^(https:\/\/(?:[a-z]+\.)?tabelog\.com\/(?:en\/)?[a-z]+\/A\d+\/A\d+\/\d{8})/i)?.[1]).find(Boolean)
   if (!base) return []
   // ssl. and en. copies of a page share its path; the plain Japanese address is the one that always answers
   const path = new URL(base).pathname.replace(/^\/en\//, '/').replace(/\/$/, '')
@@ -357,6 +357,8 @@ async function pick(admin: SupabaseClient, c: Card, images: Image[]): Promise<nu
       system:
         `These images were found for a place card in a trip app. Return the numbers of up to ${KEEP} images that are real photos of this place: its food or drinks, the interior, the building or street, or the view, ` +
         'best first. Leave out logos, text banners, maps, menus as plain text, screenshots, collages of many places, stock photos of something else, and images that clearly show a different place. ' +
+        'When an image has a place name written on it, keep it only if the name is this place. ' +
+        'Images "from post slide" come from one post about several places: keep such a slide only when this place\'s name (in any language or script) is written on it, never for its food or look alone. ' +
         'An empty list is fine.',
       messages: [{ role: 'user', content }],
     })

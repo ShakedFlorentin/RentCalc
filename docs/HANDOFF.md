@@ -25,6 +25,12 @@ Live: https://shakedflorentin.github.io/RentCalc/ · branch `japan-trip`, deploy
   New cards: suggest-place returns `tags` from a separate small call (v22; inside the card's schema in v21 they made
   the structured-output grammar too big, so every lookup fell back to cards without plan fields or English);
   AddPlace saves them. card-facts v6 fills them for cards that come without facts (e.g. the Ptitim map).
+- suggest-place v24: after the research, a short call lists the places, then each card is written in its own call,
+  all at once, with the search words beside them (a five-place roundup took 85 s with one call writing every card).
+  A card's sources also get the search results whose titles name it (Haiku tends to put just the post link).
+- card-photos v5: for a roundup post (the source of several cards) it sends every carousel slide, and keeps a slide
+  only when the place's name is written on it (a shared cover photo was given to three places before that rule).
+  Tabelog's own search can't be read from a server, so Tabelog photos come only from a Tabelog page in the sources.
 - suggest-place v22 also sends the post's pictures to the research call: every slide of an Instagram carousel
   (display_url in the embed page's data, up to 8) or a TikTok cover, for roundups that name places only on slides.
 

@@ -115,7 +115,9 @@ const MAX_SLIDES = 8
 
 // the search words go in a call of their own: in the card's schema they made it too big for structured output
 const TagList = z.object({ places: z.array(z.object({ tags: z.array(z.string()) })) })
-const TAGS = `For each place card below, in the same order, give 10-25 hidden search words for the app's search (never shown): what it sells, serves or makes (each signature dish, product and key ingredient), the kind of place (ramen shop, bakery, temple, market, bar, onsen), cuisine, notable things you see or do there, and the words people would type instead, singular and plural, each in BOTH lowercase English and Hebrew (e.g. "pancake", "pancakes", "hotcake", "פנקייק", "פנקייקים"; "knives", "סכינים"). Japanese dish names in their usual romanization and Hebrew spelling. 1-3 words each; not the place's name, city or area; nothing the notes don't support.`
+const Names = z.object({ places: z.array(z.string()) })
+const LIST = `List the real places in Japan that the research notes identified, in the order the post lists them (at most 10). Give each one's name as the notes give it, with the branch or area when the notes name one. Return an empty list if no specific real place was identified.`
+const TAGS = `For each place below, in the same order, give 10-25 hidden search words for the app's search (never shown): what it sells, serves or makes (each signature dish, product and key ingredient), the kind of place (ramen shop, bakery, temple, market, bar, onsen), cuisine, notable things you see or do there, and the words people would type instead, singular and plural, each in BOTH lowercase English and Hebrew (e.g. "pancake", "pancakes", "hotcake", "פנקייק", "פנקייקים"; "knives", "סכינים"). Japanese dish names in their usual romanization and Hebrew spelling. 1-3 words each; not the place's name, city or area; nothing the notes don't support.`
 
 const RESEARCH = `You help two Israeli couples plan a December trip to Japan (Tokyo, Kyoto, Osaka and day trips). One couple brings a 5-month-old baby who only drinks milk.
 A member shared a place (a social-media post, a map link, or just a name). Work out exactly which real place (or places) in Japan it is about, then research it.
@@ -395,63 +397,109 @@ async function research(admin: SupabaseClient, link: string | undefined, text: s
       .map((b) => b.text)
       .join('\n')
 
-    step = 'extract'
-    t = performance.now()
-    const extract = <T extends z.ZodType>(schema: T) =>
+    // each call times and logs itself: the cards below are written side by side
+    const timed = async <T extends Anthropic.Message>(name: string, call: () => Promise<T>) => {
+      const start = performance.now()
+      try {
+        const r = await call()
+        logCall(admin, { fn: 'suggest-place', step: name, userId, lookupId, model: MODEL, usage: r.usage, ms: performance.now() - start, stopReason: r.stop_reason })
+        return r
+      } catch (error) {
+        logCall(admin, { fn: 'suggest-place', step: name, userId, lookupId, model: MODEL, ms: performance.now() - start, error: String(error instanceof Error ? error.message : error) })
+        throw error
+      }
+    }
+    const material = `${ask}\n\nResearch notes:\n${notes}`
+    // which places the notes found, first: one call writing every card took 40 s for a five-place roundup, so each card
+    // gets a call of its own and they run at the same time, with the search words beside them
+    step = 'list'
+    const listed = await timed('list', () =>
       client.messages.parse({
         model: MODEL,
-        max_tokens: 20000,
-        output_config: { effort: 'low', format: zodOutputFormat(schema) },
-        system: EXTRACT,
-        messages: [{ role: 'user', content: `${ask}\n\nResearch notes:\n${notes}` }],
-      })
-    let card: { parsed_output: { places: (Draft & Partial<Plan> & { en?: En })[] } | null } & Anthropic.Message
-    try {
-      card = await extract(PlaceListPlanned)
-    } catch (error) {
-      // a rejected schema must not cost the card: ask again without the plan fields
-      if (!(error instanceof Anthropic.BadRequestError)) throw error
-      console.error('plan fields rejected, asking without them', error.message)
-      logCall(admin, { fn: 'suggest-place', step, userId, lookupId, model: MODEL, ms: performance.now() - t, error: 'plan fields: ' + error.message })
-      t = performance.now()
-      card = await extract(PlaceList)
+        max_tokens: 1000,
+        output_config: { effort: 'low', format: zodOutputFormat(Names) },
+        system: LIST,
+        messages: [{ role: 'user', content: material }],
+      }),
+    )
+    const names = [...new Set((listed.parsed_output?.places ?? []).map((n) => n.trim()).filter(Boolean))].slice(0, MAX_PLACES)
+    if (!names.length) {
+      console.log('places 0', notes.slice(0, 500))
+      return { places: [] }
     }
-    log(card)
-    if (!card.parsed_output) return { error: 'could not read the research', status: 422 }
+    step = 'extract'
+    const write = (name: string) => {
+      const extract = <T extends z.ZodType>(schema: T) =>
+        timed('extract', () =>
+          client.messages.parse({
+            model: MODEL,
+            max_tokens: 8000,
+            output_config: { effort: 'low', format: zodOutputFormat(schema) },
+            system: EXTRACT,
+            messages: [{ role: 'user', content: `${material}\n\nWrite the card for this one place only: ${name}` }],
+          }),
+        )
+      // a rejected schema must not cost the card: ask again without the plan fields
+      return extract(PlaceListPlanned).catch((error) => {
+        if (!(error instanceof Anthropic.BadRequestError)) throw error
+        console.error('plan fields rejected, asking without them', error.message)
+        return extract(PlaceList)
+      }) as Promise<{ parsed_output: { places: (Draft & Partial<Plan> & { en?: En })[] } | null }>
+    }
+    let failure: unknown = null
+    const [cards, tags] = await Promise.all([
+      Promise.all(
+        names.map((name) =>
+          write(name)
+            .then((r) => r.parsed_output?.places[0] ?? null)
+            .catch((error) => {
+              failure ??= error
+              console.error('card failed', name, error instanceof Error ? error.message : error)
+              return null
+            }),
+        ),
+      ),
+      timed('tags', () => searchWords(client, names, notes)).catch(() => null),
+    ])
+    // every card failed: report why, as one call failing used to
+    if (!cards.some(Boolean)) {
+      if (failure) throw failure
+      return { error: 'could not read the research', status: 422 }
+    }
     // the notes are prose, so take the sources from the search itself: cited pages first, then results
     const cited = research.content.flatMap((b) =>
       b.type === 'text' ? (b.citations ?? []).flatMap((c) => ('url' in c && c.url ? [c.url] : [])) : [],
     )
-    const found = research.content.flatMap((b) =>
-      b.type === 'web_search_tool_result' && Array.isArray(b.content) ? b.content.map((r) => r.url) : [],
+    const results = research.content.flatMap((b) =>
+      b.type === 'web_search_tool_result' && Array.isArray(b.content) ? b.content.map((r) => ({ url: r.url, title: r.title ?? '' })) : [],
     )
     // sources become links in the app, so keep real web addresses only
     const web = (urls: string[]) => urls.filter((u) => /^https?:\/\//i.test(u))
-    const fallback = web([...new Set([...cited, ...found])]).slice(0, 5)
-    const places: Record<string, unknown>[] = card.parsed_output.places.slice(0, MAX_PLACES).map((full) => {
+    const fallback = web([...new Set([...cited, ...results.map((r) => r.url)])]).slice(0, 5)
+    // the search pages about one place of a roundup: their titles carry its name (the post itself is about all of them)
+    const about = (name: string) => {
+      const named = distinctive(name)
+      const need = Math.min(2, named.length)
+      return need ? results.filter((r) => named.filter((w) => distinctive(r.title).includes(w)).length >= need).map((r) => r.url) : []
+    }
+    const lists = (tags?.parsed_output?.places ?? []).map((x) => [...new Set(x.tags.map((w) => w.trim().toLowerCase()).filter(Boolean))].slice(0, 30))
+    const places: Record<string, unknown>[] = cards.flatMap((full, i) => {
+      if (!full) return []
       const { address, opens, closes, closed_weekdays, closed_dates, open_dates, best_time, visit_mins, booking, plan_line, baby_block, en, ...p } = full
       const plan = { address, opens, closes, closed_weekdays, closed_dates, open_dates, best_time, visit_mins, booking, plan_line, baby_block }
-      return {
-        ...blanksToNull(p as Draft),
-        sources: web(p.sources).length ? web(p.sources) : fallback,
-        // the planner's columns, ready for the card (absent when the plan fields were rejected)
-        ...(plan_line !== undefined ? planColumns(plan as Plan) : {}),
-        ...(en ? { en: enColumn(en) } : {}),
-      }
+      const own = [...new Set([...web(p.sources), ...web(about(p.name))])].slice(0, 6)
+      return [
+        {
+          ...blanksToNull(p as Draft),
+          sources: own.length ? own : fallback,
+          // the planner's columns, ready for the card (absent when the plan fields were rejected)
+          ...(plan_line !== undefined ? planColumns(plan as Plan) : {}),
+          ...(en ? { en: enColumn(en) } : {}),
+          ...(lists[i]?.length ? { tags: lists[i] } : {}),
+        },
+      ]
     })
-    console.log('places', places.length, places.map((p) => p.name).join(' | ') || notes.slice(0, 500))
-    if (places.length) {
-      step = 'tags'
-      t = performance.now()
-      const tags = await searchWords(client, places).catch((error) => {
-        logCall(admin, { fn: 'suggest-place', step, userId, lookupId, model: MODEL, ms: performance.now() - t, error: String(error instanceof Error ? error.message : error) })
-        return null
-      })
-      if (tags) {
-        log(tags.message)
-        tags.lists.forEach((list, i) => places[i] && (places[i].tags = list))
-      }
-    }
+    console.log('places', places.length, places.map((p) => p.name).join(' | '))
     return { places }
   } catch (error) {
     // the reason goes to the function log: a 502 alone said nothing when the schema was rejected
@@ -465,10 +513,18 @@ async function research(admin: SupabaseClient, link: string | undefined, text: s
   }
 }
 
+// words that say what kind of place it is, not which one
+const GENERIC = new Set(
+  'the and main store shop branch honten restaurant cafe coffee bar izakaya yakiniku ramen sushi tempura temple shrine street market tokyo kyoto osaka nara kobe japan'.split(' '),
+)
+/** The words of a name that tell this place from others. */
+const distinctive = (s: string) =>
+  s.toLowerCase().normalize('NFKD').replace(/[^\p{L}\p{N}]+/gu, ' ').split(' ').filter((w) => w.length > 2 && !GENERIC.has(w))
+
 /** The post's pictures as image blocks for Claude: JPEG, PNG or WebP under 5 MB; the others are left out. */
 async function pictures(urls: string[]): Promise<Anthropic.ImageBlockParam[]> {
   const got = await Promise.all(
-    urls.map(async (u) => {
+    urls.map(async (u): Promise<Anthropic.ImageBlockParam | null> => {
       try {
         const r = await fetch(u, { signal: AbortSignal.timeout(8000) })
         const type = (r.headers.get('content-type') ?? '').split(';')[0].trim()
@@ -477,7 +533,7 @@ async function pictures(urls: string[]): Promise<Anthropic.ImageBlockParam[]> {
         if (bytes.length > 4_500_000) return null
         let bin = ''
         for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
-        return { type: 'image' as const, source: { type: 'base64' as const, media_type: type as 'image/jpeg', data: btoa(bin) } }
+        return { type: 'image', source: { type: 'base64', media_type: type as 'image/jpeg' | 'image/png' | 'image/webp', data: btoa(bin) } }
       } catch {
         return null
       }
@@ -486,19 +542,13 @@ async function pictures(urls: string[]): Promise<Anthropic.ImageBlockParam[]> {
   return got.filter((x): x is Anthropic.ImageBlockParam => !!x)
 }
 
-/** Hidden search words for each card (what it sells, what kind of place, synonyms in Hebrew and English). */
-async function searchWords(client: Anthropic, places: Record<string, unknown>[]) {
-  const cards = places.map((p, i) => {
-    const fields = ['name', 'category', 'serves', 'dishes', 'todo', 'highlights', 'special', 'hype'] as const
-    return `${i + 1}. ` + fields.map((f) => p[f] && `${f}: ${Array.isArray(p[f]) ? (p[f] as string[]).join(', ') : p[f]}`).filter(Boolean).join(' | ')
-  })
-  const message = await client.messages.parse({
+/** Hidden search words for each place the notes found (what it sells, what kind of place, synonyms in Hebrew and English). */
+function searchWords(client: Anthropic, names: string[], notes: string) {
+  return client.messages.parse({
     model: MODEL,
     max_tokens: 4000,
     output_config: { effort: 'low', format: zodOutputFormat(TagList) },
     system: TAGS,
-    messages: [{ role: 'user', content: cards.join('\n') }],
+    messages: [{ role: 'user', content: `Places:\n${names.map((n, i) => `${i + 1}. ${n}`).join('\n')}\n\nWhat the research found about them:\n${notes}` }],
   })
-  const lists = (message.parsed_output?.places ?? []).map((x) => [...new Set(x.tags.map((w) => w.trim().toLowerCase()).filter(Boolean))].slice(0, 30))
-  return { message, lists }
 }
