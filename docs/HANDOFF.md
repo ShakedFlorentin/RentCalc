@@ -3,6 +3,18 @@
 Live: https://shakedflorentin.github.io/RentCalc/ · branch `japan-trip`, deployed by fast-forwarding `main`
 (`git push origin japan-trip:main`; GitHub Pages builds on push). Supabase project `wbofjfwbdewgnwjmcpnv`.
 
+## Votes, vetoes and dated places (2026-10-29)
+- A couple's vote: one partner liking is enough unless the other said no ('split' = a veto for that couple). A
+  place goes to a couple's list once they vote yes; the planner plans it when every couple it's for has voted.
+- Discover → chip "נפסלו" lists every card someone said no to with each person's vote (green heart / red x); whoever
+  said no gets "שיניתי את דעתי" (upsert liked=true). Search shows "אמרו לא: …" on such a card and opens that list
+  with the card on top (`SearchTarget { tab:'swipe', vetoed: id }` → App `showVetoed` → SwipeGame).
+- `open_dates` (candidates / place_library): a market or event that runs on certain dates only; the planner places
+  it only on those dates. suggest-place v20 and card-facts v5 fill it. Planner v12: places within NEAR_KM=30 of the
+  hotel count on other-city days; a tight opening window costs +2; late rule stays s + min(mins,60) > closes.
+- Leftover: table `public._plan_compare` (dry-run comparison, RLS on, unused) can be dropped; the SQL tool asks
+  for confirmation on DROP, so it's still there.
+
 ## Offline (2026-10-29)
 - Reads: the last copy of every table is kept on the phone (`readCache` / `useTripTable`), so the app opens offline.
 - Writes: `src/outbox.ts` is the Supabase client's fetch. A table write (insert/upsert/update/delete through
