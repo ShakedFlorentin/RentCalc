@@ -273,16 +273,16 @@ main.tab-swipe { padding-bottom: 0; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1px;
+  gap: 2px;
   padding: 4px 0;
   border-radius: 999px;
-  font-size: 0.625rem;
-  font-weight: 500;
+  font-size: 0.6875rem;
+  font-weight: 600;
   color: var(--text);
 }
-.tabbar button.active { color: var(--accent); font-weight: 600; background: var(--fill); }
-.tab-icon { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-.tabbar button.active .tab-icon { fill: color-mix(in srgb, currentColor 18%, transparent); stroke-width: 2.1; }
+.tabbar button.active { color: var(--accent); background: var(--fill); }
+.tab-icon { width: 26px; height: 26px; fill: currentColor; fill-rule: evenodd; }
+.search-icon { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 
 .fab {
   position: fixed;
