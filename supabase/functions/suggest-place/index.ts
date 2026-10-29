@@ -43,7 +43,6 @@ const PlaceDraft = z.object({
   kosher: z.enum(['friendly', 'options', 'hard']).nullable(),
   kosher_note: z.string(),
   sources: z.array(z.string()),
-  tags: z.array(z.string()),
 })
 const TEXT_FIELDS = ['name_ja', 'area', 'hype', 'reality', 'price', 'tip', 'baby_notes', 'serves', 'todo', 'special', 'time_needed', 'kosher_note'] as const
 /** "" back to null, so the app sees the same card shape as before */
@@ -111,6 +110,12 @@ const planColumns = (p: Plan) => {
   }
 }
 const MAX_PLACES = 10
+// slides of a carousel sent along with the caption: roundups often name their places only on the pictures
+const MAX_SLIDES = 8
+
+// the search words go in a call of their own: in the card's schema they made it too big for structured output
+const TagList = z.object({ places: z.array(z.object({ tags: z.array(z.string()) })) })
+const TAGS = `For each place card below, in the same order, give 10-25 hidden search words for the app's search (never shown): what it sells, serves or makes (each signature dish, product and key ingredient), the kind of place (ramen shop, bakery, temple, market, bar, onsen), cuisine, notable things you see or do there, and the words people would type instead, singular and plural, each in BOTH lowercase English and Hebrew (e.g. "pancake", "pancakes", "hotcake", "פנקייק", "פנקייקים"; "knives", "סכינים"). Japanese dish names in their usual romanization and Hebrew spelling. 1-3 words each; not the place's name, city or area; nothing the notes don't support.`
 
 const RESEARCH = `You help two Israeli couples plan a December trip to Japan (Tokyo, Kyoto, Osaka and day trips). One couple brings a 5-month-old baby who only drinks milk.
 A member shared a place (a social-media post, a map link, or just a name). Work out exactly which real place (or places) in Japan it is about, then research it.
@@ -138,7 +143,6 @@ const EXTRACT = `Turn the research notes into place cards, one per real place th
 - tabelog_score / google_score / lat / lng: only if stated in the notes, else null.
 - audience: "baby" if it works with the baby, otherwise "adults".
 - sources: the URLs the notes relied on.
-- tags: 10-25 hidden search words for the app's search (never shown): what it sells, serves or makes (each signature dish, product and key ingredient), the kind of place (ramen shop, bakery, temple, market, bar, onsen), cuisine, notable things you see or do there, and the words people would type instead, singular and plural, each in BOTH lowercase English and Hebrew (e.g. "pancake", "pancakes", "hotcake", "פנקייק", "פנקייקים"; "knives", "סכינים"). Japanese dish names in their usual romanization and Hebrew spelling. 1-3 words each; not the place's name, city or area; nothing the notes don't support.
 - address (when asked for): the street address in English as Google Maps takes it (e.g. "4-2-15 Ginza, Chuo-ku, Tokyo"); for a street or area without one, the best place to navigate to.
 - opens / closes (when asked for): usual opening and closing time "HH:MM" (24h; a bar past midnight closes e.g. "02:00"); "" if it has no hours or unknown. closed_weekdays: weekly closing days, 0 = Sunday ... 6 = Saturday; [] if none or unknown. closed_dates: dates between 2026-12-12 and 2026-12-31 it is closed, "YYYY-MM-DD"; [] if none or unknown. open_dates: only for something that runs on certain dates only (a market, a festival, an event): the dates between 2026-12-12 and 2026-12-31 it runs, "YYYY-MM-DD"; [] for a place that is simply open on its usual days.
 - best_time: morning, midday, afternoon, evening (dinner, sunset) or night (bars, night views) when it matters, else any. visit_mins: a typical visit in minutes including the usual queue. booking: required, recommended or no.
@@ -154,23 +158,29 @@ const decode = (s: string) =>
     .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
     .replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
 
-/** Caption of the shared post, so the model knows what it is about (posts themselves need a login). */
-async function postContext(link: string) {
+type Post = { text: string; images: string[] }
+
+/**
+ * Caption of the shared post, so the model knows what it is about (posts themselves need a login), and its pictures:
+ * every slide of an Instagram carousel, or a video's cover.
+ */
+async function postContext(link: string): Promise<Post> {
+  const none = { text: '', images: [] }
   // fetch only real Instagram/TikTok pages, never an address the link merely mentions
   let url: URL
   try {
     url = new URL(link)
   } catch {
-    return ''
+    return none
   }
   const host = url.hostname.toLowerCase().replace(/^www\./, '')
-  if (url.protocol !== 'https:') return ''
+  if (url.protocol !== 'https:') return none
   try {
     if (host === 'tiktok.com' || host === 'vm.tiktok.com') {
       const r = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(link)}`, { signal: AbortSignal.timeout(8000) })
       if (r.ok) {
         const o = await r.json()
-        return `TikTok post by @${o.author_unique_id ?? o.author_name}: ${o.title ?? ''}`
+        return { text: `TikTok post by @${o.author_unique_id ?? o.author_name}: ${o.title ?? ''}`, images: o.thumbnail_url ? [o.thumbnail_url] : [] }
       }
     }
     if (host === 'instagram.com') {
@@ -181,6 +191,7 @@ async function postContext(link: string) {
         ...(code ? [`https://www.instagram.com/p/${code}/embed/captioned/`] : []),
       ]
       const parts: string[] = []
+      const images: string[] = []
       for (const page of pages) {
         const r = await fetch(page, { headers: { 'User-Agent': 'facebookexternalhit/1.1' }, signal: AbortSignal.timeout(8000) }).catch(
           () => null,
@@ -194,14 +205,18 @@ async function postContext(link: string) {
         }
         const cap = html.match(/class="Caption"[^>]*>([\s\S]*?)<div class="CaptionComments/i)?.[1]
         if (cap) parts.push(decode(cap.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, ' ')))
+        // the embed page's data lists every slide (display_url, inside an escaped JSON string)
+        for (const m of html.matchAll(/display_url\\*"\s*:\s*\\*"(https:[^"]+?)\\*"/g)) {
+          images.push(m[1].replace(/\\+\//g, '/').replace(/\\+u0026/g, '&'))
+        }
       }
       const text = [...new Set(parts.map((x) => x.trim()).filter(Boolean))].join(' — ').slice(0, 4000)
-      if (text) return `Instagram post: ${text}`
+      return { text: text ? `Instagram post: ${text}` : '', images: [...new Set(images)].slice(0, MAX_SLIDES) }
     }
   } catch {
     // fall back to the link alone
   }
-  return ''
+  return none
 }
 
 /** The Claude key: a function secret if one is set, otherwise the copy kept in Supabase Vault. */
@@ -338,9 +353,18 @@ Deno.serve(async (req) => {
 async function research(admin: SupabaseClient, link: string | undefined, text: string | undefined, userId: string, lookupId: string): Promise<
   { places: Record<string, unknown>[] } | { error: string; status: number }
 > {
-  const caption = link ? await postContext(link) : ''
-  console.log('caption', caption.length, caption.slice(0, 300))
-  const ask = [link && `Link: ${link}`, caption, text && `Note from the member: ${text}`].filter(Boolean).join('\n')
+  const post = link ? await postContext(link) : { text: '', images: [] }
+  const caption = post.text
+  const slides = await pictures(post.images)
+  console.log('caption', caption.length, 'slides', slides.length, caption.slice(0, 300))
+  const ask = [
+    link && `Link: ${link}`,
+    caption,
+    slides.length && `The post's ${slides.length} picture(s) follow: place names, addresses or signs on them identify the places.`,
+    text && `Note from the member: ${text}`,
+  ]
+    .filter(Boolean)
+    .join('\n')
 
   const client = new Anthropic({ apiKey: await anthropicKey(admin) })
   // each Claude call goes to ai_calls with its tokens, searches, cost and time
@@ -349,7 +373,7 @@ async function research(admin: SupabaseClient, link: string | undefined, text: s
   const log = (r: Anthropic.Message) =>
     logCall(admin, { fn: 'suggest-place', step, userId, lookupId, model: MODEL, usage: r.usage, ms: performance.now() - t, stopReason: r.stop_reason })
   try {
-    const messages: Anthropic.MessageParam[] = [{ role: 'user', content: ask }]
+    const messages: Anthropic.MessageParam[] = [{ role: 'user', content: [{ type: 'text', text: ask }, ...slides] }]
     let research: Anthropic.Message | null = null
     for (let i = 0; i < 4; i++) {
       t = performance.now()
@@ -404,19 +428,30 @@ async function research(admin: SupabaseClient, link: string | undefined, text: s
     // sources become links in the app, so keep real web addresses only
     const web = (urls: string[]) => urls.filter((u) => /^https?:\/\//i.test(u))
     const fallback = web([...new Set([...cited, ...found])]).slice(0, 5)
-    const places = card.parsed_output.places.slice(0, MAX_PLACES).map((full) => {
+    const places: Record<string, unknown>[] = card.parsed_output.places.slice(0, MAX_PLACES).map((full) => {
       const { address, opens, closes, closed_weekdays, closed_dates, open_dates, best_time, visit_mins, booking, plan_line, baby_block, en, ...p } = full
       const plan = { address, opens, closes, closed_weekdays, closed_dates, open_dates, best_time, visit_mins, booking, plan_line, baby_block }
       return {
         ...blanksToNull(p as Draft),
         sources: web(p.sources).length ? web(p.sources) : fallback,
-        tags: [...new Set((p.tags ?? []).map((w) => w.trim().toLowerCase()).filter(Boolean))].slice(0, 30),
         // the planner's columns, ready for the card (absent when the plan fields were rejected)
         ...(plan_line !== undefined ? planColumns(plan as Plan) : {}),
         ...(en ? { en: enColumn(en) } : {}),
       }
     })
     console.log('places', places.length, places.map((p) => p.name).join(' | ') || notes.slice(0, 500))
+    if (places.length) {
+      step = 'tags'
+      t = performance.now()
+      const tags = await searchWords(client, places).catch((error) => {
+        logCall(admin, { fn: 'suggest-place', step, userId, lookupId, model: MODEL, ms: performance.now() - t, error: String(error instanceof Error ? error.message : error) })
+        return null
+      })
+      if (tags) {
+        log(tags.message)
+        tags.lists.forEach((list, i) => places[i] && (places[i].tags = list))
+      }
+    }
     return { places }
   } catch (error) {
     // the reason goes to the function log: a 502 alone said nothing when the schema was rejected
@@ -428,4 +463,42 @@ async function research(admin: SupabaseClient, link: string | undefined, text: s
     console.error('lookup failed', error)
     return { error: 'lookup failed', status: 500 }
   }
+}
+
+/** The post's pictures as image blocks for Claude: JPEG, PNG or WebP under 5 MB; the others are left out. */
+async function pictures(urls: string[]): Promise<Anthropic.ImageBlockParam[]> {
+  const got = await Promise.all(
+    urls.map(async (u) => {
+      try {
+        const r = await fetch(u, { signal: AbortSignal.timeout(8000) })
+        const type = (r.headers.get('content-type') ?? '').split(';')[0].trim()
+        if (!r.ok || !['image/jpeg', 'image/png', 'image/webp'].includes(type)) return null
+        const bytes = new Uint8Array(await r.arrayBuffer())
+        if (bytes.length > 4_500_000) return null
+        let bin = ''
+        for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
+        return { type: 'image' as const, source: { type: 'base64' as const, media_type: type as 'image/jpeg', data: btoa(bin) } }
+      } catch {
+        return null
+      }
+    }),
+  )
+  return got.filter((x): x is Anthropic.ImageBlockParam => !!x)
+}
+
+/** Hidden search words for each card (what it sells, what kind of place, synonyms in Hebrew and English). */
+async function searchWords(client: Anthropic, places: Record<string, unknown>[]) {
+  const cards = places.map((p, i) => {
+    const fields = ['name', 'category', 'serves', 'dishes', 'todo', 'highlights', 'special', 'hype'] as const
+    return `${i + 1}. ` + fields.map((f) => p[f] && `${f}: ${Array.isArray(p[f]) ? (p[f] as string[]).join(', ') : p[f]}`).filter(Boolean).join(' | ')
+  })
+  const message = await client.messages.parse({
+    model: MODEL,
+    max_tokens: 4000,
+    output_config: { effort: 'low', format: zodOutputFormat(TagList) },
+    system: TAGS,
+    messages: [{ role: 'user', content: cards.join('\n') }],
+  })
+  const lists = (message.parsed_output?.places ?? []).map((x) => [...new Set(x.tags.map((w) => w.trim().toLowerCase()).filter(Boolean))].slice(0, 30))
+  return { message, lists }
 }

@@ -22,8 +22,11 @@ Live: https://shakedflorentin.github.io/RentCalc/ · branch `japan-trip`, deploy
   and English). Never shown; Search matches them for the card, its place and its plan items. English terms match at
   the start of a word, Hebrew anywhere (prefix letters). sync_library copies them to trips.
 - The 258 existing cards were tagged by 5 subscription agents (`data/card-tags-2026-10.json`, loaded with http_get).
-  New cards: suggest-place v21 returns `tags` (AddPlace saves them); card-facts v6 fills them for cards that come
-  without facts (e.g. the Ptitim map).
+  New cards: suggest-place returns `tags` from a separate small call (v22; inside the card's schema in v21 they made
+  the structured-output grammar too big, so every lookup fell back to cards without plan fields or English);
+  AddPlace saves them. card-facts v6 fills them for cards that come without facts (e.g. the Ptitim map).
+- suggest-place v22 also sends the post's pictures to the research call: every slide of an Instagram carousel
+  (display_url in the embed page's data, up to 8) or a TikTok cover, for roundups that name places only on slides.
 
 ## Votes, vetoes and dated places (2026-10-29)
 - A couple's vote: one partner liking is enough unless the other said no ('split' = a veto for that couple). A
