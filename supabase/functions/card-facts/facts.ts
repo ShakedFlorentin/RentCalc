@@ -1,5 +1,5 @@
 // What the planner needs to know about a place that the swipe card doesn't say: opening hours, closed days around the
-// trip, how long a visit takes, and one short practical line in Hebrew (and the same in English). Looked up once per card with Claude and a
+// trip, how long a visit takes, one short practical line in Hebrew (and the same in English) and hidden search words. Looked up once per card with Claude and a
 // few web searches; card-facts writes it onto the card's plan columns.
 import Anthropic from 'npm:@anthropic-ai/sdk@1.1.0'
 import { zodOutputFormat } from 'npm:@anthropic-ai/sdk@1.1.0/helpers/zod'
@@ -25,6 +25,7 @@ const FactsSchema = z.object({
   booking: z.enum(['required', 'recommended', 'no']),
   lat: z.number().nullable(),
   lng: z.number().nullable(),
+  tags: z.array(z.string()),
 })
 export type Facts = {
   key: string
@@ -44,6 +45,7 @@ export type Facts = {
   booking: string
   lat: number | null
   lng: number | null
+  tags: string[]
 }
 
 export type PlaceInfo = {
@@ -87,7 +89,8 @@ const EXTRACT = `Turn the notes into the fields below.
 - best_time: when to go if it matters (morning before crowds, midday for lunch, afternoon, evening for dinner or sunset, night for bars and night views); "any" otherwise.
 - hours: typical visit length in hours including the usual queue (e.g. 1, 1.5, 3, 8 for a full day trip).
 - booking: "required", "recommended" or "no".
-- lat / lng: only if stated in the notes, else null.`
+- lat / lng: only if stated in the notes, else null.
+- tags: 10-25 hidden search words for the app's search (never shown): what it sells, serves or makes (each signature dish, product and key ingredient), the kind of place (ramen shop, bakery, temple, market, bar, onsen), cuisine, notable things you see or do there, and the words people would type instead, singular and plural, each in BOTH lowercase English and Hebrew (e.g. "pancake", "pancakes", "hotcake", "פנקייק", "פנקייקים"; "knives", "סכינים"). Japanese dish names in their usual romanization and Hebrew spelling. 1-3 words each; not the place's name, city or area; nothing the notes don't support.`
 
 /** Looks a place up; null when the lookup failed. */
 export async function lookUp(admin: SupabaseClient, client: Anthropic, p: PlaceInfo): Promise<Facts | null> {
@@ -162,6 +165,7 @@ export async function lookUp(admin: SupabaseClient, client: Anthropic, p: PlaceI
       booking: f.booking,
       lat: inJapan ? f.lat : null,
       lng: inJapan ? f.lng : null,
+      tags: [...new Set(f.tags.map((w) => w.trim().toLowerCase()).filter(Boolean))].slice(0, 30),
     }
   } catch (error) {
     console.error('facts lookup failed', p.name, error instanceof Error ? error.message : error)

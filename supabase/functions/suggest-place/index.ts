@@ -43,6 +43,7 @@ const PlaceDraft = z.object({
   kosher: z.enum(['friendly', 'options', 'hard']).nullable(),
   kosher_note: z.string(),
   sources: z.array(z.string()),
+  tags: z.array(z.string()),
 })
 const TEXT_FIELDS = ['name_ja', 'area', 'hype', 'reality', 'price', 'tip', 'baby_notes', 'serves', 'todo', 'special', 'time_needed', 'kosher_note'] as const
 /** "" back to null, so the app sees the same card shape as before */
@@ -137,6 +138,7 @@ const EXTRACT = `Turn the research notes into place cards, one per real place th
 - tabelog_score / google_score / lat / lng: only if stated in the notes, else null.
 - audience: "baby" if it works with the baby, otherwise "adults".
 - sources: the URLs the notes relied on.
+- tags: 10-25 hidden search words for the app's search (never shown): what it sells, serves or makes (each signature dish, product and key ingredient), the kind of place (ramen shop, bakery, temple, market, bar, onsen), cuisine, notable things you see or do there, and the words people would type instead, singular and plural, each in BOTH lowercase English and Hebrew (e.g. "pancake", "pancakes", "hotcake", "פנקייק", "פנקייקים"; "knives", "סכינים"). Japanese dish names in their usual romanization and Hebrew spelling. 1-3 words each; not the place's name, city or area; nothing the notes don't support.
 - address (when asked for): the street address in English as Google Maps takes it (e.g. "4-2-15 Ginza, Chuo-ku, Tokyo"); for a street or area without one, the best place to navigate to.
 - opens / closes (when asked for): usual opening and closing time "HH:MM" (24h; a bar past midnight closes e.g. "02:00"); "" if it has no hours or unknown. closed_weekdays: weekly closing days, 0 = Sunday ... 6 = Saturday; [] if none or unknown. closed_dates: dates between 2026-12-12 and 2026-12-31 it is closed, "YYYY-MM-DD"; [] if none or unknown. open_dates: only for something that runs on certain dates only (a market, a festival, an event): the dates between 2026-12-12 and 2026-12-31 it runs, "YYYY-MM-DD"; [] for a place that is simply open on its usual days.
 - best_time: morning, midday, afternoon, evening (dinner, sunset) or night (bars, night views) when it matters, else any. visit_mins: a typical visit in minutes including the usual queue. booking: required, recommended or no.
@@ -408,6 +410,7 @@ async function research(admin: SupabaseClient, link: string | undefined, text: s
       return {
         ...blanksToNull(p as Draft),
         sources: web(p.sources).length ? web(p.sources) : fallback,
+        tags: [...new Set((p.tags ?? []).map((w) => w.trim().toLowerCase()).filter(Boolean))].slice(0, 30),
         // the planner's columns, ready for the card (absent when the plan fields were rejected)
         ...(plan_line !== undefined ? planColumns(plan as Plan) : {}),
         ...(en ? { en: enColumn(en) } : {}),

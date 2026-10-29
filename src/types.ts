@@ -254,6 +254,8 @@ export type CardText = Partial<{
 export type PlanFacts = {
   /** the street address people navigate to (coordinates stay in the backend, for distances) */
   address?: string | null
+  /** search words, never shown: what it sells, what kind of place, synonyms in Hebrew and English */
+  tags?: string[] | null
   opens?: string | null
   closes?: string | null
   closed_weekdays?: number[] | null

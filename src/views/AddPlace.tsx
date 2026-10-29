@@ -248,6 +248,7 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
             : {}),
           // the same card in English, for whoever uses the app in English
           ...(d.en ? { en: d.en } : {}),
+          ...(d.tags?.length ? { tags: d.tags } : {}),
         })
         .select('id')
         .single()

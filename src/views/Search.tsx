@@ -60,17 +60,20 @@ export default function Search({
     const wordStart = new RegExp('(^|[^\\p{L}\\p{N}])' + term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'u')
     const has = (...fields: (string | null | undefined)[]) =>
       fields.some((f) => (latin ? wordStart.test(norm(f)) : norm(f).includes(term)))
+    // a place and its plan items are found by their card's search words too (what it sells, synonyms)
+    const tagsOf = new Map(cards.map((c) => [c.id, c.tags ?? []]))
+    const placeTags = new Map(places.map((p) => [p.id, (p.candidate_id && tagsOf.get(p.candidate_id)) || []]))
     const out: { label: string; hits: Hit[] }[] = [
       {
         label: t('מקומות'),
         hits: places
-          .filter((p) => has(p.name, p.city, cityLabel(p.city), p.area, p.notes))
+          .filter((p) => has(p.name, p.city, cityLabel(p.city), p.area, p.notes, ...(placeTags.get(p.id) ?? [])))
           .map((p) => ({ key: 'p' + p.id, title: p.name, sub: [cityLabel(p.city), p.area].filter(Boolean).join(' · '), icon: MapPin, to: { tab: 'places' } })),
       },
       {
         label: t('גילוי'),
         hits: cards
-          .filter((c) => has(c.name, c.name_ja, c.area, CITY_HE[c.city] ?? c.city, cityLabel(CITY_HE[c.city] ?? c.city), c.serves, c.todo, ...(c.dishes ?? [])))
+          .filter((c) => has(c.name, c.name_ja, c.area, CITY_HE[c.city] ?? c.city, cityLabel(CITY_HE[c.city] ?? c.city), c.serves, c.todo, ...(c.dishes ?? []), ...(c.tags ?? [])))
           .map((c) => {
             // a card someone said no to says who; any card opens on its own, with the votes
             const no = swipes
@@ -101,7 +104,7 @@ export default function Search({
       {
         label: t('מסלול'),
         hits: items
-          .filter((i) => has(i.title, i.location, i.notes))
+          .filter((i) => has(i.title, i.location, i.notes, ...((i.place_id && placeTags.get(i.place_id)) || [])))
           .map((i) => ({ key: 'i' + i.id, title: i.title, sub: `${fmtDay(dayDate(start, i.day)) || t('יום {day}', { day: i.day })}${i.time ? ` · ${i.time.slice(0, 5)}` : ''}`, icon: CalendarDays, to: { tab: 'plan', day: i.day } })),
       },
       {
