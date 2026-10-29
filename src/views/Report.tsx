@@ -23,7 +23,11 @@ export default function ReportSheet(props: { trip: Trip; me: string; from: strin
   const [body, setBody] = useState('')
   const [busy, setBusy] = useState(false)
   const [sent, setSent] = useState(false)
-  const reports = [...rows].sort((a, b) => b.created_at.localeCompare(a.created_at))
+  const [showDone, setShowDone] = useState(false)
+  const sorted = [...rows].sort((a, b) => b.created_at.localeCompare(a.created_at))
+  // what's fixed (or won't be) is out of the way; its reply is still there behind one tap
+  const open = sorted.filter((r) => r.status === 'open')
+  const done = sorted.filter((r) => r.status !== 'open')
 
   const send = async () => {
     const text = body.trim()
@@ -68,35 +72,47 @@ export default function ReportSheet(props: { trip: Trip; me: string; from: strin
       </p>
       {sent && (
         <p className="report-sent" role="status">
-          <Icon as={Check} /> {t('נשלח, תודה. כשזה יטופל, התשובה תופיע כאן.')}
+          <Icon as={Check} /> {t('נשלח, תודה. כשזה יטופל, התשובה תופיע תחת "טופלו".')}
         </p>
       )}
       <button className="primary" onClick={send} disabled={busy || !body.trim()}>
         <Icon as={Send} /> {busy ? t('שולח…') : t('שליחה')}
       </button>
 
-      {reports.length > 0 && (
+      {open.length > 0 && (
         <section className="info-sec report-list">
-          <h3>{t('דיווחים קודמים')}</h3>
-          {reports.map((r) => (
-            <div key={r.id} className="card report">
-              <div className="row spread nowrap">
-                <span className="muted small">
-                  <bdi>{r.reporter ?? t('מישהו')}</bdi> · {fmtDay(new Date(r.created_at))}
-                  {r.screen && <> · <bdi>{r.screen}</bdi></>}
-                </span>
-                <span className={'report-status ' + STATUS[r.status].cls}>{STATUS[r.status].label}</span>
-              </div>
-              <p className="report-body" dir="auto">{r.body}</p>
-              {r.reply && (
-                <p className="report-reply" dir="auto">
-                  {r.reply}
-                </p>
-              )}
-            </div>
-          ))}
+          <h3>{t('ממתינים לתיקון')}</h3>
+          {open.map(card)}
+        </section>
+      )}
+      {done.length > 0 && (
+        <section className="info-sec report-list">
+          <button className="link" aria-expanded={showDone} onClick={() => setShowDone(!showDone)}>
+            {showDone ? t('הסתרת מה שטופל') : t('טופלו ({n})', { n: done.length })}
+          </button>
+          {showDone && done.map(card)}
         </section>
       )}
     </Sheet>
+  )
+}
+
+function card(r: Report) {
+  return (
+    <div key={r.id} className="card report">
+      <div className="row spread nowrap">
+        <span className="muted small">
+          <bdi>{r.reporter ?? t('מישהו')}</bdi> · {fmtDay(new Date(r.created_at))}
+          {r.screen && <> · <bdi>{r.screen}</bdi></>}
+        </span>
+        <span className={'report-status ' + STATUS[r.status].cls}>{STATUS[r.status].label}</span>
+      </div>
+      <p className="report-body" dir="auto">{r.body}</p>
+      {r.reply && (
+        <p className="report-reply" dir="auto">
+          {r.reply}
+        </p>
+      )}
+    </div>
   )
 }

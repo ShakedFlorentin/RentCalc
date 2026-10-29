@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import { t } from './i18n'
 import type { Member, Trip } from './types'
@@ -124,8 +124,9 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
   // the screen the avatar was tapped on, for a problem report sent from the settings
   const [settingsFrom, setSettingsFrom] = useState(t('בית'))
   const [searching, setSearching] = useState(false)
-  // search asked Discover to open its turned-down places on a card
-  const [showVetoed, setShowVetoed] = useState<{ id: string; n: number } | null>(null)
+  // a card picked in search, for Discover to open
+  const [showCard, setShowCard] = useState<string | null>(null)
+  const cardShown = useCallback(() => setShowCard(null), [])
   const [day, setDay] = useState(1)
   const [moreSub, setMoreSub] = useRemembered('moreTab', 'money') as [MoreTab, (s: MoreTab) => void]
   const [failed, setFailed] = useState(false)
@@ -188,7 +189,7 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
     if (to.tab === 'plan') openDay(to.day)
     else if (to.tab === 'lists') openMore('lists')
     else setTab(to.tab)
-    if (to.tab === 'swipe' && to.vetoed) setShowVetoed((v) => ({ id: to.vetoed!, n: (v?.n ?? 0) + 1 }))
+    if (to.tab === 'swipe' && to.card) setShowCard(to.card)
   }
 
   return (
@@ -225,7 +226,7 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
             settingsFrom={settingsFrom}
           />
         )}
-        {tab === 'swipe' && <SwipeGame trip={trip} userId={props.userId} members={members} showVetoed={showVetoed} />}
+        {tab === 'swipe' && <SwipeGame trip={trip} userId={props.userId} members={members} showCard={showCard} onCardShown={cardShown} />}
         {tab === 'plan' && <Itinerary trip={trip} day={day} setDay={setDay} members={members} userId={props.userId} />}
         {tab === 'bookings' && <Bookings trip={trip} members={members} userId={props.userId} />}
         {tab === 'places' && <Places trip={trip} me={me} userId={props.userId} members={members} />}

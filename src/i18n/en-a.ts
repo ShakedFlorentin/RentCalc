@@ -204,10 +204,12 @@ export const EN_A: Record<string, string> = {
   'למשל: בהזמנות, הטיסה של יום ה׳ בשעה לא נכונה': 'For example: in Bookings, Thursday\'s flight time is wrong',
   'עם הדיווח נשמרים גם המסך ({screen}), גרסת האפליקציה וסוג הטלפון, כדי שיהיה קל לתקן.':
     'The screen ({screen}), app version and phone type are saved with your report, to make it easier to fix.',
-  'נשלח, תודה. כשזה יטופל, התשובה תופיע כאן.': 'Sent, thanks. When it\'s handled, the reply will show here.',
+  'נשלח, תודה. כשזה יטופל, התשובה תופיע תחת "טופלו".': 'Sent, thanks. When it\'s handled, the reply will show under "Handled".',
+  'ממתינים לתיקון': 'Waiting for a fix',
+  'טופלו ({n})': 'Handled ({n})',
+  'הסתרת מה שטופל': 'Hide handled',
   'שולח…': 'Sending…',
   'שליחה': 'Send',
-  'דיווחים קודמים': 'Earlier reports',
   'מישהו': 'Someone',
 
   // Search

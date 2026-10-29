@@ -23,11 +23,12 @@ type Props = {
   trip: Trip
   userId: string
   members: Member[]
-  /** opens the list of turned-down places (from search), with this card on top; `n` changes on every request */
-  showVetoed?: { id: string; n: number } | null
+  /** a card picked in search: opened on its own, with everyone's votes */
+  showCard?: string | null
+  onCardShown?: () => void
 }
 
-export default function SwipeGame({ trip, userId, members, showVetoed }: Props) {
+export default function SwipeGame({ trip, userId, members, showCard, onCardShown }: Props) {
   const { rows: rawCandidates, loading } = useTripTable<Candidate>('candidates', trip.id)
   const media = useMediaIndex()
   const candidates = useMemo(() => rawCandidates.map((c) => withMedia(c, media)), [rawCandidates, media])
@@ -98,6 +99,7 @@ export default function SwipeGame({ trip, userId, members, showVetoed }: Props) 
   const myCouple = members.find((m) => m.user_id === userId)?.couple ?? null
   // a place only the other couple will be near (their hotel city) isn't ours to vote on
   const forMe = (c: Candidate) => !myCouple || !forWhom || (forWhom.get(c.id)?.couples ?? [myCouple]).includes(myCouple)
+  const myVote = (c: Candidate) => swipes.find((s) => s.candidate_id === c.id && s.user_id === userId)?.liked
   // the other couple already said yes: it waits on us, so it comes first
   const othersLiked = (c: Candidate) => (forWhom?.get(c.id)?.liked ?? []).filter((x) => x !== myCouple)
   const cities = Object.keys(CITY_HE).filter((c) => candidates.some((x) => x.city === c))
@@ -144,21 +146,23 @@ export default function SwipeGame({ trip, userId, members, showVetoed }: Props) 
   const [adding, setAdding] = useState(false)
   // places someone said no to: a split vote keeps a place off that couple's list, so it is worth finding again
   const [vetoOpen, setVetoOpen] = useState(false)
-  const [vetoTop, setVetoTop] = useState<string | null>(null)
+  const [focus, setFocus] = useState<string | null>(null)
   useEffect(() => {
-    if (!showVetoed) return
-    setVetoTop(showVetoed.id)
-    setVetoOpen(true)
-  }, [showVetoed])
+    if (!showCard) return
+    setFocus(showCard)
+    onCardShown?.()
+  }, [showCard, onCardShown])
+  const focused = focus ? candidates.find((c) => c.id === focus) : undefined
   const vetoed = useMemo(() => {
     const no = new Set(swipes.filter((s) => !s.liked).map((s) => s.candidate_id))
     const split = (c: Candidate) => swipes.some((s) => s.candidate_id === c.id && s.liked)
     return candidates
       .filter((c) => no.has(c.id))
-      .sort((a, b) => Number(b.id === vetoTop) - Number(a.id === vetoTop) || Number(split(b)) - Number(split(a)) || a.name.localeCompare(b.name))
-  }, [candidates, swipes, vetoTop])
-  const changeMind = async (c: Candidate) => {
-    if (await mutate(supabase.from('swipes').upsert({ trip_id: trip.id, candidate_id: c.id, user_id: userId, liked: true }))) reloadSwipes()
+      .sort((a, b) => Number(split(b)) - Number(split(a)) || a.name.localeCompare(b.name))
+  }, [candidates, swipes])
+  // a vote from a list or a card opened from search: not part of the deck's undo
+  const vote = async (c: Candidate, liked: boolean) => {
+    if (await mutate(supabase.from('swipes').upsert({ trip_id: trip.id, candidate_id: c.id, user_id: userId, liked }))) reloadSwipes()
   }
   const me = members.find((m) => m.user_id === userId)?.display_name ?? ''
 
@@ -190,7 +194,7 @@ export default function SwipeGame({ trip, userId, members, showVetoed }: Props) 
           {t('הכל')}
         </button>
         {vetoed.length > 0 && (
-          <button className="chip" onClick={() => (setVetoTop(null), setVetoOpen(true))}>
+          <button className="chip" onClick={() => setVetoOpen(true)}>
             <Icon as={Ban} /> {t('נפסלו')} <bdi className="muted">{vetoed.length}</bdi>
           </button>
         )}
@@ -215,28 +219,18 @@ export default function SwipeGame({ trip, userId, members, showVetoed }: Props) 
           {!vetoed.length && <p className="empty">{t('אף אחד לא פסל מקום')}</p>}
           <div className="card list-card">
             {vetoed.map((c) => {
-              const votes = members.flatMap((m) => {
-                const s = swipes.find((x) => x.candidate_id === c.id && x.user_id === m.user_id)
-                return s ? [{ m, liked: s.liked }] : []
-              })
-              const mineNo = votes.some((v) => v.m.user_id === userId && !v.liked)
+              const mineNo = swipes.some((x) => x.candidate_id === c.id && x.user_id === userId && !x.liked)
               return (
-                <div key={c.id} className={'veto-row' + (c.id === vetoTop ? ' focus' : '')}>
-                  <div className="veto-text">
+                <div key={c.id} className="veto-row">
+                  <button className="veto-text" onClick={() => setFocus(c.id)}>
                     <b dir="auto">{c.name}</b>
                     <span className="muted small">
                       {[cityLabel(CITY_HE[c.city] ?? c.city), c.area].filter(Boolean).join(' · ')}
                     </span>
-                    <div className="veto-votes">
-                      {votes.map((v) => (
-                        <span key={v.m.user_id} className={'verdict ' + (v.liked ? 'good' : 'bad')}>
-                          <Icon as={v.liked ? Heart : X} /> {t(v.m.display_name)}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
+                    <Votes c={c} swipes={swipes} members={members} />
+                  </button>
                   {mineNo && (
-                    <button className="pill soft" onClick={() => changeMind(c)}>
+                    <button className="pill soft" onClick={() => vote(c, true)}>
                       {t('שיניתי את דעתי')}
                     </button>
                   )}
@@ -244,6 +238,38 @@ export default function SwipeGame({ trip, userId, members, showVetoed }: Props) 
               )
             })}
           </div>
+        </Sheet>
+      )}
+
+      {focused && (
+        <Sheet title={focused.name} onClose={() => setFocus(null)}>
+          <div className="card-full">
+            <div className="muted small">
+              {[cityLabel(CITY_HE[focused.city] ?? focused.city), focused.area].filter(Boolean).join(' · ')}
+            </div>
+            <FocusVotes c={focused} swipes={swipes} members={members} userId={userId} />
+            <CardFull c={focused} />
+          </div>
+          {forMe(focused) && (
+            <div className="sheet-decide">
+              <button
+                className={'round nope' + (myVote(focused) === false ? ' chosen' : '')}
+                onClick={() => vote(focused, false)}
+                aria-pressed={myVote(focused) === false}
+                aria-label={t('דלג')}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+              </button>
+              <button
+                className={'round like' + (myVote(focused) === true ? ' chosen' : '')}
+                onClick={() => vote(focused, true)}
+                aria-pressed={myVote(focused) === true}
+                aria-label={t('אהבתי')}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path className="fill" d="M12 20.5s-7.5-4.6-9.2-9.4C1.6 7.7 4 4.5 7.2 4.5c1.9 0 3.4 1 4.8 2.8 1.4-1.8 2.9-2.8 4.8-2.8 3.2 0 5.6 3.2 4.4 6.6-1.7 4.8-9.2 9.4-9.2 9.4z" /></svg>
+              </button>
+            </div>
+          )}
         </Sheet>
       )}
 
@@ -588,84 +614,7 @@ function Card({ c, top, likedBy, onSwipe }: { c: Candidate; top: boolean; likedB
         createPortal(
           <Sheet title={c.name} onClose={() => setMore(false)}>
             <div className="card-full">
-              <Tags c={c} />
-              {c.serves && (
-                <div className="fact">
-                  <Label icon={Utensils}>{t('מה מגישים')}</Label>
-                  <p dir="auto">{keepRanges(c.serves)}</p>
-                  {!!c.dishes?.length && (
-                    <div className="dishes">
-                      {c.dishes.map((d) => (
-                        <span key={d} className="pill" dir="auto">
-                          {d}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-              {c.kosher_note && (
-                <div className="fact">
-                  <Label icon={UtensilsCrossed}>{t('כשרות (בלי חזיר ופירות ים)')}</Label>
-                  <p dir="auto">{keepRanges(c.kosher_note)}</p>
-                </div>
-              )}
-              {c.todo && (
-                <div className="fact">
-                  {c.serves ? <Label icon={ReceiptText}>{t('איך זה עובד')}</Label> : <Label icon={Target}>{t('מה עושים שם')}</Label>}
-                  <p dir="auto">{keepRanges(c.todo)}</p>
-                  {c.time_needed && <p className="muted small"><Icon as={Timer} /> {c.time_needed}</p>}
-                </div>
-              )}
-              {c.special && (
-                <div className="fact">
-                  <Label icon={Sparkles}>{t('מה מיוחד')}</Label>
-                  <p dir="auto">{keepRanges(c.special)}</p>
-                  {!!c.highlights?.length && (
-                    <div className="dishes">
-                      {c.highlights.map((h) => (
-                        <span key={h} className="pill" dir="auto">
-                          {h}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-              {c.hype && (
-                <div className="fact">
-                  <Label icon={MessageSquare}>{t('ברשתות')}</Label>
-                  <p dir="auto">{keepRanges(c.hype)}</p>
-                </div>
-              )}
-              {c.reality && (
-                <div className="fact">
-                  <Label icon={Search}>{t('בביקורות')}</Label>
-                  <p dir="auto">{keepRanges(c.reality)}</p>
-                </div>
-              )}
-              {c.baby_notes && (
-                <div className="fact">
-                  {c.audience === 'adults' ? <Label icon={Wine}>{t('למה בלי התינוק')}</Label> : <Label icon={Baby}>{t('עם תינוק')}</Label>}
-                  <p dir="auto">{keepRanges(c.baby_notes)}</p>
-                </div>
-              )}
-              {c.tip && (
-                <div className="fact">
-                  <Label icon={Lightbulb}>{t('טיפ')}</Label>
-                  <p dir="auto">{keepRanges(c.tip)}</p>
-                </div>
-              )}
-              <MediaActions name={c.name} maps={c.maps_url} website={c.website_url} m={c} />
-              {c.sources.some((s) => safeUrl(s)) && (
-                <div className="row">
-                  {c.sources.flatMap((s) => safeUrl(s) ?? []).slice(0, 4).map((s, i) => (
-                    <a key={s} className="pill" href={s} target="_blank" rel="noreferrer">
-                      {t('מקור {n}', { n: i + 1 })}
-                    </a>
-                  ))}
-                </div>
-              )}
+              <CardFull c={c} />
             </div>
             <div className="sheet-decide">
               <button className="round nope" onClick={() => decide(-1)} aria-label={t('דלג')}>
@@ -680,6 +629,124 @@ function Card({ c, top, likedBy, onSwipe }: { c: Candidate; top: boolean; likedB
         )}
       <span className="tint like-tint" style={{ opacity: dx > 0 ? p * 0.35 : 0 }} aria-hidden="true" />
       <span className="tint nope-tint" style={{ opacity: dx < 0 ? p * 0.35 : 0 }} aria-hidden="true" />
+    </div>
+  )
+}
+
+/** Everything a card says, as the full sheet shows it. */
+function CardFull({ c }: { c: Candidate }) {
+  return (
+    <>
+      <Tags c={c} />
+      {c.serves && (
+        <div className="fact">
+          <Label icon={Utensils}>{t('מה מגישים')}</Label>
+          <p dir="auto">{keepRanges(c.serves)}</p>
+          {!!c.dishes?.length && (
+            <div className="dishes">
+              {c.dishes.map((d) => (
+                <span key={d} className="pill" dir="auto">
+                  {d}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      {c.kosher_note && (
+        <div className="fact">
+          <Label icon={UtensilsCrossed}>{t('כשרות (בלי חזיר ופירות ים)')}</Label>
+          <p dir="auto">{keepRanges(c.kosher_note)}</p>
+        </div>
+      )}
+      {c.todo && (
+        <div className="fact">
+          {c.serves ? <Label icon={ReceiptText}>{t('איך זה עובד')}</Label> : <Label icon={Target}>{t('מה עושים שם')}</Label>}
+          <p dir="auto">{keepRanges(c.todo)}</p>
+          {c.time_needed && <p className="muted small"><Icon as={Timer} /> {c.time_needed}</p>}
+        </div>
+      )}
+      {c.special && (
+        <div className="fact">
+          <Label icon={Sparkles}>{t('מה מיוחד')}</Label>
+          <p dir="auto">{keepRanges(c.special)}</p>
+          {!!c.highlights?.length && (
+            <div className="dishes">
+              {c.highlights.map((h) => (
+                <span key={h} className="pill" dir="auto">
+                  {h}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      {c.hype && (
+        <div className="fact">
+          <Label icon={MessageSquare}>{t('ברשתות')}</Label>
+          <p dir="auto">{keepRanges(c.hype)}</p>
+        </div>
+      )}
+      {c.reality && (
+        <div className="fact">
+          <Label icon={Search}>{t('בביקורות')}</Label>
+          <p dir="auto">{keepRanges(c.reality)}</p>
+        </div>
+      )}
+      {c.baby_notes && (
+        <div className="fact">
+          {c.audience === 'adults' ? <Label icon={Wine}>{t('למה בלי התינוק')}</Label> : <Label icon={Baby}>{t('עם תינוק')}</Label>}
+          <p dir="auto">{keepRanges(c.baby_notes)}</p>
+        </div>
+      )}
+      {c.tip && (
+        <div className="fact">
+          <Label icon={Lightbulb}>{t('טיפ')}</Label>
+          <p dir="auto">{keepRanges(c.tip)}</p>
+        </div>
+      )}
+      <MediaActions name={c.name} maps={c.maps_url} website={c.website_url} m={c} />
+      {c.sources.some((s) => safeUrl(s)) && (
+        <div className="row">
+          {c.sources.flatMap((s) => safeUrl(s) ?? []).slice(0, 4).map((s, i) => (
+            <a key={s} className="pill" href={s} target="_blank" rel="noreferrer">
+              {t('מקור {n}', { n: i + 1 })}
+            </a>
+          ))}
+        </div>
+      )}
+    </>
+  )
+}
+
+/** Who voted what on a card: a green heart for yes, a red x for no. */
+function Votes({ c, swipes, members }: { c: Candidate; swipes: Swipe[]; members: Member[] }) {
+  const votes = members.flatMap((m) => {
+    const s = swipes.find((x) => x.candidate_id === c.id && x.user_id === m.user_id)
+    return s ? [{ m, liked: s.liked }] : []
+  })
+  if (!votes.length) return null
+  return (
+    <div className="veto-votes">
+      {votes.map((v) => (
+        <span key={v.m.user_id} className={'verdict ' + (v.liked ? 'good' : 'bad')}>
+          <Icon as={v.liked ? Heart : X} /> {t(v.m.display_name)}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+/** A card opened from search: the votes so far, or that nobody has voted yet. */
+function FocusVotes({ c, swipes, members, userId }: { c: Candidate; swipes: Swipe[]; members: Member[]; userId: string }) {
+  const any = swipes.some((s) => s.candidate_id === c.id)
+  const mine = swipes.find((s) => s.candidate_id === c.id && s.user_id === userId)
+  return (
+    <div className="fact">
+      <Votes c={c} swipes={swipes} members={members} />
+      <p className="muted small">
+        {!any ? t('עוד אף אחד לא הצביע') : mine ? (mine.liked ? t('אהבת את המקום. אפשר לשנות למטה.') : t('דילגת על המקום. אפשר לשנות למטה.')) : t('עוד לא הצבעת')}
+      </p>
     </div>
   )
 }

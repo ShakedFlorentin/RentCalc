@@ -9,7 +9,7 @@ import { Sheet } from '../ui'
 /** Where a result leads: the screen that shows it. */
 export type SearchTarget =
   | { tab: 'places' }
-  | { tab: 'swipe'; vetoed?: string }
+  | { tab: 'swipe'; card?: string }
   | { tab: 'bookings' }
   | { tab: 'plan'; day: number }
   | { tab: 'lists' }
@@ -67,7 +67,7 @@ export default function Search({
         hits: cards
           .filter((c) => has(c.name, c.name_ja, c.area, CITY_HE[c.city] ?? c.city, cityLabel(CITY_HE[c.city] ?? c.city), c.serves, c.todo, ...(c.dishes ?? [])))
           .map((c) => {
-            // a card someone said no to says who, and opens the list of turned-down places
+            // a card someone said no to says who; any card opens on its own, with the votes
             const no = swipes
               .filter((s) => s.candidate_id === c.id && !s.liked)
               .map((s) => t(members.find((m) => m.user_id === s.user_id)?.display_name ?? '?'))
@@ -77,7 +77,7 @@ export default function Search({
               title: c.name,
               sub: no.length ? `${where} · ${t('אמרו לא: {names}', { names: no.join(', ') })}` : where,
               icon: no.length ? Ban : Heart,
-              to: no.length ? { tab: 'swipe', vetoed: c.id } : { tab: 'swipe' },
+              to: { tab: 'swipe', card: c.id },
             } satisfies Hit
           }),
       },

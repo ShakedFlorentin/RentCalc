@@ -40,8 +40,9 @@
 /* places someone said no to */
 .veto-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 0.5px solid var(--line); }
 .veto-row:last-child { border-bottom: 0; }
-.veto-row.focus { background: var(--accent-soft); margin-inline: -16px; padding-inline: 16px; }
 .veto-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .veto-votes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
 .veto-votes .verdict { gap: 4px; padding: 2px 9px; font-weight: 600; }
 .veto-row .pill { flex: none; min-height: 44px; }
+.veto-row .veto-text { text-align: start; }
+.sheet-decide .round.chosen { box-shadow: 0 0 0 3px currentColor; }
