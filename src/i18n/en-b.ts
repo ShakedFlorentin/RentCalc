@@ -179,8 +179,8 @@ export const EN_B: Record<string, string> = {
   'כל זוג מצביע ביחד: מספיק שאחד אוהב, אלא אם השני דילג. שואלים על מקום רק את מי שישן לידו, והוא נכנס למסלול ביום שכולם בעיר, אם כל הזוגות האלה אהבו אותו. לייק או דילוג שווים 10 XP, מאצ׳ 50 XP.':
     'Each couple votes as one: it is enough that one of you likes a place, unless the other skipped it. A place is only put to the couples who sleep near it, and it goes into the plan on a day when everyone is in town, if all those couples liked it. A like or a skip is worth 10 XP, a match 50 XP.',
   'עוד אין מקומות בגילוי': 'No places in Discover yet',
-  'ראיתם את כל המקומות. אפשר לחכות לחברים או להציץ במאצ׳ים בלשונית מקומות':
-    "You've seen every place. Wait for your friends, or peek at the matches in the Places tab",
+  'הצבעת על כל המקומות. מקום חדש שמישהו יוסיף יחכה לך כאן, ומה שקיבל מאצ׳ נמצא בלשונית מקומות.':
+    'You\'ve voted on every place. New ones will wait for you here, and matches are in Places.',
   'ביטול החלקה אחרונה': 'Undo last swipe',
   'דלג': 'Skip',
   'אהבתי': 'Like',

@@ -312,7 +312,7 @@ export default function SwipeGame({ trip, userId, members, showCard, onCardShown
               ? t('עוד אין מקומות בגילוי')
               : candidates.some((c) => !mine.has(c.id) && forMe(c))
                 ? t('אין מקומות בסינון הזה')
-                : t('ראיתם את כל המקומות. אפשר לחכות לחברים או להציץ במאצ׳ים בלשונית מקומות')}
+                : t('הצבעת על כל המקומות. מקום חדש שמישהו יוסיף יחכה לך כאן, ומה שקיבל מאצ׳ נמצא בלשונית מקומות.')}
           </Empty>
         )}
         {deck
