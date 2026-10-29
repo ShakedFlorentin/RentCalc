@@ -3,6 +3,20 @@
 Live: https://shakedflorentin.github.io/RentCalc/ · branch `japan-trip`, deployed by fast-forwarding `main`
 (`git push origin japan-trip:main`; GitHub Pages builds on push). Supabase project `wbofjfwbdewgnwjmcpnv`.
 
+## Card photos (2026-10-29)
+- Photos come from `public/media.json` (95 places, collected with Claude in Chrome on 22.10) or the `photos` column.
+  40 cards there showed one picture twice (two Google addresses for the same image, found by equal byte sizes at
+  =w160): the repeats were dropped.
+- New: edge function `card-photos` (v3, verify_jwt false, planner token). Trigger `card_needs_photos` calls it after
+  a member adds a card (library_id null, no photos). It gathers candidates: the cover of the post the card came
+  from (skipped when the post is the source of several cards, a roundup), Tabelog's photo page for food/cafe/bars,
+  the share image of the official site or a page titled with the place's name, photos captioned with its name, and
+  Wikipedia/Commons for sights. Downloads, drops small images and repeats (SHA-256), Haiku vision keeps up to 3 that
+  show the place, stores them in Storage bucket `card-photos` (public) and writes candidates, place_library (so sync
+  doesn't wipe them) and places. POST {candidate_id, dry:true} reports without saving. ~$0.0007 per card.
+- Backfill 29.10: 44 of the 64 cards without photos got 1-3. The other 20 have no usable source (roundup reels,
+  ryokans on booking sites, restaurants with no page of their own).
+
 ## Search words (2026-10-29)
 - `tags text[]` on place_library and candidates: hidden search words (what it sells, kind of place, synonyms, Hebrew
   and English). Never shown; Search matches them for the card, its place and its plan items. English terms match at
