@@ -27,6 +27,29 @@ export function Sheet(props: { title: string; onClose: () => void; children: Rea
     }
   }, [])
 
+  // The keyboard covers the bottom of the screen without resizing the page, and the sheet sits at the bottom: keep
+  // the backdrop to the part still visible (visualViewport), so the sheet ends above the keyboard and its top,
+  // where the field is, stays on screen
+  useEffect(() => {
+    const vv = window.visualViewport
+    const backdrop = ref.current?.parentElement
+    if (!vv || !backdrop) return
+    const fit = () => {
+      const keyboard = window.innerHeight - vv.height > 120
+      backdrop.style.top = keyboard ? `${vv.offsetTop}px` : ''
+      backdrop.style.bottom = keyboard ? 'auto' : ''
+      backdrop.style.height = keyboard ? `${vv.height}px` : ''
+      if (ref.current) ref.current.style.maxHeight = keyboard ? `${vv.height - 8}px` : ''
+    }
+    fit()
+    vv.addEventListener('resize', fit)
+    vv.addEventListener('scroll', fit)
+    return () => {
+      vv.removeEventListener('resize', fit)
+      vv.removeEventListener('scroll', fit)
+    }
+  }, [])
+
   // Pull down anywhere on the sheet to close it: from the header always, from the content once it is scrolled to
   // the top. A short fast flick closes it too. Touch listeners are attached by hand because React's are passive
   // and the pull has to stop the content from scrolling.

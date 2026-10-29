@@ -54,7 +54,12 @@ export default function Search({
   const groups = useMemo(() => {
     const term = norm(q.trim())
     if (term.length < 2) return []
-    const has = (...fields: (string | null | undefined)[]) => fields.some((f) => norm(f).includes(term))
+    // English matches at the start of a word ("one" shouldn't find Hakone or Sonezaki); Hebrew anywhere, since
+    // a word can carry a prefix letter (בטוקיו, הטיסה)
+    const latin = !/[֐-׿]/.test(term) // he-only
+    const wordStart = new RegExp('(^|[^\\p{L}\\p{N}])' + term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'u')
+    const has = (...fields: (string | null | undefined)[]) =>
+      fields.some((f) => (latin ? wordStart.test(norm(f)) : norm(f).includes(term)))
     const out: { label: string; hits: Hit[] }[] = [
       {
         label: t('מקומות'),
