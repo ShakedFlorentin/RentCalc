@@ -3,6 +3,14 @@
 Live: https://shakedflorentin.github.io/RentCalc/ · branch `japan-trip`, deployed by fast-forwarding `main`
 (`git push origin japan-trip:main`; GitHub Pages builds on push). Supabase project `wbofjfwbdewgnwjmcpnv`.
 
+## Search words (2026-10-29)
+- `tags text[]` on place_library and candidates: hidden search words (what it sells, kind of place, synonyms, Hebrew
+  and English). Never shown; Search matches them for the card, its place and its plan items. English terms match at
+  the start of a word, Hebrew anywhere (prefix letters). sync_library copies them to trips.
+- The 258 existing cards were tagged by 5 subscription agents (`data/card-tags-2026-10.json`, loaded with http_get).
+  New cards: suggest-place v21 returns `tags` (AddPlace saves them); card-facts v6 fills them for cards that come
+  without facts (e.g. the Ptitim map).
+
 ## Votes, vetoes and dated places (2026-10-29)
 - A couple's vote: one partner liking is enough unless the other said no ('split' = a veto for that couple). A
   place goes to a couple's list once they vote yes; the planner plans it when every couple it's for has voted.
