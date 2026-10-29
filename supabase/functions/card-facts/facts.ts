@@ -19,6 +19,7 @@ const FactsSchema = z.object({
   closes: z.string(),
   closed_weekdays: z.array(z.number().int()),
   closed_dates: z.array(z.string()),
+  open_dates: z.array(z.string()),
   best_time: z.enum(['morning', 'midday', 'afternoon', 'evening', 'night', 'any']),
   hours: z.number(),
   booking: z.enum(['required', 'recommended', 'no']),
@@ -37,6 +38,7 @@ export type Facts = {
   closes: string | null
   closed_weekdays: number[]
   closed_dates: string[]
+  open_dates: string[]
   best_time: string
   hours: number | null
   booking: string
@@ -64,6 +66,7 @@ const RESEARCH = `You check practical visiting facts for a place in Japan for tr
 Search briefly (in English and Japanese) and report:
 - regular opening hours (as of late 2026) and weekly closing days
 - closures between 12 and 31 December 2026, especially the year-end holidays (usually from 28-31 December); say clearly when the place is open on those days if you find it
+- for a market, a festival or an event that runs on certain dates only: the dates it runs between 12 and 31 December 2026
 - whether you need to book ahead, and the usual queue
 - how long a typical visit takes
 - the best time of day to go, if there is one (sunset view, dinner, nightlife, morning before crowds)
@@ -80,6 +83,7 @@ const EXTRACT = `Turn the notes into the fields below.
 - opens / closes: typical opening and closing time as "HH:MM" (24h); "" if it has no hours (a street, an area) or unknown. A bar open past midnight closes at e.g. "02:00".
 - closed_weekdays: weekly closing days as numbers, 0 = Sunday ... 6 = Saturday; [] if none or unknown.
 - closed_dates: dates between 2026-12-12 and 2026-12-31 it is closed as "YYYY-MM-DD" (year-end holidays included); [] if none or unknown.
+- open_dates: ONLY for something that runs on certain dates only (a market, a festival, an event): the dates between 2026-12-12 and 2026-12-31 it runs, "YYYY-MM-DD"; [] for a place that is simply open on its usual days.
 - best_time: when to go if it matters (morning before crowds, midday for lunch, afternoon, evening for dinner or sunset, night for bars and night views); "any" otherwise.
 - hours: typical visit length in hours including the usual queue (e.g. 1, 1.5, 3, 8 for a full day trip).
 - booking: "required", "recommended" or "no".
@@ -152,6 +156,7 @@ export async function lookUp(admin: SupabaseClient, client: Anthropic, p: PlaceI
       closes: time(f.closes),
       closed_weekdays: [...new Set(f.closed_weekdays.filter((d) => d >= 0 && d <= 6))],
       closed_dates: f.closed_dates.filter((d) => /^2026-12-(1[2-9]|2\d|3[01])$/.test(d)),
+      open_dates: f.open_dates.filter((d) => /^2026-12-(1[2-9]|2\d|3[01])$/.test(d)),
       best_time: f.best_time,
       hours: f.hours > 0 && f.hours <= 12 ? f.hours : null,
       booking: f.booking,

@@ -157,6 +157,7 @@ type Facts = {
   closes: string | null
   closed_weekdays: number[] | null
   closed_dates: string[] | null
+  open_dates: string[] | null
   best_time: string | null
   visit_mins: number | null
   booking: string | null
@@ -244,7 +245,7 @@ function visitMins(f: Facts | undefined, timeNeeded: string | null | undefined, 
 
 const CAND_COLUMNS =
   'id,name,address,area,city,category,lat,lng,tip,time_needed,verdict,local_pick,tabelog_score,' +
-  'opens,closes,closed_weekdays,closed_dates,best_time,visit_mins,booking,plan_line,baby_block,facts_at,en'
+  'opens,closes,closed_weekdays,closed_dates,open_dates,best_time,visit_mins,booking,plan_line,baby_block,facts_at,en'
 /** The same place under small differences in spelling, case or punctuation gets one key. */
 const factKey = (name: string) => name.toLowerCase().normalize('NFKD').replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
 
@@ -433,6 +434,7 @@ async function run(admin: SupabaseClient, tid: string, dry: boolean) {
       closes,
       closedWeekdays: f?.closed_weekdays ?? [],
       closedDates: (f?.closed_dates ?? []).map((d) => d.slice(0, 10)),
+      openDates: (f?.open_dates ?? []).map((d) => d.slice(0, 10)),
       priority:
         (VERDICT[c.verdict ?? ''] ?? 2.5) +
         (c.local_pick ? 0.5 : 0) +
@@ -558,7 +560,8 @@ async function run(admin: SupabaseClient, tid: string, dry: boolean) {
     const f = factsOfItem(i)
     const d = days[i.day - 1]
     if (!f || !d) continue
-    if ((f.closed_dates ?? []).some((x) => x.slice(0, 10) === d.date)) warnings.push({ item_id: i.id, text: 'סגור בתאריך הזה', kind: 'closed_date' })
+    const runsThatDay = !f.open_dates?.length || f.open_dates.some((x) => x.slice(0, 10) === d.date)
+    if (!runsThatDay || (f.closed_dates ?? []).some((x) => x.slice(0, 10) === d.date)) warnings.push({ item_id: i.id, text: 'סגור בתאריך הזה', kind: 'closed_date' })
     else if ((f.closed_weekdays ?? []).includes(d.weekday)) warnings.push({ item_id: i.id, text: `סגור ב${WEEKDAY[d.weekday]}`, kind: 'closed_weekday', weekday: d.weekday })
     else {
       const t = mins(i.time)

@@ -258,6 +258,8 @@ export type PlanFacts = {
   closes?: string | null
   closed_weekdays?: number[] | null
   closed_dates?: string[] | null
+  /** runs only on these dates (a market, an event); empty = no such limit */
+  open_dates?: string[] | null
   best_time?: 'morning' | 'midday' | 'afternoon' | 'evening' | 'night' | 'any' | null
   visit_mins?: number | null
   booking?: 'required' | 'recommended' | 'no' | null

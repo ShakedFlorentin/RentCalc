@@ -53,6 +53,7 @@ async function fill(admin: SupabaseClient, cid: string, token: string) {
     closes: f.closes,
     closed_weekdays: f.closed_weekdays,
     closed_dates: f.closed_dates,
+    open_dates: f.open_dates,
     best_time: f.best_time,
     visit_mins: f.hours ? Math.round(f.hours * 60) : null,
     booking: f.booking,

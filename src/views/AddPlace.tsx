@@ -235,6 +235,7 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
                 closes: d.closes ?? null,
                 closed_weekdays: d.closed_weekdays ?? [],
                 closed_dates: d.closed_dates ?? [],
+                open_dates: d.open_dates ?? [],
                 best_time: d.best_time ?? 'any',
                 visit_mins: d.visit_mins ?? null,
                 booking: d.booking ?? null,

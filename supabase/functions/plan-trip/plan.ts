@@ -31,6 +31,7 @@ export type Unit = {
   closes: number | null
   closedWeekdays: number[]
   closedDates: string[]
+  openDates: string[] // runs only on these dates (a market, an event); empty = no such limit
   priority: number
   current: number | null // the day it is on now, if any
 }
@@ -48,6 +49,8 @@ const HOP = 20
 // a day trip starts by this time and its places sit this close together
 const TRIP_START = 11 * 60
 const TRIP_SPREAD = 20
+// a place in another city this close to where a couple sleeps can go on that day too (Tokyo from Yokohama)
+const NEAR_KM = 30
 // at most this many of a kind a day, per couple
 const PER_DAY: Record<string, number> = { food: 2, cafe: 2, nightlife: 2 }
 
@@ -113,11 +116,12 @@ function arrange(days: Day[], units: Unit[], fixed: Fixed[], barred: Map<string,
         if (!p) return false
         // a day trip needs a day that starts in the morning, with time for the ride there and back
         if (u.far) return !!u.point && km(p.hotel, u.point) <= 150 && p.start <= TRIP_START && p.end - p.start >= 2 * ride(p.hotel, u.point) + u.mins
-        return p.base === u.base
+        return p.base === u.base || (!!u.point && km(p.hotel, u.point) <= NEAR_KM)
       })
       if (!there) return false
       anyDay = true
       if (u.closedWeekdays.includes(d.weekday) || u.closedDates.includes(d.date) || barred.get(u.id)?.has(d.day)) return false
+      if (u.openDates.length && !u.openDates.includes(d.date)) return false
       // open long enough inside the hours everyone has that day
       const start = Math.max(...u.couples.map((c) => d.at.get(c)!.start), u.opens ?? 0)
       const end = Math.min(...u.couples.map((c) => d.at.get(c)!.end), u.closes ?? 24 * 60)
@@ -195,6 +199,10 @@ function arrange(days: Day[], units: Unit[], fixed: Fixed[], barred: Map<string,
     // a couple's own place fits best on a day the other couple is elsewhere
     if (u.couples.length < together(d, u.couples[0]).length) cost += 2
     if (u.current != null && u.current !== day) cost += 1.5
+    // a day that leaves little of the place's opening hours (a market that closes at 14:30 on an arrival day): only
+    // if no roomier day will do
+    const from = Math.max(u.opens ?? 0, ...u.couples.map((c) => d.at.get(c)!.start))
+    if ((u.closes ?? 24 * 60) - from < u.mins + 90) cost += 2
     return cost
   }
   const fits = (u: Unit, day: number) =>
