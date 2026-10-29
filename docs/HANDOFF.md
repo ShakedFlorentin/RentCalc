@@ -3,6 +3,17 @@
 Live: https://shakedflorentin.github.io/RentCalc/ · branch `japan-trip`, deployed by fast-forwarding `main`
 (`git push origin japan-trip:main`; GitHub Pages builds on push). Supabase project `wbofjfwbdewgnwjmcpnv`.
 
+## Offline (2026-10-29)
+- Reads: the last copy of every table is kept on the phone (`readCache` / `useTripTable`), so the app opens offline.
+- Writes: `src/outbox.ts` is the Supabase client's fetch. A table write (insert/upsert/update/delete through
+  PostgREST) made with no network is kept in localStorage `outbox`, answered as saved, and laid over the rows on
+  screen (`withPending` in useTripTable), so a swipe, a ticked task or a new expense shows at once. Rows added
+  offline get their uuid on the phone, so editing or deleting them before they sync hits the same row. On `online`,
+  on waking and at start the changes are sent in order; one the server refuses is dropped (logged), a network
+  failure, 401 or 5xx stops and retries later. The offline bar counts what waits.
+- Still needs a connection: AI lookups (add place by link/name, translate, parse booking), file uploads, and the
+  planner itself (it runs when the swipes arrive).
+
 ## Language: Hebrew and English (2026-10-28)
 - Settings → "שפה · Language". The choice lives on the phone (localStorage `lang`); switching reloads the app.
   index.html sets `<html lang dir>` before the first paint; `src/styles/ltr.css` holds the left-to-right fixes

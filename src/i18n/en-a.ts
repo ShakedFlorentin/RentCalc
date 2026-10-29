@@ -237,4 +237,8 @@ export const EN_A: Record<string, string> = {
   ': עוד לא': ': not yet',
   'מחיקה': 'Delete',
   'למחוק את "{text}"?': 'Delete "{text}"?',
+  'שולח שינוי אחד…': 'Sending 1 change…',
+  'שולח {n} שינויים…': 'Sending {n} changes…',
+  'שינוי אחד יישלח כשתהיה קליטה': '1 change will sync when you have signal',
+  '{n} שינויים יישלחו כשתהיה קליטה': '{n} changes will sync when you have signal',
 }

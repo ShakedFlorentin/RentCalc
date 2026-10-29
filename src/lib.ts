@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { supabase } from './supabase'
+import { onOutbox, withPending } from './outbox'
 import type { CardText, Member } from './types'
 import { isEn, locale, t } from './i18n'
 
@@ -93,14 +94,27 @@ export function useTripTable<T>(table: string, tripId: string, order: string = '
     const refresh = () => document.visibilityState === 'visible' && reload()
     document.addEventListener('visibilitychange', refresh)
     window.addEventListener('online', refresh)
+    // what was saved offline has reached the server: show the server's copy
+    window.addEventListener('outbox-sent', reload)
     return () => {
+      window.removeEventListener('outbox-sent', reload)
       supabase.removeChannel(channel)
       document.removeEventListener('visibilitychange', refresh)
       window.removeEventListener('online', refresh)
     }
   }, [table, tripId, reload, instance])
 
-  return { rows, loading, error, reload, stale, updatedAt }
+  // changes made offline show at once, before they reach the server
+  const [outboxAt, setOutboxAt] = useState(0)
+  useEffect(() => {
+    const off = onOutbox(() => setOutboxAt((n) => n + 1))
+    return () => {
+      off()
+    }
+  }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- outboxAt is the signal that the waiting changes moved
+  const shown = useMemo(() => withPending(table, rows), [table, rows, outboxAt])
+  return { rows: shown, loading, error, reload, stale, updatedAt }
 }
 
 /**

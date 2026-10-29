@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { t } from './i18n'
+import { onOutbox, pending } from './outbox'
 
 export function useOnline() {
   const [online, setOnline] = useState(() => navigator.onLine)
@@ -26,21 +27,41 @@ function ago(at: number) {
   return d === 1 ? t('לפני יום') : d === 2 ? t('לפני יומיים') : t('לפני {n} ימים', { n: d })
 }
 
+/** How many changes made offline are still waiting to be sent. */
+function useWaiting() {
+  const [n, setN] = useState(() => pending().length)
+  useEffect(() => {
+    const off = onOutbox(() => setN(pending().length))
+    return () => {
+      off()
+    }
+  }, [])
+  return n
+}
+
 /**
- * Slim bar under the top bar while there is no connection, or while what's shown is a saved copy
- * (`since` = when that copy was taken).
+ * Slim bar under the top bar while there is no connection, while what's shown is a saved copy (`since` = when that
+ * copy was taken), or while changes made offline wait to be sent.
  */
 export function OfflineBanner({ since }: { since: number | null }) {
   const online = useOnline()
+  const waiting = useWaiting()
   const [, tick] = useState(0)
   // keep "לפני 3 שעות" honest while the screen stays open
   useEffect(() => {
     const t = setInterval(() => tick((n) => n + 1), 60000)
     return () => clearInterval(t)
   }, [])
-  if (online && since == null) return null
-  const parts = [online ? t('השרת לא עונה') : t('אין אינטרנט')]
+  if (online && since == null && !waiting) return null
+  const parts: string[] = []
+  if (!online || since != null) parts.push(online ? t('השרת לא עונה') : t('אין אינטרנט'))
   if (since != null) parts.push(t('עדכון אחרון {ago}', { ago: ago(since) }))
+  if (waiting)
+    parts.push(
+      online
+        ? waiting === 1 ? t('שולח שינוי אחד…') : t('שולח {n} שינויים…', { n: waiting })
+        : waiting === 1 ? t('שינוי אחד יישלח כשתהיה קליטה') : t('{n} שינויים יישלחו כשתהיה קליטה', { n: waiting }),
+    )
   return (
     <div
       role="status"
