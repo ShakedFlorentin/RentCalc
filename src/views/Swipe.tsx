@@ -7,7 +7,7 @@ import AddPlace from './AddPlace'
 import { t } from '../i18n'
 import { Empty, Sheet } from '../ui'
 import { MediaActions } from '../media'
-import { ChevronLeft, ChevronUp, Heart, Lightbulb, MapPin, MessageSquare, Plus, ReceiptText, Search, Sparkles, Star, Target, Timer, Users, Utensils, UtensilsCrossed, Wine, Baby } from 'lucide-react'
+import { ChevronLeft, ChevronUp, Heart, Ban, X, Lightbulb, MapPin, MessageSquare, Plus, ReceiptText, Search, Sparkles, Star, Target, Timer, Users, Utensils, UtensilsCrossed, Wine, Baby } from 'lucide-react'
 import { AUDIENCE_ICON, CARD_ICON, Icon, type LucideIcon } from '../icons'
 import '../styles/game.css'
 
@@ -19,9 +19,15 @@ const LEVELS = [
   { xp: 2000, name: t('שוגון') },
 ]
 
-type Props = { trip: Trip; userId: string; members: Member[] }
+type Props = {
+  trip: Trip
+  userId: string
+  members: Member[]
+  /** opens the list of turned-down places (from search), with this card on top; `n` changes on every request */
+  showVetoed?: { id: string; n: number } | null
+}
 
-export default function SwipeGame({ trip, userId, members }: Props) {
+export default function SwipeGame({ trip, userId, members, showVetoed }: Props) {
   const { rows: rawCandidates, loading } = useTripTable<Candidate>('candidates', trip.id)
   const media = useMediaIndex()
   const candidates = useMemo(() => rawCandidates.map((c) => withMedia(c, media)), [rawCandidates, media])
@@ -136,6 +142,24 @@ export default function SwipeGame({ trip, userId, members }: Props) {
   const levelPct = meRow ? (nextLevel ? ((meRow.xp - meRow.level.xp) / (nextLevel.xp - meRow.level.xp)) * 100 : 100) : 0
   const [boardOpen, setBoardOpen] = useState(false)
   const [adding, setAdding] = useState(false)
+  // places someone said no to: a split vote keeps a place off that couple's list, so it is worth finding again
+  const [vetoOpen, setVetoOpen] = useState(false)
+  const [vetoTop, setVetoTop] = useState<string | null>(null)
+  useEffect(() => {
+    if (!showVetoed) return
+    setVetoTop(showVetoed.id)
+    setVetoOpen(true)
+  }, [showVetoed])
+  const vetoed = useMemo(() => {
+    const no = new Set(swipes.filter((s) => !s.liked).map((s) => s.candidate_id))
+    const split = (c: Candidate) => swipes.some((s) => s.candidate_id === c.id && s.liked)
+    return candidates
+      .filter((c) => no.has(c.id))
+      .sort((a, b) => Number(b.id === vetoTop) - Number(a.id === vetoTop) || Number(split(b)) - Number(split(a)) || a.name.localeCompare(b.name))
+  }, [candidates, swipes, vetoTop])
+  const changeMind = async (c: Candidate) => {
+    if (await mutate(supabase.from('swipes').upsert({ trip_id: trip.id, candidate_id: c.id, user_id: userId, liked: true }))) reloadSwipes()
+  }
   const me = members.find((m) => m.user_id === userId)?.display_name ?? ''
 
   return (
@@ -165,6 +189,11 @@ export default function SwipeGame({ trip, userId, members }: Props) {
         <button className={'chip' + (!city && !aud ? ' on' : '')} aria-pressed={!city && !aud} onClick={() => (setCity(''), setAud(''))}>
           {t('הכל')}
         </button>
+        {vetoed.length > 0 && (
+          <button className="chip" onClick={() => (setVetoTop(null), setVetoOpen(true))}>
+            <Icon as={Ban} /> {t('נפסלו')} <bdi className="muted">{vetoed.length}</bdi>
+          </button>
+        )}
         {Object.entries(AUDIENCES).map(([k, v]) => (
           <button key={k} className={'chip' + (aud === k ? ' on' : '')} aria-pressed={aud === k} onClick={() => setAud(aud === k ? '' : k)}>
             {AUDIENCE_ICON[k] && <Icon as={AUDIENCE_ICON[k]} />} {v}
@@ -179,6 +208,44 @@ export default function SwipeGame({ trip, userId, members }: Props) {
       </div>
 
       {adding && <AddPlace tripId={trip.id} userId={userId} me={me} defaultTo="deck" onClose={() => setAdding(false)} />}
+
+      {vetoOpen && (
+        <Sheet title={t('נפסלו')} onClose={() => setVetoOpen(false)}>
+          <p className="small muted">{t('מקומות שמישהו אמר עליהם לא. אצל זוג שאחד אהב והשני לא, המקום לא נכנס למסלול שלהם עד שמישהו משנה את דעתו.')}</p>
+          {!vetoed.length && <p className="empty">{t('אף אחד לא פסל מקום')}</p>}
+          <div className="card list-card">
+            {vetoed.map((c) => {
+              const votes = members.flatMap((m) => {
+                const s = swipes.find((x) => x.candidate_id === c.id && x.user_id === m.user_id)
+                return s ? [{ m, liked: s.liked }] : []
+              })
+              const mineNo = votes.some((v) => v.m.user_id === userId && !v.liked)
+              return (
+                <div key={c.id} className={'veto-row' + (c.id === vetoTop ? ' focus' : '')}>
+                  <div className="veto-text">
+                    <b dir="auto">{c.name}</b>
+                    <span className="muted small">
+                      {[cityLabel(CITY_HE[c.city] ?? c.city), c.area].filter(Boolean).join(' · ')}
+                    </span>
+                    <div className="veto-votes">
+                      {votes.map((v) => (
+                        <span key={v.m.user_id} className={'verdict ' + (v.liked ? 'good' : 'bad')}>
+                          <Icon as={v.liked ? Heart : X} /> {t(v.m.display_name)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  {mineNo && (
+                    <button className="pill soft" onClick={() => changeMind(c)}>
+                      {t('שיניתי את דעתי')}
+                    </button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </Sheet>
+      )}
 
       {boardOpen && (
         <Sheet title={t('דירוג')} onClose={() => setBoardOpen(false)}>

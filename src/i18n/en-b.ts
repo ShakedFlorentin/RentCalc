@@ -4,6 +4,11 @@ export const EN_B: Record<string, string> = {
   // plan: day header, filters, rows
   'שלנו': 'Ours',
   'של כולם': "Everyone's",
+  'נפסלו': 'Turned down',
+  'מקומות שמישהו אמר עליהם לא. אצל זוג שאחד אהב והשני לא, המקום לא נכנס למסלול שלהם עד שמישהו משנה את דעתו.': 'Places someone said no to. If one of a couple liked it and the other said no, it stays off their plan until someone changes their mind.',
+  'אף אחד לא פסל מקום': 'Nobody has turned down a place',
+  'שיניתי את דעתי': 'Changed my mind',
+  'אמרו לא: {names}': 'No from {names}',
   'הכל': 'All',
   'יום {day}': 'Day {day}',
   'רק {who}': 'Only {who}',

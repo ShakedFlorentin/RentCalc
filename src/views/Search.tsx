@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { CalendarDays, Heart, ListChecks, MapPin, Search as SearchIcon, Ticket } from 'lucide-react'
+import { Ban, CalendarDays, Heart, ListChecks, MapPin, Search as SearchIcon, Ticket } from 'lucide-react'
 import { BOOKING_ICON, Icon, type LucideIcon } from '../icons'
-import { BOOKING_TABS, CITY_HE, type Booking, type Candidate, type ChecklistItem, type ItineraryItem, type Place } from '../types'
+import { BOOKING_TABS, CITY_HE, type Booking, type Candidate, type ChecklistItem, type ItineraryItem, type Member, type Place, type Swipe } from '../types'
 import { cityLabel, dayDate, fmtDay, useTripTable } from '../lib'
 import { t } from '../i18n'
 import { Sheet } from '../ui'
@@ -9,7 +9,7 @@ import { Sheet } from '../ui'
 /** Where a result leads: the screen that shows it. */
 export type SearchTarget =
   | { tab: 'places' }
-  | { tab: 'swipe' }
+  | { tab: 'swipe'; vetoed?: string }
   | { tab: 'bookings' }
   | { tab: 'plan'; day: number }
   | { tab: 'lists' }
@@ -27,11 +27,13 @@ const norm = (s: string | null | undefined) =>
 export default function Search({
   tripId,
   start,
+  members,
   onClose,
   onPick,
 }: {
   tripId: string
   start: string | null
+  members: Member[]
   onClose: () => void
   onPick: (to: SearchTarget) => void
 }) {
@@ -39,6 +41,7 @@ export default function Search({
   const input = useRef<HTMLInputElement>(null)
   const { rows: places } = useTripTable<Place>('places', tripId)
   const { rows: cards } = useTripTable<Candidate>('candidates', tripId)
+  const { rows: swipes } = useTripTable<Swipe>('swipes', tripId)
   const { rows: bookings } = useTripTable<Booking>('bookings', tripId, 'starts_at')
   const { rows: items } = useTripTable<ItineraryItem>('itinerary_items', tripId, 'sort')
   const { rows: todos } = useTripTable<ChecklistItem>('checklist_items', tripId)
@@ -63,7 +66,20 @@ export default function Search({
         label: t('גילוי'),
         hits: cards
           .filter((c) => has(c.name, c.name_ja, c.area, CITY_HE[c.city] ?? c.city, cityLabel(CITY_HE[c.city] ?? c.city), c.serves, c.todo, ...(c.dishes ?? [])))
-          .map((c) => ({ key: 'c' + c.id, title: c.name, sub: [cityLabel(CITY_HE[c.city] ?? c.city), c.area].filter(Boolean).join(' · '), icon: Heart, to: { tab: 'swipe' } })),
+          .map((c) => {
+            // a card someone said no to says who, and opens the list of turned-down places
+            const no = swipes
+              .filter((s) => s.candidate_id === c.id && !s.liked)
+              .map((s) => t(members.find((m) => m.user_id === s.user_id)?.display_name ?? '?'))
+            const where = [cityLabel(CITY_HE[c.city] ?? c.city), c.area].filter(Boolean).join(' · ')
+            return {
+              key: 'c' + c.id,
+              title: c.name,
+              sub: no.length ? `${where} · ${t('אמרו לא: {names}', { names: no.join(', ') })}` : where,
+              icon: no.length ? Ban : Heart,
+              to: no.length ? { tab: 'swipe', vetoed: c.id } : { tab: 'swipe' },
+            } satisfies Hit
+          }),
       },
       {
         label: t('הזמנות'),
@@ -91,7 +107,7 @@ export default function Search({
       },
     ]
     return out.filter((g) => g.hits.length)
-  }, [q, places, cards, bookings, items, todos])
+  }, [q, places, cards, swipes, members, bookings, items, todos])
 
   return (
     <Sheet title={t('חיפוש')} onClose={onClose}>
