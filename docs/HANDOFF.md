@@ -209,6 +209,10 @@ titles, iPhone system font). Swipe card moves on springs (`springTo` in `Swipe.t
 finger's speed, and likes/skips by where the flick projects, not where it was let go.
 
 ## Open / ideas
+- Tab bar in English (to fix later, the user asked): six equal tabs leave ~47px each on a phone, and "Bookings" /
+  "Discover" are wider than that, so they run into the tab padding and sit close to their neighbours. Options: shorter
+  labels, a smaller font in English only, or fewer tabs. Solid glyphs and the per-icon `nudge` (App.tsx TABS) keep the
+  gaps between icons equal (28.6px); measure again after changing any glyph.
 - "דרכונים בתוקף" was reset when it became per-couple; each couple should tick it again.
 - Facebook research is done by the Claude session on Shaked's Mac (Claude in Chrome); it can't message back, so
   results are read from its transcript (list_events). Unread posts worth a look: the 19-day and 30-day recaps and
