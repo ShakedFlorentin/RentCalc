@@ -267,6 +267,9 @@ main.tab-swipe { padding-bottom: 0; }
 .search-fab:active { transform: scale(0.94); }
 .tabbar button {
   flex: 1;
+  /* equal tabs whatever the label: a long word ("Bookings") may run into the padding, never widen its tab */
+  min-width: 0;
+  white-space: nowrap;
   max-width: 106px;
   min-height: var(--tabbar-h);
   display: flex;
@@ -281,7 +284,7 @@ main.tab-swipe { padding-bottom: 0; }
   color: var(--text);
 }
 .tabbar button.active { color: var(--accent); background: var(--fill); }
-.tab-icon { width: 26px; height: 26px; fill: currentColor; fill-rule: evenodd; }
+.tab-icon { width: 26px; height: 26px; fill: currentColor; fill-rule: evenodd; translate: calc(var(--nudge, 0) * -1px); }
 .search-icon { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 
 .fab {

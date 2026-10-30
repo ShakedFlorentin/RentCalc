@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type CSSProperties } from 'react'
 import { supabase } from './supabase'
 import { t } from './i18n'
 import type { Member, Trip } from './types'
@@ -15,14 +15,16 @@ import { useRemembered } from './ui'
 import SwipeGame from './views/Swipe'
 import Search, { type SearchTarget } from './views/Search'
 
-// solid glyphs, like Music's tab bar: every tab carries the same weight and only the colour marks the open one
+// solid glyphs, like Music's tab bar: every tab carries the same weight and only the colour marks the open one.
+// The glyphs differ in width (the pin is narrow, the ticket wide), so `nudge` moves each one by a fraction of a pixel
+// along the bar, toward the next tab, to leave the same empty space between every two icons
 const TABS = [
-  { id: 'home', label: t('בית'), d: 'M10.7 3.6a2 2 0 0 1 2.6 0l7.3 6.2a1 1 0 0 1-1.3 1.5l-.3-.3V19a2 2 0 0 1-2 2h-2.5a.5.5 0 0 1-.5-.5V16a2 2 0 0 0-4 0v4.5a.5.5 0 0 1-.5.5H7a2 2 0 0 1-2-2v-8l-.3.3a1 1 0 0 1-1.3-1.5Z' },
-  { id: 'swipe', label: t('גילוי'), d: 'M12.6 2.4c.4-.3 1-.2 1.2.3.6 2 1.9 3.3 3.2 4.7 1.6 1.7 3 3.6 3 6.6 0 4.4-3.6 7.5-8 7.5s-8-3.1-8-7.3c0-2.6 1.1-4.5 2.6-6.1.4-.4 1-.2 1.2.3.3 1 .9 1.9 1.7 2.3.2-3.4 1.6-6.3 3.1-8.3Z' },
-  { id: 'plan', label: t('מסלול'), d: 'M8 2.5a1 1 0 0 1 1 1V5h6V3.5a1 1 0 1 1 2 0V5h1.5A2.5 2.5 0 0 1 21 7.5v11a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 18.5v-11A2.5 2.5 0 0 1 5.5 5H7V3.5a1 1 0 0 1 1-1ZM5 10v8.5c0 .3.2.5.5.5h13c.3 0 .5-.2.5-.5V10ZM7 12h2.5v2.5H7Zm3.75 0h2.5v2.5h-2.5Zm3.75 0H17v2.5h-2.5ZM7 15.5h2.5V18H7Zm3.75 0h2.5V18h-2.5Z' },
-  { id: 'bookings', label: t('הזמנות'), d: 'M4 5.5h16A1.5 1.5 0 0 1 21.5 7v2.6a.6.6 0 0 1-.5.6 1.8 1.8 0 0 0 0 3.6.6.6 0 0 1 .5.6V17a1.5 1.5 0 0 1-1.5 1.5H4A1.5 1.5 0 0 1 2.5 17v-2.6a.6.6 0 0 1 .5-.6 1.8 1.8 0 0 0 0-3.6.6.6 0 0 1-.5-.6V7A1.5 1.5 0 0 1 4 5.5ZM14.25 7.5h1.5v2h-1.5Zm0 3.5h1.5v2h-1.5Zm0 3.5h1.5v2h-1.5Z' },
-  { id: 'places', label: t('מקומות'), d: 'M12 2a7.5 7.5 0 0 1 7.5 7.5c0 5.6-6 11.1-6.8 11.8a1 1 0 0 1-1.4 0C10.5 20.6 4.5 15.1 4.5 9.5A7.5 7.5 0 0 1 12 2Zm0 4.6a2.9 2.9 0 1 0 0 5.8 2.9 2.9 0 0 0 0-5.8Z' },
-  { id: 'more', label: t('עוד'), d: 'M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19ZM7.5 10.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm4.5 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm4.5 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z' },
+  { id: 'home', label: t('בית'), d: 'M10.7 3.6a2 2 0 0 1 2.6 0l7.3 6.2a1 1 0 0 1-1.3 1.5l-.3-.3V19a2 2 0 0 1-2 2h-2.5a.5.5 0 0 1-.5-.5V16a2 2 0 0 0-4 0v4.5a.5.5 0 0 1-.5.5H7a2 2 0 0 1-2-2v-8l-.3.3a1 1 0 0 1-1.3-1.5Z', nudge: 0.1 },
+  { id: 'swipe', label: t('גילוי'), d: 'M12.6 2.4c.4-.3 1-.2 1.2.3.6 2 1.9 3.3 3.2 4.7 1.6 1.7 3 3.6 3 6.6 0 4.4-3.6 7.5-8 7.5s-8-3.1-8-7.3c0-2.6 1.1-4.5 2.6-6.1.4-.4 1-.2 1.2.3.3 1 .9 1.9 1.7 2.3.2-3.4 1.6-6.3 3.1-8.3Z', nudge: -0.4 },
+  { id: 'plan', label: t('מסלול'), d: 'M8 2.5a1 1 0 0 1 1 1V5h6V3.5a1 1 0 1 1 2 0V5h1.5A2.5 2.5 0 0 1 21 7.5v11a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 18.5v-11A2.5 2.5 0 0 1 5.5 5H7V3.5a1 1 0 0 1 1-1ZM5 10v8.5c0 .3.2.5.5.5h13c.3 0 .5-.2.5-.5V10ZM7 12h2.5v2.5H7Zm3.75 0h2.5v2.5h-2.5Zm3.75 0H17v2.5h-2.5ZM7 15.5h2.5V18H7Zm3.75 0h2.5V18h-2.5Z', nudge: -0.7 },
+  { id: 'bookings', label: t('הזמנות'), d: 'M4 5.5h16A1.5 1.5 0 0 1 21.5 7v2.6a.6.6 0 0 1-.5.6 1.8 1.8 0 0 0 0 3.6.6.6 0 0 1 .5.6V17a1.5 1.5 0 0 1-1.5 1.5H4A1.5 1.5 0 0 1 2.5 17v-2.6a.6.6 0 0 1 .5-.6 1.8 1.8 0 0 0 0-3.6.6.6 0 0 1-.5-.6V7A1.5 1.5 0 0 1 4 5.5ZM14.25 7.5h1.5v2h-1.5Zm0 3.5h1.5v2h-1.5Zm0 3.5h1.5v2h-1.5Z', nudge: 0.6 },
+  { id: 'places', label: t('מקומות'), d: 'M12 2a7.5 7.5 0 0 1 7.5 7.5c0 5.6-6 11.1-6.8 11.8a1 1 0 0 1-1.4 0C10.5 20.6 4.5 15.1 4.5 9.5A7.5 7.5 0 0 1 12 2Zm0 4.6a2.9 2.9 0 1 0 0 5.8 2.9 2.9 0 0 0 0-5.8Z', nudge: 0.3 },
+  { id: 'more', label: t('עוד'), d: 'M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19ZM7.5 10.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm4.5 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm4.5 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z', nudge: 0.1 },
 ] as const
 type Tab = (typeof TABS)[number]['id']
 
@@ -236,7 +238,7 @@ function TripApp(props: { tripId: string; userId: string; onLeave: () => void })
       <nav className="tabbar glass" aria-label={t('ניווט ראשי')}>
         {TABS.map((t) => (
           <button key={t.id} className={tab === t.id ? 'active' : ''} aria-current={tab === t.id ? 'page' : undefined} onClick={() => setTab(t.id)}>
-            <svg className="tab-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <svg className="tab-icon" viewBox="0 0 24 24" aria-hidden="true" style={{ '--nudge': t.nudge } as CSSProperties}>
               <path d={t.d} />
             </svg>
             <span>{t.label}</span>
