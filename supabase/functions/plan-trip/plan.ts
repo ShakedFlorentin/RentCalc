@@ -79,17 +79,35 @@ export function ride(a: Point | null, b: Point | null) {
  * day's timetable can't fit before it closes is barred from that day and the days are worked out again.
  */
 export function plan(days: Day[], units: Unit[], fixed: Fixed[]): Outcome {
-  const barred = new Map<string, Set<number>>()
-  let out = arrange(days, units, fixed, barred)
-  for (let round = 0; round < 3 && out.late.length; round++) {
-    for (const { id, day } of out.late) barred.set(id, new Set([...(barred.get(id) ?? []), day]))
-    out = arrange(days, units, fixed, barred)
+  const solve = (settle: boolean) => {
+    const barred = new Map<string, Set<number>>()
+    let out = arrange(days, units, fixed, barred, settle)
+    for (let round = 0; round < 3 && out.late.length; round++) {
+      for (const { id, day } of out.late) barred.set(id, new Set([...(barred.get(id) ?? []), day]))
+      out = arrange(days, units, fixed, barred, settle)
+    }
+    // still late after that: better left for the people to place than put where it is closed
+    for (const { id } of out.late) {
+      out.placed.delete(id)
+      out.unplanned.set(id, 'full')
+    }
+    return out
   }
-  // still late after that: better left for the people to place than put where it is closed
-  for (const { id } of out.late) {
-    out.placed.delete(id)
-    out.unplanned.set(id, 'full')
+  // the plan worked out afresh, and the plan as it stands with only new places added to it: the fresh one replaces
+  // what people already see only when it is clearly better, so the plan settles instead of shifting on every run
+  const fresh = solve(false)
+  const kept = units.some((u) => u.current != null) ? solve(true) : null
+  const worth = (o: typeof fresh) => {
+    let value = 0
+    let missed = 0
+    for (const [id, p] of o.placed) {
+      const u = units.find((x) => x.id === id)!
+      value += u.priority * (0.5 + u.mins / 120)
+      if (p.missed) missed++
+    }
+    return value - missed * 2
   }
+  const out = kept && worth(fresh) <= worth(kept) * 1.02 ? kept : fresh
   return { placed: out.placed, unplanned: out.unplanned, issues: check(days, units, fixed, out.placed) }
 }
 
@@ -129,7 +147,7 @@ export function check(days: Day[], units: Unit[], fixed: Fixed[], placed: Map<st
   return issues
 }
 
-function arrange(days: Day[], units: Unit[], fixed: Fixed[], barred: Map<string, Set<number>>) {
+function arrange(days: Day[], units: Unit[], fixed: Fixed[], barred: Map<string, Set<number>>, settle = false) {
   const byDay = new Map(days.map((d) => [d.day, d]))
   const fixedMins = new Map<string, number>()
   const fixedPts = new Map<string, Point[]>()
@@ -325,8 +343,9 @@ function arrange(days: Day[], units: Unit[], fixed: Fixed[], barred: Map<string,
     put(u, best)
   }
 
-  // then improve: move single places, or swap a place in for a less wanted one on a full day
-  for (let pass = 0; pass < 40; pass++) {
+  // then improve: move single places, or swap a place in for a less wanted one on a full day (not when settling:
+  // then the plan stays as it stands and only new places are added)
+  for (let pass = 0; !settle && pass < 40; pass++) {
     let improved = false
     for (const u of order) {
       const was = at.get(u.id) ?? null
@@ -421,7 +440,7 @@ function arrange(days: Day[], units: Unit[], fixed: Fixed[], barred: Map<string,
 
   // repair: a place reached hours past its hour moves on its own to a day where it is on time, when that day has
   // room and neither day ends up with more places late or past their hour (nothing else moves, nothing drops)
-  for (let round = 0; round < 2; round++) {
+  for (let round = 0; !settle && round < 2; round++) {
     let moved = false
     for (const u of order) {
       const was = at.get(u.id)
