@@ -210,8 +210,12 @@ finger's speed, and likes/skips by where the flick projects, not where it was le
 
 ## Open / ideas
 - Ratings (`place_ratings`, on the shared library card; read by any signed-in user, write your own for a trip you're
-  in): stars on visited places in Places, a summary in the swipe card. 25 of the trip's 128 places (added by link)
-  have no library card, so they can't be rated yet: give link-added cards a library card (inactive) to close that.
+  in): stars on visited places in Places, a summary in the swipe card.
+- Shared library (2026-10-31, migration added_places_join_library): every card people add (link, name, map) gets a
+  library card at insert (trigger candidates_to_library → card_to_library, security definer; same norm_name reuses
+  the existing card), active, with all its fields, so later trips swipe on it and ratings have a home. The 27 cards
+  added before that were backfilled. card_needs_photos now fires for cards people add (added_by ≠ 'סקאוטים') with no
+  photos. A card someone added by mistake stays in the library: set place_library.active = false to retire it.
 - suggest-place streams NDJSON steps when asked (`stream: true`); after deploying, check that Supabase doesn't buffer
   `application/x-ndjson` (if the steps arrive all at once, switch to `text/event-stream`).
 - Planner (2026-10-31, plan-trip v16), all algorithm, no AI. Day choice unchanged. Each day gets two timetables, both
