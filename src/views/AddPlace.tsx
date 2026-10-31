@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabase'
 import { AUDIENCES, CARD_STYLE, CITY_HE, VERDICTS, type Candidate } from '../types'
 import { aiError, cityLabel, localizeCard, mutate, safeUrl, samePlace } from '../lib'
 import { isEn, t } from '../i18n'
-import { ArrowRight, Heart, List, Search, Star } from 'lucide-react'
+import { ArrowRight, Check, Heart, List, LoaderCircle, Search, Star, X } from 'lucide-react'
 import { Field, Sheet } from '../ui'
 import { Icon } from '../icons'
 
@@ -47,6 +47,106 @@ async function savedResult(id: string): Promise<Draft[] | undefined> {
   return undefined
 }
 
+/** A place as the lookup's progress names it (see suggest-place): a card's area comes with its city apart. */
+type Spot = { name: string; where: string; city?: string }
+/** One line of the lookup's progress stream, sent by suggest-place as each step learns something. */
+type Step =
+  | { type: 'read'; source: 'instagram' | 'tiktok' | 'maps' | 'link'; excerpt: string; slides: number }
+  | { type: 'search'; query: string }
+  | { type: 'researched'; searches: number }
+  | { type: 'found'; places: Spot[] }
+  | ({ type: 'card'; i: number; ok: boolean } & Spot)
+  | { type: 'cached'; places: Spot[] }
+  | { type: 'done'; places: Draft[] }
+  | { type: 'error'; error: string; status: number }
+/** What the lookup has told so far. */
+type Progress = {
+  link: boolean
+  read?: Extract<Step, { type: 'read' }>
+  searches: string[]
+  researched?: number
+  found?: Spot[]
+  // by the place's index in found
+  cards: ({ ok: boolean } & Spot)[]
+  cached?: Spot[]
+}
+
+function heard(p: Progress, e: Step): Progress {
+  switch (e.type) {
+    case 'read':
+      return { ...p, read: e }
+    case 'search':
+      return { ...p, searches: [...p.searches, e.query] }
+    case 'researched':
+      return { ...p, researched: e.searches }
+    case 'found':
+      return { ...p, found: e.places }
+    case 'card': {
+      const cards = [...p.cards]
+      cards[e.i] = e
+      return { ...p, cards }
+    }
+    case 'cached':
+      return { ...p, cached: e.places }
+  }
+  return p
+}
+
+/** The lookup's answer in the shape supabase.functions.invoke gives it, so both ways are read alike. */
+type Answer = { data: { places?: Draft[] } | null; error: { context?: Response } | null }
+
+/**
+ * Runs the lookup with its steps streamed to `on` as they happen (functions.invoke would wait for the whole body).
+ * Null when the request couldn't be sent at all, so the caller asks the plain way.
+ */
+async function lookupLive(body: object, opened: () => void, on: (e: Step) => void, signal: AbortSignal): Promise<Answer | null> {
+  const { data } = await supabase.auth.getSession()
+  const token = data.session?.access_token
+  if (!token) return null
+  let res: Response
+  try {
+    res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/suggest-place`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, apikey: import.meta.env.VITE_SUPABASE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...body, stream: true }),
+      signal,
+    })
+  } catch {
+    return null
+  }
+  // refused before the search began (sign-in, today's cap, too long): the same error invoke would give
+  if (!res.ok) return { data: null, error: { context: res } }
+  // a function from before the stream answers in one piece, and that is the answer
+  if (!/ndjson/.test(res.headers.get('content-type') ?? '') || !res.body) {
+    const data = await res.json().catch(() => null)
+    return data ? { data, error: null } : { data: null, error: {} }
+  }
+  opened()
+  const reader = res.body.pipeThrough(new TextDecoderStream()).getReader()
+  let buf = ''
+  try {
+    for (;;) {
+      const { value, done } = await reader.read()
+      if (done) break
+      buf += value
+      for (let nl = buf.indexOf('\n'); nl >= 0; nl = buf.indexOf('\n')) {
+        const line = buf.slice(0, nl).trim()
+        buf = buf.slice(nl + 1)
+        if (!line) continue
+        const e = JSON.parse(line) as Step
+        if (e.type === 'done') return { data: { places: e.places }, error: null }
+        // an error status as invoke reports it, so aiError reads the reason the same way
+        if (e.type === 'error') return { data: null, error: { context: new Response(JSON.stringify({ error: e.error }), { status: e.status }) } }
+        on(e)
+      }
+    }
+  } catch {
+    // cut off below
+  }
+  // cut off before the end (screen locked, network): no status, so the caller reads what the search saved
+  return { data: null, error: {} }
+}
+
 /**
  * Suggest a place from an Instagram/TikTok/Maps link or just its name; Claude finds it on the web and fills in the
  * card. Nobody types details by hand: when a link can't be read, the place's name is searched instead.
@@ -66,6 +166,11 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
   const [existing, setExisting] = useState<{ found: Existing; draft: Draft } | null>(null)
   // a post that names several places: each with what's already in the trip, and whether it's ticked
   const [many, setMany] = useState<{ d: Draft; found: Existing | null; on: boolean }[] | null>(null)
+  // the steps of the running lookup, as the function reports them; null until it answers with a stream
+  const [progress, setProgress] = useState<Progress | null>(null)
+  const stop = useRef<AbortController | null>(null)
+  // closing the sheet stops reading; the search itself goes on and saves its result
+  useEffect(() => () => stop.current?.abort(), [])
 
   /** The trip's places, in the game and on the list, to check new ones against. */
   const loadTrip = async (): Promise<TripPlaces> => {
@@ -97,8 +202,17 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
     if (!link && !text) return
     setBusy(true)
     setErr('')
+    setProgress(null)
     const id = crypto.randomUUID()
-    const { data, error } = await supabase.functions.invoke('suggest-place', { body: link ? { link, id } : { text, id } })
+    const body = link ? { link, id } : { text, id }
+    stop.current?.abort()
+    const live = (stop.current = new AbortController())
+    // streamed when it can be, to show each step; otherwise (no session, no network) the plain call as before
+    const answer =
+      (await lookupLive(body, () => setProgress({ link: !!link, searches: [], cards: [] }), (e) => setProgress((p) => p && heard(p, e)), live.signal)) ??
+      (await supabase.functions.invoke('suggest-place', { body }))
+    if (live.signal.aborted) return
+    const { data, error } = answer
     const status = (error as { context?: Response } | null)?.context?.status
     // no answer at all (screen locked, another app) while the search went on: read what it found
     const places = error && !status ? await savedResult(id) : (data?.places as Draft[] | undefined)
@@ -117,6 +231,8 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
       }
       return
     }
+    // the steps stay up only when nothing was found, to show what was read and searched
+    setProgress(null)
     if (found.length > 1) {
       const trip = await loadTrip()
       setMany(found.map((d) => {
@@ -399,7 +515,8 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
         <button className="primary" onClick={() => research({ name })} disabled={busy || !name.trim()}>
           {busy ? t('מחפש, עד דקה…') : (<><Icon as={Search} /> {t('חיפוש לפי שם')}</>)}
         </button>
-        <button className="link" onClick={() => (setErr(''), setFailedLink(''))}>
+        {progress && <Steps p={progress} live={busy} />}
+        <button className="link" onClick={() => (setErr(''), setProgress(null), setFailedLink(''))}>
           <Icon as={ArrowRight} className="flip-ltr" /> {t('חזרה')}
         </button>
       </Sheet>
@@ -425,7 +542,132 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
       <button className="primary" onClick={lookUp} disabled={busy || !query.trim()}>
         {busy ? t('מחפש, עד דקה…') : (<><Icon as={Search} /> {t('זיהוי ובדיקה')}</>)}
       </button>
+      {progress && <Steps p={progress} live={busy} />}
     </Sheet>
+  )
+}
+
+type Mark = 'done' | 'now' | 'wait' | 'fail'
+
+const MARK_ICON = { done: Check, now: LoaderCircle, fail: X } as const
+
+/** A step's mark: a check when done, a spinner while it runs, an empty ring while it waits. */
+function StepMark({ mark }: { mark: Mark }) {
+  return (
+    <span className={'step-mark ' + mark}>
+      {mark !== 'wait' && <Icon as={MARK_ICON[mark]} size={14} className={mark === 'now' ? 'spin' : undefined} />}
+    </span>
+  )
+}
+
+/** Where a place is, as the lookup told it: a card's city in the app's language, then its area. */
+const whereOf = (s: Spot) => [s.city ? cityLabel(CITY_HE[s.city] ?? '') : '', s.where].filter(Boolean)
+
+/**
+ * The lookup's steps as they happen, each with what it learned (the post's text, the searches, the places and
+ * where they are), so a wrong turn shows early instead of after a minute of spinner.
+ */
+function Steps({ p, live }: { p: Progress; live: boolean }) {
+  const rows: { key: string; title: string; mark: Mark; body?: React.ReactNode }[] = []
+  // stopped (an error, or the answer came): a step still marked running just waits
+  const still = (m: Mark): Mark => (!live && m === 'now' ? 'wait' : m)
+  const spots = (list: Spot[], status?: (i: number) => Mark) => (
+    <ul className="step-list">
+      {list.map((s, i) => (
+        <li key={i}>
+          {status && <StepMark mark={still(status(i))} />}
+          <span className="step-place">
+            <bdi dir="auto">{s.name}</bdi>
+            {/* each part isolated: the city can be Hebrew and the area English */}
+            {whereOf(s).map((w, j) => (
+              <span key={j} className="muted">
+                {' · '}
+                <bdi dir="auto">{w}</bdi>
+              </span>
+            ))}
+          </span>
+        </li>
+      ))}
+    </ul>
+  )
+
+  if (p.cached) {
+    rows.push({ key: 'cached', title: t('נמצא בבדיקה קודמת'), mark: 'done', body: spots(p.cached) })
+  } else {
+    if (p.link) {
+      const r = p.read
+      const SOURCE = { instagram: t('פוסט באינסטגרם'), tiktok: t('סרטון בטיקטוק'), maps: t('קישור לגוגל מפות'), link: t('קישור לאתר') }
+      // nothing read from a post: the search starts from the address alone, which often misses
+      const empty = r && !r.excerpt && !r.slides
+      rows.push({
+        key: 'read',
+        title: t('קריאת הקישור'),
+        mark: r ? 'done' : 'now',
+        body: r && (
+          <>
+            <span>{SOURCE[r.source]}</span>
+            {r.excerpt && <q className="step-quote clamp" dir="auto">{r.excerpt}</q>}
+            {r.slides > 0 && <span>{r.slides === 1 ? t('תמונה אחת מהפוסט') : t('{n} תמונות מהפוסט', { n: r.slides })}</span>}
+            {empty &&
+              (r.source === 'instagram' || r.source === 'tiktok' ? (
+                <span>{t('לא הצלחנו לקרוא את הפוסט. נחפש לפי הקישור בלבד.')}</span>
+              ) : (
+                <span>{t('את העמוד עצמו לא קוראים. נחפש לפי הקישור.')}</span>
+              ))}
+          </>
+        ),
+      })
+    }
+    const searching = !p.link || !!p.read
+    // the newest searches; a long research can make a few dozen
+    const shown = p.searches.slice(-8)
+    rows.push({
+      key: 'search',
+      title: t('חיפוש ברשת'),
+      mark: p.researched != null ? 'done' : searching ? 'now' : 'wait',
+      body: (p.searches.length > 0 || p.researched === 0) && (
+        <>
+          {p.searches.length > shown.length && <span>{t('ועוד {n} חיפושים', { n: p.searches.length - shown.length })}</span>}
+          {shown.map((q, i) => (
+            <span key={i} className="step-line">
+              <Icon as={Search} size={13} /> <bdi dir="auto">{q}</bdi>
+            </span>
+          ))}
+          {p.researched === 0 && <span>{t('בלי חיפוש ברשת')}</span>}
+        </>
+      ),
+    })
+    const found = p.found
+    rows.push({
+      key: 'found',
+      title: t('זיהוי המקומות'),
+      mark: found ? (found.length ? 'done' : 'fail') : p.researched != null ? 'now' : 'wait',
+      body:
+        found &&
+        (found.length === 0 ? t('לא זיהינו מקום') : found.length === 1 ? t('נמצא מקום אחד') : t('נמצאו {n} מקומות', { n: found.length })),
+    })
+    if (!found || found.length) {
+      const cards = found?.map((s, i) => p.cards[i] ?? s) ?? []
+      const all = !!found && found.every((_, i) => p.cards[i])
+      rows.push({
+        key: 'cards',
+        title: t('כתיבת הכרטיסים'),
+        mark: all ? (p.cards.some((c) => c?.ok) ? 'done' : 'fail') : found ? 'now' : 'wait',
+        body: found && spots(cards, (i) => (p.cards[i] ? (p.cards[i].ok ? 'done' : 'fail') : 'now')),
+      })
+    }
+  }
+
+  return (
+    <ol className="steps" aria-live="polite" aria-busy={live}>
+      {rows.map((r) => (
+        <li key={r.key} className={'step ' + still(r.mark)}>
+          <StepMark mark={still(r.mark)} />
+          <span className="step-title">{r.title}</span>
+          {r.body && <div className="step-body">{r.body}</div>}
+        </li>
+      ))}
+    </ol>
   )
 }
 

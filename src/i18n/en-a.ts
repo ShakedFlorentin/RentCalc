@@ -243,4 +243,23 @@ export const EN_A: Record<string, string> = {
   'שולח {n} שינויים…': 'Sending {n} changes…',
   'שינוי אחד יישלח כשתהיה קליטה': '1 change will sync when you have signal',
   '{n} שינויים יישלחו כשתהיה קליטה': '{n} changes will sync when you have signal',
+
+  // add place: the steps of a lookup, as they happen
+  'קריאת הקישור': 'Reading the link',
+  'פוסט באינסטגרם': 'Instagram post',
+  'סרטון בטיקטוק': 'TikTok video',
+  'קישור לגוגל מפות': 'Google Maps link',
+  'קישור לאתר': 'Website link',
+  'תמונה אחת מהפוסט': '1 picture from the post',
+  '{n} תמונות מהפוסט': '{n} pictures from the post',
+  'לא הצלחנו לקרוא את הפוסט. נחפש לפי הקישור בלבד.': 'Couldn\'t read the post. Searching by the link alone.',
+  'את העמוד עצמו לא קוראים. נחפש לפי הקישור.': 'The page itself isn\'t read. Searching by the link.',
+  'חיפוש ברשת': 'Searching the web',
+  'ועוד {n} חיפושים': '{n} more searches',
+  'בלי חיפוש ברשת': 'No web search needed',
+  'זיהוי המקומות': 'Identifying the places',
+  'לא זיהינו מקום': 'No place identified',
+  'נמצא מקום אחד': 'Found 1 place',
+  'כתיבת הכרטיסים': 'Writing the cards',
+  'נמצא בבדיקה קודמת': 'From an earlier lookup',
 }

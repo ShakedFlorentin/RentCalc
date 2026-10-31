@@ -115,8 +115,9 @@ const MAX_SLIDES = 8
 
 // the search words go in a call of their own: in the card's schema they made it too big for structured output
 const TagList = z.object({ places: z.array(z.object({ tags: z.array(z.string()) })) })
-const Names = z.object({ places: z.array(z.string()) })
-const LIST = `List the real places in Japan that the research notes identified, in the order the post lists them (at most 10). Give each one's name as the notes give it, with the branch or area when the notes name one. Return an empty list if no specific real place was identified.`
+// where: shown to the member while the cards are written, so they can tell early whether it found the right place
+const Names = z.object({ places: z.array(z.object({ name: z.string(), where: z.string() })) })
+const LIST = `List the real places in Japan that the research notes identified, in the order the post lists them (at most 10). Give each one's name as the notes give it, with the branch or area when the notes name one, and where it is: neighbourhood and city in English (e.g. "Shibuya, Tokyo"), or "" if the notes don't say. Return an empty list if no specific real place was identified.`
 const TAGS = `For each place below, in the same order, give 10-25 hidden search words for the app's search (never shown): what it sells, serves or makes (each signature dish, product and key ingredient), the kind of place (ramen shop, bakery, temple, market, bar, onsen), cuisine, notable things you see or do there, and the words people would type instead, singular and plural, each in BOTH lowercase English and Hebrew (e.g. "pancake", "pancakes", "hotcake", "פנקייק", "פנקייקים"; "knives", "סכינים"). Japanese dish names in their usual romanization and Hebrew spelling. 1-3 words each; not the place's name, city or area; nothing the notes don't support.`
 
 const RESEARCH = `You help two Israeli couples plan a December trip to Japan (Tokyo, Kyoto, Osaka and day trips). One couple brings a 5-month-old baby who only drinks milk.
@@ -160,14 +161,21 @@ const decode = (s: string) =>
     .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
     .replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
 
-type Post = { text: string; images: string[] }
+/** A caption cut to a couple of lines for the progress view. */
+const short = (s: string) => {
+  const t = s.replace(/\s+/g, ' ').trim()
+  return t.length > 200 ? t.slice(0, 199).trimEnd() + '…' : t
+}
+
+/** What was read from the link: the text for Claude, its pictures, and a short excerpt to show the member. */
+type Post = { text: string; images: string[]; excerpt: string }
 
 /**
  * Caption of the shared post, so the model knows what it is about (posts themselves need a login), and its pictures:
  * every slide of an Instagram carousel, or a video's cover.
  */
 async function postContext(link: string): Promise<Post> {
-  const none = { text: '', images: [] }
+  const none = { text: '', images: [], excerpt: '' }
   // fetch only real Instagram/TikTok pages, never an address the link merely mentions
   let url: URL
   try {
@@ -182,7 +190,11 @@ async function postContext(link: string): Promise<Post> {
       const r = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(link)}`, { signal: AbortSignal.timeout(8000) })
       if (r.ok) {
         const o = await r.json()
-        return { text: `TikTok post by @${o.author_unique_id ?? o.author_name}: ${o.title ?? ''}`, images: o.thumbnail_url ? [o.thumbnail_url] : [] }
+        return {
+          text: `TikTok post by @${o.author_unique_id ?? o.author_name}: ${o.title ?? ''}`,
+          images: o.thumbnail_url ? [o.thumbnail_url] : [],
+          excerpt: short(o.title ?? ''),
+        }
       }
     }
     if (host === 'instagram.com') {
@@ -194,6 +206,8 @@ async function postContext(link: string): Promise<Post> {
       ]
       const parts: string[] = []
       const images: string[] = []
+      // the embed's caption is the post's own text; the meta tags wrap it in likes and dates
+      let caption = ''
       for (const page of pages) {
         const r = await fetch(page, { headers: { 'User-Agent': 'facebookexternalhit/1.1' }, signal: AbortSignal.timeout(8000) }).catch(
           () => null,
@@ -206,14 +220,15 @@ async function postContext(link: string): Promise<Post> {
           if (c) parts.push(decode(c))
         }
         const cap = html.match(/class="Caption"[^>]*>([\s\S]*?)<div class="CaptionComments/i)?.[1]
-        if (cap) parts.push(decode(cap.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, ' ')))
+        if (cap) parts.push((caption = decode(cap.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, ' '))))
         // the embed page's data lists every slide (display_url, inside an escaped JSON string)
         for (const m of html.matchAll(/display_url\\*"\s*:\s*\\*"(https:[^"]+?)\\*"/g)) {
           images.push(m[1].replace(/\\+\//g, '/').replace(/\\+u0026/g, '&'))
         }
       }
       const text = [...new Set(parts.map((x) => x.trim()).filter(Boolean))].join(' — ').slice(0, 4000)
-      return { text: text ? `Instagram post: ${text}` : '', images: [...new Set(images)].slice(0, MAX_SLIDES) }
+      const longest = parts.reduce((a, b) => (b.length > a.length ? b : a), '')
+      return { text: text ? `Instagram post: ${text}` : '', images: [...new Set(images)].slice(0, MAX_SLIDES), excerpt: short(caption || longest) }
     }
   } catch {
     // fall back to the link alone
@@ -286,13 +301,76 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 // Supabase's runtime keeps a promise running after the response is sent, or after the client has gone
 const edge = (globalThis as { EdgeRuntime?: { waitUntil(p: Promise<unknown>): void } }).EdgeRuntime
 
+/**
+ * A place as the progress view names it: its name and where it is, when known (the list's "Shibuya, Tokyo"; for a
+ * written card its area, with the city apart so the app can name it in its own language).
+ */
+type Spot = { name: string; where: string; city?: string }
+/**
+ * One line of the progress stream, sent as each step learns something (a request with `stream: true` gets these as
+ * newline-delimited JSON; the rest get the single JSON answer as before). done carries that same answer.
+ */
+type Progress =
+  | { type: 'read'; source: 'instagram' | 'tiktok' | 'maps' | 'link'; excerpt: string; slides: number }
+  | { type: 'search'; query: string }
+  | { type: 'researched'; searches: number }
+  | { type: 'found'; places: Spot[] }
+  | ({ type: 'card'; i: number; ok: boolean } & Spot)
+  | { type: 'cached'; places: Spot[] }
+  | { type: 'done'; places: unknown[]; cached?: true }
+  | { type: 'error'; error: string; status: number }
+type Send = (e: Progress) => void
+
+/** A response that streams what `run` sends, one JSON object per line; the work goes on if the phone stops reading. */
+function streamed(run: (send: Send) => Promise<void>) {
+  const enc = new TextEncoder()
+  let out: ReadableStreamDefaultController<Uint8Array> | null = null
+  const body = new ReadableStream<Uint8Array>({
+    start: (c) => void (out = c),
+    cancel: () => void (out = null),
+  })
+  const send: Send = (e) => {
+    try {
+      out?.enqueue(enc.encode(JSON.stringify(e) + '\n'))
+    } catch {
+      // the phone went away; the search still finishes and saves its result
+      out = null
+    }
+  }
+  const done = run(send)
+    .catch((error) => {
+      console.error('stream failed', error)
+      send({ type: 'error', error: 'lookup failed', status: 500 })
+    })
+    .finally(() => {
+      try {
+        out?.close()
+      } catch {
+        // already closed
+      }
+    })
+  edge?.waitUntil(done)
+  // no-cache and no proxy buffering, or the lines arrive all at once at the end
+  return new Response(body, {
+    headers: { ...cors, 'Content-Type': 'application/x-ndjson; charset=utf-8', 'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no' },
+  })
+}
+
+/** How a card names its place for the progress view. */
+const spot = (p: unknown): Spot => {
+  const c = (p ?? {}) as { name?: unknown; area?: unknown; city?: unknown }
+  const text = (x: unknown) => (typeof x === 'string' ? x.trim() : '')
+  return { name: text(c.name), where: text(c.area), ...(text(c.city) ? { city: text(c.city) } : {}) }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
 
   // check the request before charging for it, so a malformed one doesn't use up the daily quota
-  const body = (await req.json().catch(() => null)) as { link?: unknown; text?: unknown; id?: unknown } | null
+  const body = (await req.json().catch(() => null)) as { link?: unknown; text?: unknown; id?: unknown; stream?: unknown } | null
+  const live = body?.stream === true
   const link = typeof body?.link === 'string' ? body.link : undefined
   const text = typeof body?.text === 'string' ? body.text : undefined
   if (!link?.trim() && !text?.trim()) return json({ error: 'nothing to look up' }, 400)
@@ -329,6 +407,12 @@ Deno.serve(async (req) => {
       console.log('cached', key, places.length)
       await track({ status: 'done', places, finished_at: new Date().toISOString() })
       logCall(admin, { fn: 'suggest-place', step: 'cached', userId, lookupId: id })
+      if (live) {
+        return streamed(async (send) => {
+          send({ type: 'cached', places: places.map(spot) })
+          send({ type: 'done', places, cached: true })
+        })
+      }
       return json({ places, cached: true })
     }
   }
@@ -338,27 +422,53 @@ Deno.serve(async (req) => {
   await track({ status: 'running' })
 
   // the search runs on its own, so it finishes and saves its result even if the phone stops waiting
-  const work = research(admin, link, text, userId, id).then(async (r) => {
-    const finished_at = new Date().toISOString()
-    await admin
-      .from('place_lookups')
-      .update('places' in r ? { status: 'done', places: r.places, finished_at } : { status: 'failed', error: r.error, finished_at })
-      .eq('id', id)
-    return r
-  })
+  const run = (send?: Send) =>
+    research(admin, link, text, userId, id, send).then(async (r) => {
+      const finished_at = new Date().toISOString()
+      await admin
+        .from('place_lookups')
+        .update('places' in r ? { status: 'done', places: r.places, finished_at } : { status: 'failed', error: r.error, finished_at })
+        .eq('id', id)
+      return r
+    })
+  if (live) {
+    return streamed(async (send) => {
+      const r = await run(send)
+      send('places' in r ? { type: 'done', places: r.places } : { type: 'error', error: r.error, status: r.status })
+    })
+  }
+  const work = run()
   edge?.waitUntil(work)
   const r = await work
   return 'places' in r ? json({ places: r.places }) : json({ error: r.error }, r.status)
 })
 
-/** Finds the place(s) a link or name is about and turns them into cards; or an error with its status. */
-async function research(admin: SupabaseClient, link: string | undefined, text: string | undefined, userId: string, lookupId: string): Promise<
-  { places: Record<string, unknown>[] } | { error: string; status: number }
-> {
-  const post = link ? await postContext(link) : { text: '', images: [] }
+/** Which kind of link it is, for the progress view. */
+function linkSource(link: string): 'instagram' | 'tiktok' | 'maps' | 'link' {
+  const l = link.toLowerCase()
+  if (/instagram\.com/.test(l)) return 'instagram'
+  if (/tiktok\.com/.test(l)) return 'tiktok'
+  if (/(google\.[a-z.]+\/maps|maps\.app\.goo\.gl|goo\.gl\/maps)/.test(l)) return 'maps'
+  return 'link'
+}
+
+/**
+ * Finds the place(s) a link or name is about and turns them into cards; or an error with its status. `send`, when
+ * given, hears each step as it happens (what was read, what was searched, which places, each card).
+ */
+async function research(
+  admin: SupabaseClient,
+  link: string | undefined,
+  text: string | undefined,
+  userId: string,
+  lookupId: string,
+  send: Send = () => {},
+): Promise<{ places: Record<string, unknown>[] } | { error: string; status: number }> {
+  const post = link ? await postContext(link) : { text: '', images: [], excerpt: '' }
   const caption = post.text
   const slides = await pictures(post.images)
   console.log('caption', caption.length, 'slides', slides.length, caption.slice(0, 300))
+  if (link) send({ type: 'read', source: linkSource(link), excerpt: post.excerpt, slides: slides.length })
   const ask = [
     link && `Link: ${link}`,
     caption,
@@ -377,16 +487,27 @@ async function research(admin: SupabaseClient, link: string | undefined, text: s
   try {
     const messages: Anthropic.MessageParam[] = [{ role: 'user', content: [{ type: 'text', text: ask }, ...slides] }]
     let research: Anthropic.Message | null = null
+    // streamed, so each web search can be shown the moment Claude makes it
+    let searches = 0
+    const searched = (b: Anthropic.ContentBlock) => {
+      const query = b.type === 'server_tool_use' && (b.input as { query?: unknown } | null)?.query
+      if (typeof query !== 'string' || !query.trim()) return
+      searches++
+      send({ type: 'search', query: query.trim().slice(0, 200) })
+    }
     for (let i = 0; i < 4; i++) {
       t = performance.now()
-      research = await client.messages.create({
-        model: MODEL,
-        max_tokens: 8000,
-        output_config: { effort: 'low' },
-        system: RESEARCH,
-        tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 10 }],
-        messages,
-      })
+      research = await client.messages
+        .stream({
+          model: MODEL,
+          max_tokens: 8000,
+          output_config: { effort: 'low' },
+          system: RESEARCH,
+          tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 10 }],
+          messages,
+        })
+        .on('contentBlock', searched)
+        .finalMessage()
       log(research)
       if (research.stop_reason !== 'pause_turn') break
       messages.push({ role: 'assistant', content: research.content })
@@ -396,6 +517,7 @@ async function research(admin: SupabaseClient, link: string | undefined, text: s
       .filter((b): b is Anthropic.TextBlock => b.type === 'text')
       .map((b) => b.text)
       .join('\n')
+    send({ type: 'researched', searches })
 
     // each call times and logs itself: the cards below are written side by side
     const timed = async <T extends Anthropic.Message>(name: string, call: () => Promise<T>) => {
@@ -422,7 +544,13 @@ async function research(admin: SupabaseClient, link: string | undefined, text: s
         messages: [{ role: 'user', content: material }],
       }),
     )
-    const names = [...new Set((listed.parsed_output?.places ?? []).map((n) => n.trim()).filter(Boolean))].slice(0, MAX_PLACES)
+    const spots = new Map<string, string>()
+    for (const p of listed.parsed_output?.places ?? []) {
+      const n = p.name.trim()
+      if (n && !spots.has(n)) spots.set(n, p.where.trim())
+    }
+    const names = [...spots.keys()].slice(0, MAX_PLACES)
+    send({ type: 'found', places: names.map((name) => ({ name, where: spots.get(name) ?? '' })) })
     if (!names.length) {
       console.log('places 0', notes.slice(0, 500))
       return { places: [] }
@@ -449,13 +577,18 @@ async function research(admin: SupabaseClient, link: string | undefined, text: s
     let failure: unknown = null
     const [cards, tags] = await Promise.all([
       Promise.all(
-        names.map((name) =>
+        names.map((name, i) =>
           write(name)
             .then((r) => r.parsed_output?.places[0] ?? null)
             .catch((error) => {
               failure ??= error
               console.error('card failed', name, error instanceof Error ? error.message : error)
               return null
+            })
+            .then((card) => {
+              // the card's own area and city, which may be more exact than the list's guess
+              send({ type: 'card', i, ok: !!card, ...(card ? { ...spot(card), name } : { name, where: spots.get(name) ?? '' }) })
+              return card
             }),
         ),
       ),
