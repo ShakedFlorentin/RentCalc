@@ -235,7 +235,9 @@ function arrange(days: Day[], units: Unit[], fixed: Fixed[], barred: Map<string,
     return spread + crowd + hours * hours * 0.35
   }
   const unitCost = (u: Unit, day: number | null) => {
-    if (day == null) return u.priority * 14
+    // leaving a place out costs its priority, more for a bigger one: a two-hour shrine is more of the trip than a
+    // forty-minute café of the same priority, which the day would otherwise always pick for fitting more in
+    if (day == null) return u.priority * 14 * (0.5 + u.mins / 120)
     let cost = 0
     const d = byDay.get(day)!
     // a couple's own place fits best on a day the other couple is elsewhere
@@ -302,10 +304,14 @@ function arrange(days: Day[], units: Unit[], fixed: Fixed[], barred: Map<string,
     return after - before
   }
 
-  // greedy: the most wanted first, each where it adds least
+  // the plan as it stands first: each place stays on the day it is on while that day still takes it, so running the
+  // planner again on its own plan changes nothing (it runs after every swipe; the days must not shift each time)
   const order = [...live].sort((a, b) => b.priority - a.priority || options.get(a.id)!.length - options.get(b.id)!.length)
+  for (const u of order) at.set(u.id, null)
+  for (const u of order) if (u.current != null && options.get(u.id)!.includes(u.current) && fits(u, u.current)) put(u, u.current)
+  // then the rest, greedy: the most wanted first, each where it adds least
   for (const u of order) {
-    at.set(u.id, null)
+    if (at.get(u.id) != null) continue
     let best: number | null = null
     let bestD = 0
     for (const day of options.get(u.id)!) {
