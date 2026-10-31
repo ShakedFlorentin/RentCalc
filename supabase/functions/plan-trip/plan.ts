@@ -475,10 +475,10 @@ const wantOf = (u: Unit) => {
 }
 
 /**
- * Rough times for one day, everyone's at once: places in the order of the hour they want, each couple with its own
- * clock. A place everyone does together starts when all its couples are free; a couple's own place starts when that
- * couple is, so a couple's morning place can come before the shared afternoon instead of after all of it. Places
- * that want no hour go where they add the least travel without pushing a timed place late.
+ * Rough times for one day, two ways, both walked with a clock per couple (the ride from wherever each couple is):
+ * what everyone does together first and then each couple's own, or every place in the order of the hour it wants,
+ * so a couple's morning place can come before the shared afternoon instead of after all of it. Places that want no
+ * hour go where they add the least travel without pushing a timed place late or past closing.
  */
 function timetables(d: Day, units: Unit[], fixed: Fixed[]) {
   const couples = [...d.at.keys()]
