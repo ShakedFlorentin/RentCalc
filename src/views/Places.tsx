@@ -290,9 +290,9 @@ function PlaceRow(props: { p: Place; card?: Candidate; planned: boolean; onEdit:
             <Icon as={props.planned ? CalendarCheck : CalendarPlus} /> <span>{props.planned ? t('במסלול') : t('למסלול')}</span>
           </button>
         </MediaActions>
-        {/* the stars, once the place is ticked as visited */}
-        {props.children}
       </div>
+      {/* the stars, once the place is ticked as visited: a row of its own across the whole card */}
+      {props.children}
     </div>
   )
 }
