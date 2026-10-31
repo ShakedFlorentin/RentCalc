@@ -17,6 +17,12 @@ const LEVELS = [
   { xp: 500, name: t('נוסע') },
   { xp: 1000, name: t('מקומי') },
   { xp: 2000, name: t('שוגון') },
+  // past the shogun: by then every card is voted on, so these come with new places and their matches
+  { xp: 3000, name: t('קיסר') },
+  { xp: 4000, name: t('דרקון') },
+  { xp: 5000, name: t('קאמי') },
+  { xp: 6500, name: t('אמאטרסו') },
+  { xp: 8000, name: t('גודזילה') },
 ]
 
 type Props = {
@@ -292,6 +298,11 @@ export default function SwipeGame({ trip, userId, members, showCard, onCardShown
                   <div className="bar">
                     <span style={{ width: `${candidates.length ? (b.done / candidates.length) * 100 : 0}%` }} />
                   </div>
+                  {b.m.user_id === userId && (
+                    <div className="small muted">
+                      {nextLevel ? t('עוד {xp} XP ל{level}', { xp: nextLevel.xp - b.xp, level: nextLevel.name }) : t('הדרגה הכי גבוהה')}
+                    </div>
+                  )}
                   {b.m.user_id !== userId && b.twin !== null && (
                     <div className="small muted">{t('טעם משותף איתך: {pct}%', { pct: b.twin })}</div>
                   )}
