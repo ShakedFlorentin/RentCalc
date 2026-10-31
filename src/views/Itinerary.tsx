@@ -1,8 +1,8 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
-import { BedDouble, Check, CircleAlert, Navigation, Pencil, PlaneLanding, Plus, Users } from 'lucide-react'
+import { BedDouble, Check, CircleAlert, Navigation, Pencil, PlaneLanding, Plus, Undo2, Users } from 'lucide-react'
 import { supabase } from '../supabase'
 import { CATEGORIES, TOGETHER, WHO_OPTIONS, type Booking, type DayInfo, type Member, type Place, type PlanSummary, type Trip } from '../types'
-import { cityLabel, couplesOf, dayDate, keepRanges, dayOption, dayParts, fmtDayLong, mutate, replan, useTripTable } from '../lib'
+import { cityLabel, couplesOf, currentDay, dayDate, keepRanges, dayOption, dayParts, fmtDayLong, mutate, replan, useTripTable } from '../lib'
 import { isEn, t } from '../i18n'
 import { Empty, Field, Sheet, useRemembered } from '../ui'
 import { Icon } from '../icons'
@@ -44,6 +44,15 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
   }, [day])
 
   const info = days.find((d) => d.day === day)
+  // a day that has passed: a place nobody ticked can go back to the planner for a day still ahead
+  const today = currentDay(trip.start_date, trip.num_days)
+  const past = today != null && day < today
+  const missed = async (i: PlanItem) => {
+    if (!(await mutate(supabase.from('itinerary_items').delete().eq('id', i.id)))) return
+    // a new place to the planner again, not one somebody took out
+    await mutate(supabase.from('places').update({ auto_planned: false }).eq('id', i.place_id!))
+    replan(trip.id)
+  }
   const date = trip.start_date ? ymd(dayDate(trip.start_date, day)!) : ''
   const entries = dayEntries(items, bookings, day, date, mode, myCouple)
   // on a day with several owners, "הכל" reads as one section per owner (the group first)
@@ -134,7 +143,13 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
           {entries
             .filter((e) => owner === undefined || e.who === owner)
             .map((e) => (
-              <EntryRow key={e.key} e={e} onEdit={setEditItem} warning={e.item && warnings.get(e.item.id)} />
+              <EntryRow
+                key={e.key}
+                e={e}
+                onEdit={setEditItem}
+                warning={e.item && warnings.get(e.item.id)}
+                onMissed={past && e.item?.place_id && !e.item.done ? missed : undefined}
+              />
             ))}
         </Fragment>
       ))}
@@ -162,7 +177,7 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
 }
 
 /** One line of the day: a plan item you can tick and edit, or a booking moment that is read-only here. */
-function EntryRow({ e, onEdit, warning }: { e: Entry; onEdit: (i: PlanItem) => void; warning?: string }) {
+function EntryRow({ e, onEdit, warning, onMissed }: { e: Entry; onEdit: (i: PlanItem) => void; warning?: string; onMissed?: (i: PlanItem) => void }) {
   const i = e.item
   return (
     <div className={'item card' + (i ? '' : ' plan-booking') + (e.done ? ' done' : '')}>
@@ -197,10 +212,25 @@ function EntryRow({ e, onEdit, warning }: { e: Entry; onEdit: (i: PlanItem) => v
             <Icon as={CircleAlert} /> {warning}
           </div>
         )}
-        {e.location && (
-          <a className="action nav-btn" href={navUrl(e.location)} target="_blank" rel="noreferrer">
-            <Icon as={Navigation} /> {t('ניווט')}
-          </a>
+        {(e.location || (i && onMissed)) && (
+          <div className="item-actions">
+            {e.location && (
+              <a className="action nav-btn" href={navUrl(e.location)} target="_blank" rel="noreferrer">
+                <Icon as={Navigation} /> {t('ניווט')}
+              </a>
+            )}
+            {i && onMissed && (
+              <button
+                className="action"
+                onClick={(ev) => {
+                  ev.stopPropagation()
+                  onMissed(i)
+                }}
+              >
+                <Icon as={Undo2} /> {t('לא הגענו')}
+              </button>
+            )}
+          </div>
         )}
       </div>
     </div>

@@ -171,6 +171,7 @@ export const EN_B: Record<string, string> = {
   'נוסע': 'Traveller',
   'מקומי': 'Local',
   'שוגון': 'Shogun',
+  'לא הגענו': "Didn't make it",
   'קיסר': 'Emperor',
   'דרקון': 'Dragon',
   'קאמי': 'Kami',

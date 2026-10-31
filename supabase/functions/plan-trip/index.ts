@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
-  const body = (await req.json().catch(() => null)) as { trip_id?: unknown; dry?: unknown; wait?: unknown; next?: unknown } | null
+  const body = (await req.json().catch(() => null)) as { trip_id?: unknown; dry?: unknown; wait?: unknown } | null
   const tid = typeof body?.trip_id === 'string' && UUID.test(body.trip_id) ? body.trip_id : null
   if (!tid) return json({ error: 'trip_id missing' }, 400)
 
@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
   // a dry run (planner token only) returns the plan it would write, for checking
   if (trusted && body?.dry === true) {
     try {
-      return json(await run(admin, tid, true, body.next === true))
+      return json(await run(admin, tid, true))
     } catch (e) {
       return json({ error: String(e instanceof Error ? e.stack : e) }, 500)
     }
@@ -262,7 +262,7 @@ const DEFAULT_TIME: Record<string, BestTime> = { nightlife: 'night' }
 /** The facts of a card that has them; undefined for one never checked. */
 const factsOf = (c: Cand | undefined): Facts | undefined => (c?.facts_at ? c : undefined)
 
-async function run(admin: SupabaseClient, tid: string, dry: boolean, next = false) {
+async function run(admin: SupabaseClient, tid: string, dry: boolean) {
   const q = async <T>(p: PromiseLike<{ data: T | null; error: { message: string } | null }>) => {
     const { data, error } = await p
     if (error) throw new Error(error.message)
@@ -327,11 +327,15 @@ async function run(admin: SupabaseClient, tid: string, dry: boolean, next = fals
       return JAPAN.test(from) && f.starts_at?.slice(0, 10) === date
     })
 
+  // the trip runs on Japan's calendar; a day that has passed takes no new plans, and what is on it stays (a place
+  // nobody got to goes back to the planner only when someone says so in the app: "לא הגענו")
+  const today = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10)
+  const past = (day: number) => dateOf(day) < today
   const days: Day[] = []
   for (let d = 1; d <= trip.num_days; d++) {
     const date = dateOf(d)
     const atMap = new Map<string, Presence>()
-    for (const c of couples) {
+    for (const c of past(d) ? [] : couples) {
       const tonight = sleepOf(c, date, d)
       const last = sleepOf(c, dateOf(d - 1), d - 1)
       if (!tonight && !last) continue
@@ -366,8 +370,8 @@ async function run(admin: SupabaseClient, tid: string, dry: boolean, next = fals
   }
 
   const tipOf = (c: Cand) => c.tip
-  const fixedItems = items.filter((i) => !i.auto || i.done)
-  const autoItems = items.filter((i) => i.auto && !i.done)
+  const fixedItems = items.filter((i) => !i.auto || i.done || past(i.day))
+  const autoItems = items.filter((i) => i.auto && !i.done && !past(i.day))
   const fixedPlaceIds = new Set(fixedItems.map((i) => i.place_id).filter(Boolean))
   const fixedNames = new Set(fixedItems.map((i) => factKey(i.title)))
   const autoByPlace = groupBy(autoItems.filter((i) => i.place_id), (i) => i.place_id!)
@@ -489,7 +493,7 @@ async function run(admin: SupabaseClient, tid: string, dry: boolean, next = fals
     fixed.push({ day, couples: whoOf(b.who, day), point, start: s.min, mins: len })
   }
 
-  const out = plan(days, units, fixed, { timeOfDay: next })
+  const out = plan(days, units, fixed)
 
   // ---- the rows the plan wants, against the rows there are
   const noteOf = (u: { c: Cand; f?: Facts }) => {
