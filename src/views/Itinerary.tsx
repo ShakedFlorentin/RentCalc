@@ -1,11 +1,12 @@
-import { Fragment, useEffect, useRef, useState } from 'react'
-import { BedDouble, Check, CircleAlert, Navigation, Pencil, PlaneLanding, Plus, Undo2, Users } from 'lucide-react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { BedDouble, Check, ChevronRight, CircleAlert, Heart, MapPin, Navigation, Pencil, PlaneLanding, Plus, Undo2, Users } from 'lucide-react'
 import { supabase } from '../supabase'
-import { CATEGORIES, TOGETHER, WHO_OPTIONS, type Booking, type DayInfo, type Member, type Place, type PlanSummary, type Trip } from '../types'
-import { cityLabel, couplesOf, currentDay, dayDate, keepRanges, dayOption, dayParts, fmtDayLong, mutate, replan, useTripTable } from '../lib'
+import { CATEGORIES, CITY_HE, TOGETHER, WHO_OPTIONS, type Booking, type Candidate, type DayInfo, type Member, type Place, type PlanSummary, type Trip } from '../types'
+import { cityLabel, couplesOf, currentDay, dayDate, keepRanges, dayOption, dayParts, fmtDayLong, mutate, replan, useMediaIndex, useTripTable, withMedia } from '../lib'
 import { isEn, t } from '../i18n'
 import { Empty, Field, Sheet, useRemembered } from '../ui'
-import { Icon } from '../icons'
+import { CARD_ICON, Icon } from '../icons'
+import { CardFull } from './Swipe'
 import {
   ARRIVAL,
   dayEntries,
@@ -36,8 +37,17 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
   const mode: WhoMode = saved === 'group' || saved === 'all' ? saved : 'mine'
   const [editItem, setEditItem] = useState<Partial<PlanItem> | null>(null)
   const [editDay, setEditDay] = useState(false)
+  // the item whose sheet is open: what the place is and what else is around it
+  const [openId, setOpenId] = useState<string | null>(null)
   const stripRef = useRef<HTMLDivElement>(null)
   const summary = usePlanSummary(trip.id, items)
+  // the card behind a place item, with the same text and media the swipe game shows
+  const { rows: places } = useTripTable<Place>('places', trip.id)
+  const { rows: rawCards } = useTripTable<Candidate>('candidates', trip.id)
+  const media = useMediaIndex()
+  const cards = useMemo(() => rawCards.map((c) => withMedia(c, media)), [rawCards, media])
+  const placeOf = (i?: PlanItem) => (i?.place_id ? places.find((p) => p.id === i.place_id) : undefined)
+  const cardOf = (p?: Place) => (p?.candidate_id ? cards.find((c) => c.id === p.candidate_id) : undefined)
 
   useEffect(() => {
     stripRef.current?.querySelector('.active')?.scrollIntoView({ inline: 'center', block: 'nearest' })
@@ -59,9 +69,12 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
   const owners = [...new Set(entries.map((e) => e.who))].sort((a, b) => (a ?? '').localeCompare(b ?? ''))
   const sections = mode === 'all' && owners.length > 1 ? owners : [undefined]
   const arrivals = entries.filter((e) => e.key.endsWith(':arr'))
+  const opened = openId ? entries.find((e) => e.item?.id === openId) : undefined
   // a day only one couple is in Japan is that couple's plan by default
   const defaultWho = info?.who ?? null
   const warnings = new Map(summary?.warnings.map((w) => [w.item_id, warningText(w)]))
+  // the planner's own items are keyed by place: what its final check found on them
+  const issues = new Map(summary?.issues?.map((x) => [x.place_id, ISSUE[x.kind]]))
   // places you liked in today's city that didn't fit into any day: ready to swap in
   const dayCities = (info?.city ?? '').split(' / ').filter(Boolean)
   const spare = (summary?.unplanned ?? []).filter(
@@ -146,20 +159,36 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
               <EntryRow
                 key={e.key}
                 e={e}
+                kind={cardOf(placeOf(e.item))?.serves}
+                onOpen={(i) => setOpenId(i.id)}
                 onEdit={setEditItem}
-                warning={e.item && warnings.get(e.item.id)}
+                warning={e.item && (warnings.get(e.item.id) ?? (e.item.auto && e.item.place_id ? issues.get(e.item.place_id) : undefined))}
                 onMissed={past && e.item?.place_id && !e.item.done ? missed : undefined}
               />
             ))}
         </Fragment>
       ))}
 
-      {spare.length > 0 && <Spare trip={trip} day={day} spare={spare} />}
+      {spare.length > 0 && <Spare trip={trip} day={day} spare={spare} places={places} />}
 
       <button className="fab" aria-label={t('פעילות חדשה')} onClick={() => setEditItem({ day, category: 'sight', who: defaultWho })}>
         <Plus size={28} strokeWidth={2} aria-hidden="true" />
       </button>
 
+      {opened && (
+        <ItemSheet
+          e={opened}
+          place={placeOf(opened.item)}
+          card={cardOf(placeOf(opened.item))}
+          cards={cards}
+          places={places}
+          onEdit={(i) => {
+            setOpenId(null)
+            setEditItem(i)
+          }}
+          onClose={() => setOpenId(null)}
+        />
+      )}
       {editItem && (
         <ItemForm tripId={trip.id} start={trip.start_date} numDays={trip.num_days} couples={couples} item={editItem} onClose={() => setEditItem(null)} />
       )}
@@ -176,8 +205,17 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
   )
 }
 
-/** One line of the day: a plan item you can tick and edit, or a booking moment that is read-only here. */
-function EntryRow({ e, onEdit, warning, onMissed }: { e: Entry; onEdit: (i: PlanItem) => void; warning?: string; onMissed?: (i: PlanItem) => void }) {
+/** One line of the day: a plan item you can tick, open and edit, or a booking moment that is read-only here. */
+function EntryRow(props: {
+  e: Entry
+  /** what the card says it serves: "food" alone doesn't tell a cake shop from a ramen counter */
+  kind?: string | null
+  onOpen: (i: PlanItem) => void
+  onEdit: (i: PlanItem) => void
+  warning?: string
+  onMissed?: (i: PlanItem) => void
+}) {
+  const { e, kind, onOpen, onEdit, warning, onMissed } = props
   const i = e.item
   return (
     <div className={'item card' + (i ? '' : ' plan-booking') + (e.done ? ' done' : '')}>
@@ -195,14 +233,17 @@ function EntryRow({ e, onEdit, warning, onMissed }: { e: Entry; onEdit: (i: Plan
           <Icon as={e.icon} size="1.375rem" />
         </span>
       )}
-      <div className="item-body" onClick={i ? () => onEdit(i) : undefined} style={i ? undefined : { cursor: 'default' }}>
+      <div className="item-body" onClick={i ? () => onOpen(i) : undefined} style={i ? undefined : { cursor: 'default' }}>
         <div className="item-title">
           {/* the planner's time is a rough guess: it shows as such until someone sets one */}
           {e.time && (i?.auto ? <span className="time approx" title={t('שעה משוערת')}>~{e.time}</span> : <span className="time">{e.time}</span>)}
           {e.title}
         </div>
-        <div className="muted small">
-          {i ? CATEGORIES[i.category] ?? i.category : t('הזמנה')}
+        <div className="muted small plan-meta">
+          <span className="plan-kind">
+            {i ? CATEGORIES[i.category] ?? i.category : t('הזמנה')}
+            {kind && <> · {keepRanges(firstSentence(kind))}</>}
+          </span>
           {e.who && <span className="who-pill">{t(e.who)}</span>}
         </div>
         {/* the planner's notes are one short line (and a baby line when it matters); people's own notes can run long */}
@@ -212,12 +253,19 @@ function EntryRow({ e, onEdit, warning, onMissed }: { e: Entry; onEdit: (i: Plan
             <Icon as={CircleAlert} /> {warning}
           </div>
         )}
-        {(e.location || (i && onMissed)) && (
+        {(e.location || i) && (
           <div className="item-actions">
-            {e.location && (
-              <a className="action nav-btn" href={navUrl(e.location)} target="_blank" rel="noreferrer">
-                <Icon as={Navigation} /> {t('ניווט')}
-              </a>
+            {e.location && <NavLink to={e.location} />}
+            {i && (
+              <button
+                className="action"
+                onClick={(ev) => {
+                  ev.stopPropagation()
+                  onEdit(i)
+                }}
+              >
+                <Icon as={Pencil} /> {t('עריכה')}
+              </button>
             )}
             {i && onMissed && (
               <button
@@ -235,6 +283,170 @@ function EntryRow({ e, onEdit, warning, onMissed }: { e: Entry; onEdit: (i: Plan
       </div>
     </div>
   )
+}
+
+/** Directions to a plan item; a tap here leaves the row alone (the row opens its sheet). */
+function NavLink({ to }: { to: string }) {
+  return (
+    <a className="action nav-btn" href={navUrl(to)} target="_blank" rel="noreferrer" onClick={(ev) => ev.stopPropagation()}>
+      <Icon as={Navigation} /> {t('ניווט')}
+    </a>
+  )
+}
+
+type Near = { key: string; name: string; line: string | null; icon: Entry['icon']; mins: number | null; liked: boolean; card?: Candidate }
+
+/**
+ * A plan item opened: the place's card and what else there is around it (liked places first, then the rest of the
+ * deck), or for a hand-written activity its own notes. A nearby card opens in the same sheet.
+ */
+function ItemSheet(props: {
+  e: Entry
+  place?: Place
+  card?: Candidate
+  cards: Candidate[]
+  places: Place[]
+  onEdit: (i: PlanItem) => void
+  onClose: () => void
+}) {
+  const { e, place, card, cards, places } = props
+  const i = e.item!
+  const [peek, setPeek] = useState<Candidate | null>(null)
+  const top = useRef<HTMLDivElement>(null)
+  const nearRef = useRef<HTMLElement>(null)
+  // a nearby card (and the way back) starts at its top, not where the list was scrolled to
+  useEffect(() => {
+    top.current?.closest('.sheet-body')?.scrollTo(0, 0)
+  }, [peek])
+  const near = useMemo(() => nearby(card, place, cards, places), [card, place, cards, places])
+  const where = (c: { city: string | null; area: string | null }) =>
+    [cityLabel(c.city ? CITY_HE[c.city] ?? c.city : null), c.area].filter(Boolean).join(' · ')
+
+  if (peek)
+    return (
+      <Sheet title={peek.name} onClose={props.onClose}>
+        <div ref={top} className="card-full">
+          <button className="link plan-back" onClick={() => setPeek(null)}>
+            <Icon as={ChevronRight} className="flip-ltr" /> {t('חזרה')} · <bdi>{e.title}</bdi>
+          </button>
+          <div className="muted small">{where(peek)}</div>
+          <CardFull c={peek} />
+        </div>
+      </Sheet>
+    )
+
+  return (
+    <Sheet title={e.title} onClose={props.onClose}>
+      <div ref={top} className="card-full">
+        <div className="muted small">
+          {[e.time, CATEGORIES[i.category] ?? i.category, where(card ?? place ?? { city: null, area: null })].filter(Boolean).join(' · ')}
+        </div>
+        <div className="item-actions">
+          {e.location && <NavLink to={e.location} />}
+          <button className="action" onClick={() => props.onEdit(i)}>
+            <Icon as={Pencil} /> {t('עריכה')}
+          </button>
+          {/* the card can run long: what is around it is one tap away, not a long scroll */}
+          {near.length > 0 && (
+            <button className="action" onClick={() => nearRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
+              <Icon as={MapPin} /> {near.length === 1 ? t('מקום אחד באזור') : t('{n} מקומות באזור', { n: near.length })}
+            </button>
+          )}
+        </div>
+        {e.sub && <p className={'notes' + (i.auto ? ' plan-auto-notes' : '')}>{keepRanges(e.sub)}</p>}
+        {card ? (
+          <CardFull c={card} />
+        ) : (
+          place?.notes && place.notes !== e.sub && <p dir="auto">{keepRanges(place.notes)}</p>
+        )}
+        {!card && !place?.notes && !e.sub && <p className="muted">{t('אין הערות. אפשר להוסיף בעריכה.')}</p>}
+      </div>
+      {near.length > 0 && (
+        <section className="plan-near" ref={nearRef}>
+          <h3>{t('מה עוד יש באזור')}</h3>
+          <div className="card list-card">
+            {near.map((n) => {
+              const body = (
+                <>
+                  <Icon as={n.icon} />
+                  <span className="plan-near-text">
+                    <b dir="auto">
+                      {n.name}
+                      {n.liked && <Icon as={Heart} className="plan-near-liked" label={t('ברשימה שלכם')} />}
+                    </b>
+                    {n.line && <span className="muted small">{keepRanges(n.line)}</span>}
+                  </span>
+                  {n.mins != null && <span className="muted small plan-near-mins">{t('{n} דק׳ הליכה', { n: n.mins })}</span>}
+                </>
+              )
+              return n.card ? (
+                <button key={n.key} className="plan-near-row" onClick={() => setPeek(n.card!)}>
+                  {body}
+                </button>
+              ) : (
+                <div key={n.key} className="plan-near-row">
+                  {body}
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
+    </Sheet>
+  )
+}
+
+/** Within this, as the crow flies, a place counts as "around here" even in another area name. */
+const NEAR_METERS = 1200
+
+/** Liked places and cards around a place: within NEAR_METERS, or in the same area when a side has no coordinates. */
+function nearby(card: Candidate | undefined, place: Place | undefined, cards: Candidate[], places: Place[]): Near[] {
+  const at = card ?? place
+  if (!at) return []
+  // cards keep the city as a key ("tokyo"), places in Hebrew: compare in Hebrew
+  const cityOf = (c: string | null) => (c ? CITY_HE[c] ?? c : '')
+  const here = { lat: at.lat, lng: at.lng, area: norm(at.area), city: cityOf(at.city) }
+  const liked = new Set(places.map((p) => p.candidate_id).filter(Boolean))
+  const close = (o: { lat: number | null; lng: number | null; area: string | null; city: string | null }) => {
+    const m = here.lat != null && here.lng != null && o.lat != null && o.lng != null ? meters(here.lat, here.lng, o.lat, o.lng) : null
+    // coordinates decide when both sides have them: an area name can be loose; without them, the same area counts
+    const ok = m != null ? m <= NEAR_METERS : !!here.area && norm(o.area) === here.area && cityOf(o.city) === here.city
+    // ~80 m a minute, and streets are about a third longer than the straight line
+    return ok ? { mins: m == null ? null : Math.max(1, Math.round((m * 1.3) / 80)) } : null
+  }
+  const out: Near[] = []
+  for (const c of cards) {
+    if (c.id === card?.id || c.id === place?.candidate_id) continue
+    const n = close(c)
+    if (n) out.push({ key: c.id, name: c.name, line: whatItIs(c), icon: CARD_ICON[c.category] ?? CARD_ICON.sight, liked: liked.has(c.id), card: c, ...n })
+  }
+  // places someone added by hand have no card: they still belong on the list
+  for (const p of places) {
+    if (p.candidate_id || p.id === place?.id) continue
+    const n = close(p)
+    if (n) out.push({ key: p.id, name: p.name, line: p.notes ? firstSentence(p.notes) : null, icon: CARD_ICON[p.category] ?? CARD_ICON.sight, liked: true, ...n })
+  }
+  return out.sort((a, b) => Number(b.liked) - Number(a.liked) || (a.mins ?? 99) - (b.mins ?? 99)).slice(0, 8)
+}
+
+const norm = (s: string | null | undefined) => (s ?? '').trim().toLowerCase()
+
+/** Great-circle distance in meters. */
+function meters(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const r = Math.PI / 180
+  const a = Math.sin(((lat2 - lat1) * r) / 2) ** 2 + Math.cos(lat1 * r) * Math.cos(lat2 * r) * Math.sin(((lng2 - lng1) * r) / 2) ** 2
+  return 2 * 6371000 * Math.asin(Math.sqrt(a))
+}
+
+/** A card in one line: what it serves, or what you do there. */
+function whatItIs(c: Candidate) {
+  const s = c.serves || c.todo || c.special || c.plan_line
+  return s ? firstSentence(s) : null
+}
+
+/** The first sentence of a card's text; the row cuts it further with an ellipsis. */
+function firstSentence(s: string) {
+  return s.split(/(?<=[.!?])\s/)[0].replace(/\.$/, '').trim()
 }
 
 /** The planner's last word on the trip; refreshed whenever the plan changes, and the planner asked to run once a visit. */
@@ -263,8 +475,7 @@ function usePlanSummary(tripId: string, items: PlanItem[]) {
 }
 
 /** Liked places in this city that the plan had no room for (or that are closed on its days), each one tap from today. */
-function Spare({ trip, day, spare }: { trip: Trip; day: number; spare: PlanSummary['unplanned'] }) {
-  const { rows: places } = useTripTable<Place>('places', trip.id)
+function Spare({ trip, day, spare, places }: { trip: Trip; day: number; spare: PlanSummary['unplanned']; places: Place[] }) {
   const add = async (u: PlanSummary['unplanned'][number]) => {
     const p = places.find((x) => x.id === u.place_id)
     await mutate(
@@ -462,6 +673,13 @@ function DayForm(props: { tripId: string; day: number; title: string; info?: Day
 }
 
 /** A planner warning in the app's language: the Hebrew text, or English words built from what it found. */
+const ISSUE: Record<NonNullable<PlanSummary['issues']>[number]['kind'], string> = {
+  overlap: t('חופף לתוכנית אחרת'),
+  tight: t('אין מספיק זמן להגיע לכאן מהקודם'),
+  hours: t('מחוץ לשעות הפתיחה'),
+  meals: t('קרוב מדי לארוחה הקודמת'),
+}
+
 function warningText(w: PlanSummary['warnings'][number]) {
   if (!isEn || !w.kind) return w.text
   if (w.kind === 'closed_date') return 'Closed on this date'

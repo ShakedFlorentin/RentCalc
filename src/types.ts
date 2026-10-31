@@ -53,6 +53,9 @@ export type PlanSummary = {
   unplanned: { place_id: string; name: string; reason: 'waiting' | 'full' | 'closed' | 'no_day'; who: string | null; city?: string | null }[]
   // text is the Hebrew; kind (and weekday or hours) lets the app word it in English
   warnings: { item_id: string; text: string; kind?: 'closed_date' | 'closed_weekday' | 'hours'; weekday?: number; opens?: string; closes?: string }[]
+  // what the planner's final check found on its own places (should stay empty): overlapping, too little time to get
+  // there, outside opening hours, two meals too close
+  issues?: { place_id: string; kind: 'overlap' | 'tight' | 'hours' | 'meals' }[]
   facts_pending: number
 }
 
@@ -225,6 +228,8 @@ export type Candidate = {
   photos?: string[] | null
   /** the card's text in English, shown when the app is in English */
   en?: CardText | null
+  /** the shared card (place_library) this trip's copy came from; ratings hang on it. null for a card only this trip has */
+  library_id?: string | null
 } & PlanFacts
 
 /** The card text fields, as kept in English in `en` (same keys as the Hebrew columns). */
@@ -270,6 +275,19 @@ export type PlanFacts = {
   facts_at?: string | null
   /** true: confirmed from a source; false: estimated */
   facts_sure?: boolean | null
+}
+
+/**
+ * One person's stars (1-5) and short note for a shared card, kept on the library card so every later trip with the
+ * same place sees them. One row per person per card: rating again replaces it.
+ */
+export type PlaceRating = {
+  library_id: string
+  user_id: string
+  trip_id: string
+  stars: number
+  note: string | null
+  updated_at: string
 }
 
 export type Swipe = { trip_id: string; candidate_id: string; user_id: string; liked: boolean; created_at: string }

@@ -34,6 +34,28 @@
 .pick-row { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; cursor: pointer; }
 .pick-row input { flex: none; width: 22px; height: 22px; margin-top: 2px; accent-color: var(--accent); }
 .pick-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+/* add-place: the steps of a lookup as they happen, each with what it learned */
+.steps { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.step { display: grid; grid-template-columns: 22px 1fr; column-gap: 10px; align-items: start; }
+.step-title { font-weight: 600; line-height: 22px; }
+.step.wait .step-title { color: var(--muted); font-weight: 500; }
+.step-body { grid-column: 2; display: flex; flex-direction: column; gap: 4px; margin-top: 2px; min-width: 0; font-size: 0.875rem; color: var(--muted); overflow-wrap: anywhere; }
+.step-mark { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; }
+.step-mark.done { background: var(--ok); color: #fff; }
+.step-mark.now { color: var(--accent); }
+.step-mark.wait { border: 1.5px solid color-mix(in srgb, var(--muted) 55%, transparent); }
+.step-mark.fail { background: var(--fill); color: var(--accent); }
+.step-mark .ic { display: block; }
+.step-quote { color: var(--text); padding-inline-start: 8px; border-inline-start: 2px solid var(--line); quotes: none; }
+.step-line { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.step-line .ic { flex: none; }
+.step-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.step-list li { display: flex; align-items: flex-start; gap: 8px; }
+.step-list .step-mark { width: 18px; height: 18px; }
+.step-place { color: var(--text); min-width: 0; line-height: 18px; }
+.spin { animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
 /* the other couple already liked this card: it waits on our vote */
 .liked-by { display: inline-flex; align-items: center; gap: 5px; align-self: flex-start; margin-bottom: 6px; padding: 3px 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.2); color: #fff; font-size: 0.8125rem; font-weight: 600; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
 

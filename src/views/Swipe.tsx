@@ -4,6 +4,7 @@ import { supabase } from '../supabase'
 import { AUDIENCES, CARD_STYLE, CITY_HE, KOSHER, VERDICTS, type Candidate, type Member, type Swipe, type Trip } from '../types'
 import { cityLabel, couplesOf, keepRanges, mutate, safeUrl, useMediaIndex, useTripTable, withMedia } from '../lib'
 import AddPlace from './AddPlace'
+import { CardRatings } from './Ratings'
 import { t } from '../i18n'
 import { Empty, Sheet } from '../ui'
 import { MediaActions } from '../media'
@@ -645,7 +646,7 @@ function Card({ c, top, likedBy, onSwipe }: { c: Candidate; top: boolean; likedB
 }
 
 /** Everything a card says, as the full sheet shows it. */
-function CardFull({ c }: { c: Candidate }) {
+export function CardFull({ c }: { c: Candidate }) {
   return (
     <>
       <Tags c={c} />
@@ -716,6 +717,8 @@ function CardFull({ c }: { c: Candidate }) {
           <p dir="auto">{keepRanges(c.tip)}</p>
         </div>
       )}
+      {/* what travellers on earlier trips thought, once someone has rated it */}
+      <CardRatings libraryId={c.library_id} />
       <MediaActions name={c.name} maps={c.maps_url} website={c.website_url} m={c} />
       {c.sources.some((s) => safeUrl(s)) && (
         <div className="row">

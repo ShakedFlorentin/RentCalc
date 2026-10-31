@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabase'
 import { AUDIENCES, CATEGORIES, VERDICTS, type Candidate, type DayInfo, type GuidePlace, type ItineraryItem, type Member, type Place, type Trip } from '../types'
 import { cityLabel, couplesOf, dayOption, errorText, keepRanges, mapsUrl, mutate, normName, replan, safeUrl, useMediaIndex, useTripTable, withMedia } from '../lib'
@@ -10,6 +10,7 @@ import '../styles/game.css'
 import { MediaActions, Thumb } from '../media'
 import PlacesMap from './PlacesMap'
 import AddPlace from './AddPlace'
+import { RateBox, useRatings } from './Ratings'
 
 const PLACE_TABS: Record<string, string> = {
   '': t('הכל'),
@@ -43,6 +44,14 @@ export default function Places({ trip, me, userId, members }: Props) {
   // the raw card rows: a matched place's notes are copied from its card, and show in English from the card's `en`
   const { rows: cards } = useTripTable<Candidate>('candidates', trip.id)
   const cardById = useMemo(() => new Map(cards.map((c) => [c.id, c])), [cards])
+  // ratings sit on the shared library card, so the next trip with the same place sees them; a card made only for this
+  // trip has none, and its place gets no stars. One query for every visited place.
+  const libOf = (p: Place) => (p.candidate_id && cardById.get(p.candidate_id)?.library_id) || null
+  const ratings = useRatings(rows.filter((p) => p.visited).map(libOf))
+  const rateBox = (p: Place) => {
+    const lib = p.visited && libOf(p)
+    return lib ? <RateBox libraryId={lib} tripId={trip.id} userId={userId} ratings={ratings} /> : null
+  }
   const [view, setView] = useState<'list' | 'map'>('list')
   const [city, setCity] = useState('')
   const [cat, setCat] = useRemembered('placesTab', '')
@@ -175,7 +184,9 @@ export default function Places({ trip, me, userId, members }: Props) {
             <GuideCard g={guidePick} tripId={trip.id} userId={userId} me={me} onClose={() => setGuidePick(null)} />
           )}
           {picked && (
-            <PlaceRow p={picked} card={picked.candidate_id ? cardById.get(picked.candidate_id) : undefined} planned={plannedIds.has(picked.id)} onEdit={setEdit} onPlan={setPlanning} />
+            <PlaceRow p={picked} card={picked.candidate_id ? cardById.get(picked.candidate_id) : undefined} planned={plannedIds.has(picked.id)} onEdit={setEdit} onPlan={setPlanning}>
+              {rateBox(picked)}
+            </PlaceRow>
           )}
           <p className="small muted">
             {noLocation > 0 &&
@@ -199,7 +210,9 @@ export default function Places({ trip, me, userId, members }: Props) {
                 <div key={a} className="stack">
                   {a !== '—' && <div className="area-title"><Icon as={MapPin} /> <bdi>{a}</bdi></div>}
                   {ps.map((p) => (
-                    <PlaceRow key={p.id} p={p} card={p.candidate_id ? cardById.get(p.candidate_id) : undefined} planned={plannedIds.has(p.id)} onEdit={setEdit} onPlan={setPlanning} />
+                    <PlaceRow key={p.id} p={p} card={p.candidate_id ? cardById.get(p.candidate_id) : undefined} planned={plannedIds.has(p.id)} onEdit={setEdit} onPlan={setPlanning}>
+                      {rateBox(p)}
+                    </PlaceRow>
                   ))}
                 </div>
               ))}
@@ -225,7 +238,7 @@ export default function Places({ trip, me, userId, members }: Props) {
   )
 }
 
-function PlaceRow(props: { p: Place; card?: Candidate; planned: boolean; onEdit: (p: Place) => void; onPlan: (p: Place) => void }) {
+function PlaceRow(props: { p: Place; card?: Candidate; planned: boolean; onEdit: (p: Place) => void; onPlan: (p: Place) => void; children?: ReactNode }) {
   const { p } = props
   const mapLink = safeUrl(p.url) || mapsUrl([p.name, p.area, p.city].filter(Boolean).join(', '))
   return (
@@ -277,6 +290,8 @@ function PlaceRow(props: { p: Place; card?: Candidate; planned: boolean; onEdit:
             <Icon as={props.planned ? CalendarCheck : CalendarPlus} /> <span>{props.planned ? t('במסלול') : t('למסלול')}</span>
           </button>
         </MediaActions>
+        {/* the stars, once the place is ticked as visited */}
+        {props.children}
       </div>
     </div>
   )

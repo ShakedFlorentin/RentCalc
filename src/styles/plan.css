@@ -103,7 +103,7 @@
 
 /* the planner's rough time: lighter, so a time someone set stands out */
 .time.approx { color: var(--muted); font-weight: 500; }
-/* plan rows show the first lines; the whole note is one tap away in the edit sheet */
+/* plan rows show the first lines; the whole note is one tap away in the item's sheet */
 .plan-notes { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .plan-auto-notes { color: var(--muted); }
 .plan-warn { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 0.875rem; font-weight: 600; color: var(--accent); }
@@ -111,3 +111,19 @@
 .spare ul { margin: 8px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
 .spare li { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .spare li .action { flex: none; }
+/* the kind of place ("food · ramen in chicken broth") stays one line; the couple pill never gets cut */
+.plan-meta { display: flex; align-items: center; min-width: 0; }
+.plan-kind { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plan-meta .who-pill { flex: none; }
+/* an opened plan item: its card, then what else is around it */
+.plan-back { align-self: flex-start; min-height: 36px; padding: 0; }
+.plan-near { margin-top: 20px; }
+.plan-near h3 { margin: 0 2px 8px; font-size: 0.9375rem; color: var(--muted); }
+.plan-near-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 10px 0; text-align: start; border-bottom: 0.5px solid var(--line); }
+.plan-near-row:last-child { border-bottom: 0; }
+.plan-near-row > .ic { flex: none; color: var(--muted); }
+.plan-near-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.plan-near-text b { font-weight: 600; }
+.plan-near-text .small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plan-near-liked { margin-inline-start: 6px; color: var(--accent); width: 0.9em; height: 0.9em; }
+.plan-near-mins { flex: none; white-space: nowrap; }

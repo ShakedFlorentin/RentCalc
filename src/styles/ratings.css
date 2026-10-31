@@ -1,0 +1,60 @@
+/* Place ratings (views/Ratings.tsx): stars on a visited place, and what other travellers said. */
+
+.rate-box, .rate-sum { --star: #b07a00; }
+@media (prefers-color-scheme: dark) {
+  .rate-box, .rate-sum { --star: #ffc933; }
+}
+
+/* a visited row is muted and struck through; the rating is live, so it keeps the normal text colour */
+.rate-box {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 0.5px solid var(--line);
+  color: var(--text);
+  cursor: default;
+}
+.item.done .rate-box { color: var(--text); text-decoration: none; }
+.rate-head { display: flex; align-items: center; gap: 4px 8px; flex-wrap: wrap; }
+.rate-ask { font-size: 0.9375rem; font-weight: 600; }
+
+.stars { display: inline-flex; }
+.stars button {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: color-mix(in srgb, var(--muted) 70%, transparent);
+}
+.stars button.on { color: var(--star); }
+.stars button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.stars button:active .ic { transform: scale(0.85); }
+.stars .ic { transition: transform 0.12s; }
+
+.rate-mine { display: grid; gap: 2px; justify-items: start; }
+.rate-write { display: grid; gap: 6px; }
+.rate-write textarea { width: 100%; }
+
+.rate-sum { display: grid; gap: 4px; font-size: 0.875rem; color: var(--muted); }
+.rate-avg { font-variant-numeric: tabular-nums; }
+.rate-star { color: var(--star); margin-inline-end: 3px; }
+.rate-note {
+  margin: 0;
+  padding-inline-start: 8px;
+  border-inline-start: 3px solid var(--fill);
+  font-size: 0.875rem;
+  color: var(--text);
+  white-space: pre-line;
+}
+.rate-sum .rate-note { color: var(--muted); }
+/* read aloud, not shown: the stars already say it */
+.rate-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
