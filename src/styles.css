@@ -185,6 +185,13 @@ form.card, .login .card { display: flex; flex-direction: column; gap: 12px; widt
 }
 .login h1 { font-size: 1.75rem; }
 .hinomaru { width: 84px; height: 84px; border-radius: 50%; background: var(--accent-fill); box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 35%, transparent); }
+/* after sign-up, when the account waits for its email confirmation */
+
+/* invite a friend (home, participants card) */
+.invite { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.invite p { margin: 0; }
+.invite-link input { flex: 1; min-width: 0; font-size: 0.8125rem; }
+.invite-code { color: var(--text); font-weight: 700; padding: 2px 4px; text-decoration: underline dotted; text-underline-offset: 3px; }
 
 /* App shell */
 .app { max-width: 640px; margin: 0 auto; min-height: 100dvh; }

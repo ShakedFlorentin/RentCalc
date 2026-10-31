@@ -16,6 +16,7 @@ import {
   Sun,
   SunMoon,
   Ticket,
+  UserPlus,
   Users,
   Wallet,
 } from 'lucide-react'
@@ -35,7 +36,7 @@ import {
   type Swipe,
   type Trip,
 } from '../types'
-import { cityLabel, couplesOf, currentDay, dayDate, dayParts, fmtDay, fmtDayLong, mutate, useTripTable } from '../lib'
+import { cityLabel, couplesOf, currentDay, dayDate, dayParts, errorText, fmtDay, fmtDayLong, mutate, useTripTable } from '../lib'
 import { lang, locale, setLang, t } from '../i18n'
 import { Field, Sheet } from '../ui'
 import { cityPhoto } from '../cities'
@@ -268,20 +269,7 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
             </span>
           ))}
         </div>
-        <p className="muted small">
-          {t('להצטרפות: שלחו את הקישור וקוד הטיול')}{' '}
-          <b className="code" dir="ltr">{trip.join_code}</b>
-        </p>
-        <button
-          className="secondary"
-          onClick={() => {
-            const text = `${t('הצטרפו לתכנון הטיול ליפן')}\n${location.href}\n${t('קוד טיול: {code}', { code: trip.join_code })}`
-            if (navigator.share) navigator.share({ text }).catch(() => {})
-            else navigator.clipboard.writeText(text).then(() => alert(t('הועתק')))
-          }}
-        >
-          <Icon as={Share2} /> {t('שיתוף הזמנה')}
-        </button>
+        <InviteFriend trip={trip} />
       </section>
 
       {editing && (
@@ -298,6 +286,79 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
         />
       )}
       {reporting && <ReportSheet trip={trip} me={me} from={settingsFrom} onClose={() => setReporting(false)} />}
+    </div>
+  )
+}
+
+/**
+ * New people join by invitation only: each tap makes a one-time link (good for 30 days) that opens a sign-up and
+ * leads into this trip. Someone who already has an account joins with the trip code instead.
+ */
+function InviteFriend({ trip }: { trip: Trip }) {
+  const [link, setLink] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [note, setNote] = useState('')
+
+  const send = async (url: string) => {
+    const text = `${t('הצטרפו לתכנון הטיול ליפן')}\n${url}`
+    if (navigator.share) {
+      try {
+        await navigator.share({ text })
+        return setNote('')
+      } catch (e) {
+        // cancelled: the link stays on screen to send later
+        if ((e as Error).name === 'AbortError') return
+        // otherwise (Safari wants a fresh tap after the wait for the server) copy it instead
+      }
+    }
+    copy(text, t('הקישור הועתק, אפשר להדביק בהודעה'))
+  }
+
+  const copy = (text: string, done: string) =>
+    navigator.clipboard
+      .writeText(text)
+      .then(() => setNote(done))
+      .catch(() => setNote(t('אפשר להעתיק את הקישור מכאן')))
+
+  const invite = async () => {
+    setNote('')
+    // the link needs the code the server makes: an invite saved offline would come back without one
+    if (!navigator.onLine) return setNote(t('אין אינטרנט. נסו שוב כשיש קליטה.'))
+    setBusy(true)
+    const { data, error } = await supabase.from('invites').insert({ trip_id: trip.id }).select('code').single()
+    setBusy(false)
+    const code = (data as { code?: string } | null)?.code
+    if (error || !code) return setNote(error ? errorText(error.message) : t('אין אינטרנט. נסו שוב כשיש קליטה.'))
+    const url = `${location.origin}${location.pathname}?invite=${encodeURIComponent(code)}`
+    setLink(url)
+    send(url)
+  }
+
+  return (
+    <div className="invite">
+      <button className="secondary" onClick={invite} disabled={busy}>
+        <Icon as={UserPlus} /> {busy ? t('יוצרים קישור…') : link ? t('הזמנת חבר נוסף') : t('הזמנת חבר')}
+      </button>
+      <p className="muted small">{t('קישור לאדם אחד, בתוקף 30 יום')}</p>
+      {link && (
+        <div className="row nowrap invite-link">
+          <input readOnly value={link} dir="ltr" aria-label={t('קישור ההזמנה')} onFocus={(e) => e.target.select()} />
+          <button className="icon" onClick={() => send(link)} aria-label={t('שליחת הקישור')}>
+            <Icon as={Share2} />
+          </button>
+        </div>
+      )}
+      {note && (
+        <p className="small" role="status">
+          {note}
+        </p>
+      )}
+      <p className="muted small">
+        {t('למי שכבר יש חשבון: קוד הטיול')}{' '}
+        <button className="code invite-code" dir="ltr" onClick={() => copy(trip.join_code, t('הקוד הועתק'))} aria-label={t('העתקת קוד הטיול')}>
+          {trip.join_code}
+        </button>
+      </p>
     </div>
   )
 }
