@@ -209,6 +209,11 @@ titles, iPhone system font). Swipe card moves on springs (`springTo` in `Swipe.t
 finger's speed, and likes/skips by where the flick projects, not where it was let go.
 
 ## Open / ideas
+- Planner stability (2026-11-01, plan-trip v19): it runs after every swipe, so it must not shift the plan each time.
+  Each place starts on the day it is on (warm start); leaving a place out costs priority × (0.5 + mins/120) so big
+  sights aren't traded for small cafés; and every run also works out the plan as it stands with only new places
+  added (no improve/repair) and keeps that unless the fresh plan is worth over 2% more (Σ priority × size − 2 per
+  place missed by 2 h+). Checked on the real trip: a second run changes nothing (0 updates).
 - Invites and questionnaire (2026-10-31): sign-ups only with an invite (`invites`, one-time, 30 days; the auth.users
   trigger block_new_users checks and uses it; `my_invite()` gives the new account its trip's join code). The app's
   sign-up goes through edge function `sign-up` (service role createUser, email confirmed: the built-in mail only
