@@ -209,6 +209,15 @@ titles, iPhone system font). Swipe card moves on springs (`springTo` in `Swipe.t
 finger's speed, and likes/skips by where the flick projects, not where it was let go.
 
 ## Open / ideas
+- Invites and questionnaire (2026-10-31): sign-ups only with an invite (`invites`, one-time, 30 days; the auth.users
+  trigger block_new_users checks and uses it; `my_invite()` gives the new account its trip's join code). The app's
+  sign-up goes through edge function `sign-up` (service role createUser, email confirmed: the built-in mail only
+  reaches the team) and then signs in; TripPicker auto-joins the invited trip. Invited people answer the questionnaire
+  (`profiles.answers`, shape in src/types.ts `Answers`) before the app; the four original accounts never see it unless
+  they open More › ההעדפות שלי. src/prefs.ts hides cards that don't fit (city, "not for us", never-eat, kosher only,
+  baby blocker, budget) from everything Discover shows and orders the rest by score. plan-trip reads `pace` per
+  person; a couple's day cap is the calmer half's (relaxed 360 / balanced 480 / packed 600 min, else 510).
+  With a baby, about half the library has a blocker and is hidden; kosher "only" hides food with no kosher info.
 - Ratings (`place_ratings`, on the shared library card; read by any signed-in user, write your own for a trip you're
   in): stars on visited places in Places, a summary in the swipe card.
 - Shared library (2026-10-31, migration added_places_join_library): every card people add (link, name, map) gets a
