@@ -209,6 +209,15 @@ titles, iPhone system font). Swipe card moves on springs (`springTo` in `Swipe.t
 finger's speed, and likes/skips by where the flick projects, not where it was let go.
 
 ## Open / ideas
+- Planner time of day (2026-10-31, plan-trip v14): `plan(…, { timeOfDay })` is off in the live planner and on only in a
+  dry run with `next: true`. On: "morning" for a place that opens later means its opening hour, a day that starts
+  hours after a place's time costs more, so does a morning with more morning places than fit before 13:00, and a
+  place reached 2 h+ past its time tries another day. On the real trip it planned 84 places instead of 83 and fixed
+  TIES (16:00 → 12:45) but missed 21 times instead of 20 and dropped Kyoto Aquarium; heavier weights also dropped
+  Fushimi Inari and Kiyomizu-dera. The root cause is the schedule: a couple's own places only fill the hours after
+  the shared ones, so their morning places land in the afternoon. Left off until that is solved. To compare
+  versions, replay a dry run's `input` in node (esbuild plan.ts) and count placed / reached 2 h+ late / average
+  lateness / which places drop.
 - Tab bar in English (to fix later, the user asked): six equal tabs leave ~47px each on a phone, and "Bookings" /
   "Discover" are wider than that, so they run into the tab padding and sit close to their neighbours. Options: shorter
   labels, a smaller font in English only, or fewer tabs. Solid glyphs and the per-icon `nudge` (App.tsx TABS) keep the

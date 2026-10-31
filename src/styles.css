@@ -89,6 +89,17 @@ input, select, textarea {
   background: var(--bg);
   font-size: 16px; /* >=16px: no iOS focus zoom */
 }
+/* iOS draws date and time fields taller than the rest and with a minimum width of their own, so beside a select
+   they stand higher and push into it: same height, may shrink, text at the start like the other fields */
+input[type='time'], input[type='date'], input[type='datetime-local'] {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  height: 44px;
+  min-width: 0;
+  line-height: 22px;
+}
+input::-webkit-date-and-time-value { text-align: start; min-height: 22px; }
 input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 button { cursor: pointer; border: none; background: none; touch-action: manipulation; }
 button:disabled { cursor: default; }
@@ -147,6 +158,8 @@ button:disabled { cursor: default; }
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .row.nowrap { flex-wrap: nowrap; }
 .row > .field { flex: 1; }
+/* fields side by side: labels on one line, boxes on the next, whatever each box's own height */
+.row:has(> .field) { align-items: flex-start; }
 .spread { justify-content: space-between; }
 .col { display: flex; flex-direction: column; align-items: center; }
 
