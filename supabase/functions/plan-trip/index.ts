@@ -250,6 +250,8 @@ const CAND_COLUMNS =
 const factKey = (name: string) => name.toLowerCase().normalize('NFKD').replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
 
 const VERDICT: Record<string, number> = { gem: 4, worth_it: 3, overhyped: 1.5, trap: 0.5 }
+// minutes of plans (with the time between them) a day holds at each pace from the questionnaire
+const PACE: Record<string, number> = { relaxed: 360, balanced: 480, packed: 600 }
 
 // the baby line only when it changes the plan (no strollers, stairs only, smoke, adults only); "no information on
 // strollers" on every place made people stop reading the notes
@@ -270,7 +272,7 @@ async function run(admin: SupabaseClient, tid: string, dry: boolean) {
   }
   const [trip, members, bookings, dayInfo, items, places, votes, mediaIdx] = await Promise.all([
     q<{ start_date: string; num_days: number }>(admin.from('trips').select('start_date,num_days').eq('id', tid).single()),
-    q<{ couple: string | null }[]>(admin.from('members').select('couple').eq('trip_id', tid)),
+    q<{ couple: string | null; user_id: string }[]>(admin.from('members').select('couple,user_id').eq('trip_id', tid)),
     q<Booking[]>(admin.from('bookings').select('id,kind,title,starts_at,ends_at,who,location').eq('trip_id', tid)),
     q<{ day: number; city: string | null; who: string | null }[]>(admin.from('day_info').select('day,city,who').eq('trip_id', tid)),
     q<Item[]>(admin.from('itinerary_items').select('id,day,time,title,location,notes,notes_en,category,sort,place_id,who,auto,done').eq('trip_id', tid).gt('day', 0)),
@@ -293,6 +295,14 @@ async function run(admin: SupabaseClient, tid: string, dry: boolean) {
   const candById = new Map(cands.map((c) => [c.id, c]))
   const voteById = new Map(votes.map((v) => [v.candidate_id, v]))
   const couples = [...new Set(members.map((m) => m.couple).filter((c): c is string => !!c))].sort()
+  // the pace each person chose in the questionnaire; a couple's days are as full as its calmer half wants
+  const { data: profiles } = await admin.from('profiles').select('user_id,answers').in('user_id', members.map((m) => m.user_id))
+  const capOf = new Map<string, number>()
+  for (const m of members) {
+    const pace = (profiles ?? []).find((x) => x.user_id === m.user_id)?.answers?.pace as string | undefined
+    const cap = pace ? PACE[pace] : undefined
+    if (m.couple && cap) capOf.set(m.couple, Math.min(capOf.get(m.couple) ?? cap, cap))
+  }
   const start = new Date(trip.start_date + 'T00:00:00Z')
   const dateOf = (day: number) => new Date(start.getTime() + (day - 1) * 86400000).toISOString().slice(0, 10)
 
@@ -356,7 +366,7 @@ async function run(admin: SupabaseClient, tid: string, dry: boolean) {
       }
       const base = hotelBase(h.title + ' ' + (h.location ?? ''))
       if (!base) continue
-      atMap.set(c, { base, hotel: hotelPt.get(h.id)!, start: s, end: Math.max(s, e) })
+      atMap.set(c, { base, hotel: hotelPt.get(h.id)!, start: s, end: Math.max(s, e), cap: capOf.get(c) })
     }
     days.push({ day: d, date, weekday: new Date(date + 'T12:00:00Z').getUTCDay(), at: atMap })
   }

@@ -4,8 +4,11 @@
 export type Point = { lat: number; lng: number }
 export type BestTime = 'morning' | 'midday' | 'afternoon' | 'evening' | 'night' | 'any'
 
-/** Where one couple is on one day and the hours they have for plans (minutes after midnight). */
-export type Presence = { base: string; hotel: Point; start: number; end: number }
+/**
+ * Where one couple is on one day and the hours they have for plans (minutes after midnight); cap: how much of a day
+ * they want filled, from the pace they chose (DAY_CAP when nobody said)
+ */
+export type Presence = { base: string; hotel: Point; start: number; end: number; cap?: number }
 
 export type Day = {
   day: number
@@ -140,7 +143,7 @@ function arrange(days: Day[], units: Unit[], fixed: Fixed[], barred: Map<string,
   const cap = (day: number, c: string) => {
     const p = byDay.get(day)?.at.get(c)
     if (!p) return 0
-    return Math.max(0, Math.min(DAY_CAP, p.end - p.start) - (fixedMins.get(day + '|' + c) ?? 0))
+    return Math.max(0, Math.min(p.cap ?? DAY_CAP, p.end - p.start) - (fixedMins.get(day + '|' + c) ?? 0))
   }
   // the couples sleeping in the same city as this couple that day
   const together = (d: Day, c: string) => [...d.at].filter(([, p]) => p.base === d.at.get(c)!.base).map(([o]) => o)
