@@ -39,7 +39,9 @@ export type Unit = {
 // late: the day's timetable only reaches it after it closes (or after the day's hours)
 // missed: it wants a time of day (a morning café, cakes that sell out) and the day only reaches it hours after
 export type Placed = { day: number; start: number; order: number; late?: boolean; missed?: boolean }
-export type Outcome = { placed: Map<string, Placed>; unplanned: Map<string, 'closed' | 'no_day' | 'full'> }
+export type Outcome = { placed: Map<string, Placed>; unplanned: Map<string, 'closed' | 'no_day' | 'full'>; issues: Issue[] }
+/** What the final check found on a planned place: it should never happen, and the app shows it if it does. */
+export type Issue = { id: string; kind: 'overlap' | 'tight' | 'hours' | 'meals' }
 
 // a day's plans add up to at most this much, whatever the window; a baby and December daylight set the pace
 const DAY_CAP = 510
@@ -85,7 +87,43 @@ export function plan(days: Day[], units: Unit[], fixed: Fixed[]): Outcome {
     out.placed.delete(id)
     out.unplanned.set(id, 'full')
   }
-  return { placed: out.placed, unplanned: out.unplanned }
+  return { placed: out.placed, unplanned: out.unplanned, issues: check(days, units, fixed, out.placed) }
+}
+
+/**
+ * The last word before the plan is written: walk each couple's day in time order and flag what a person couldn't
+ * follow: two plans at once (with each other or with something fixed), not enough time to get from one to the next,
+ * outside opening hours, or two full meals too close together.
+ */
+export function check(days: Day[], units: Unit[], fixed: Fixed[], placed: Map<string, Placed>): Issue[] {
+  const byId = new Map(units.map((u) => [u.id, u]))
+  const issues: Issue[] = []
+  const flag = (id: string, kind: Issue['kind']) => {
+    if (!issues.some((x) => x.id === id && x.kind === kind)) issues.push({ id, kind })
+  }
+  for (const d of days) {
+    for (const c of d.at.keys()) {
+      const mine = [...placed]
+        .filter(([id, p]) => p.day === d.day && byId.get(id)!.couples.includes(c))
+        .map(([id, p]) => ({ id, u: byId.get(id)!, s: p.start }))
+        .sort((x, y) => x.s - y.s)
+      const busy = fixed.filter((f) => f.day === d.day && f.start != null && f.couples.includes(c))
+      let lastMeal: number | null = null
+      mine.forEach(({ id, u, s }, i) => {
+        const prev = mine[i - 1]
+        if (prev && prev.s + prev.u.mins > s) flag(id, 'overlap')
+        // ten minutes of slack: the times are rounded to a quarter of an hour
+        else if (prev && prev.s + prev.u.mins + ride(prev.u.point, u.point) > s + 10) flag(id, 'tight')
+        if (busy.some((f) => s < f.start! + f.mins && s + u.mins > f.start!)) flag(id, 'overlap')
+        if ((u.opens != null && s < u.opens) || (u.closes != null && s + u.mins > u.closes)) flag(id, 'hours')
+        if (u.category === 'food') {
+          if (lastMeal != null && s - lastMeal < MEAL_GAP) flag(id, 'meals')
+          lastMeal = s
+        }
+      })
+    }
+  }
+  return issues
 }
 
 function arrange(days: Day[], units: Unit[], fixed: Fixed[], barred: Map<string, Set<number>>) {
@@ -329,30 +367,38 @@ function arrange(days: Day[], units: Unit[], fixed: Fixed[], barred: Map<string,
     const d = byDay.get(day)!
     const ids = live.filter((u) => at.get(u.id) === day)
     const fx = fixed.filter((f) => f.day === day)
-    const a = schedule(d, ids, fx)
-    if (!ids.length) return a
-    // the old timetable as it was, with its places past their hour marked
-    for (const [id, p] of a) {
-      const u = unitById.get(id)!
-      const w = wantOf(u)
-      p.missed = w != null && w < 17 * 60 && p.start - w > 120
-    }
-    const b = scheduleTogether(d, ids, fx)
+    if (!ids.length) return new Map<string, Placed>()
+    const [a, b] = timetables(d, ids, fx)
     const score = (m: Map<string, Placed>) => {
       let late = 0
       let missed = 0
       let behind = 0
+      const meals = new Map<string, number[]>()
       for (const [id, p] of m) {
+        const u = unitById.get(id)!
         if (p.late) late++
         if (p.missed) missed++
-        const w = wantOf(unitById.get(id)!)
+        const w = wantOf(u)
         if (w != null && w < 17 * 60) behind += Math.max(0, p.start - w)
+        if (u.category === 'food') for (const c of u.couples) meals.set(c, [...(meals.get(c) ?? []), p.start])
       }
-      return { late, missed, behind }
+      // two full meals too close together for the same people
+      let crowded = 0
+      for (const ss of meals.values()) {
+        ss.sort((x, y) => x - y)
+        for (let i = 1; i < ss.length; i++) if (ss[i] - ss[i - 1] < MEAL_GAP) crowded++
+      }
+      // what a person couldn't follow: two plans at once, not enough time to get there, outside opening hours
+      const broken = check([d], ids, fx, m).filter((x) => x.kind !== 'meals').length
+      return { late, broken, crowded, missed, behind }
     }
     const sa = score(a)
     const sb = score(b)
-    return sb.late <= sa.late && (sb.missed < sa.missed || (sb.missed === sa.missed && sb.behind < sa.behind)) ? b : a
+    // nothing late for closing first, then a day that can be followed, meals spaced, fewer places past their hour,
+    // then less waiting for it
+    const keys = ['broken', 'crowded', 'missed', 'behind'] as const
+    const k = keys.find((x) => sb[x] !== sa[x])
+    return sb.late <= sa.late && k != null && sb[k] < sa[k] ? b : a
   }
   const missedOn = (day: number) => {
     let late = 0
@@ -416,6 +462,10 @@ const SLOT: Record<BestTime, number | null> = {
   any: null,
 }
 const round15 = (m: number) => Math.round(m / 15) * 15
+// the whole visit has to end by closing time (it used to be enough to arrive an hour before)
+const stay = (u: Unit) => u.mins
+// two full meals for the same people at least this far apart (start to start)
+const MEAL_GAP = 180
 // minutes of travel worth one minute of a timed place reached past its hour, when placing a place that has none
 const LW = 0.5
 // the time of day a place asks for; "morning" for a place that opens at noon means as soon as it opens
@@ -425,93 +475,12 @@ const wantOf = (u: Unit) => {
 }
 
 /**
- * Rough times for one day: the places everyone does together first, then each couple's own in their free time.
- * Places that want a time of day (sunset, dinner, a bar) keep it; the rest are threaded in by distance.
- */
-function schedule(d: Day, units: Unit[], fixed: Fixed[]) {
-  const out = new Map<string, Placed>()
-  const busy = new Map<string, [number, number][]>()
-  for (const c of d.at.keys()) busy.set(c, [])
-  for (const f of fixed) if (f.start != null) for (const c of f.couples) busy.get(c)?.push([f.start, f.start + f.mins])
-
-  // biggest groups first: shared plans are set before a couple fills its own gaps
-  const sets = new Map<string, Unit[]>()
-  for (const u of units) {
-    const k = [...u.couples].sort().join('+')
-    sets.set(k, [...(sets.get(k) ?? []), u])
-  }
-  let order = 0
-  for (const [, us] of [...sets].sort((a, b) => b[1][0].couples.length - a[1][0].couples.length)) {
-    const couples = us[0].couples
-    const pres = couples.map((c) => d.at.get(c)!)
-    const start = Math.max(...pres.map((p) => p.start))
-    const hotel = pres[0].hotel
-    // meals without a stated time: lunch if the day starts early enough, then dinner
-    const meals = [...(start <= 13 * 60 + 30 ? [12 * 60 + 15] : []), 18 * 60 + 30]
-    const want = (u: Unit) => {
-      const s = SLOT[u.best]
-      if (s != null) return s
-      if (u.category === 'food') return meals.shift() ?? null
-      if (u.category === 'cafe') return 15 * 60
-      if (u.category === 'nightlife') return 20 * 60
-      return null
-    }
-    const timed = us.map((u) => ({ u, want: want(u) }))
-    const anchored = timed.filter((t) => t.want != null).sort((a, b) => a.want! - b.want!)
-    const loose = timed.filter((t) => t.want == null).sort((a, b) => b.u.mins - a.u.mins)
-    // route: start at the hotel, anchored places in time order, each loose place where it adds the least travel
-    const route = anchored.map((t) => t.u)
-    for (const { u } of loose) {
-      let bestI = 0
-      let bestAdd = Infinity
-      for (let i = 0; i <= route.length; i++) {
-        // a loose place before the first anchored one keeps the morning busy
-        const prev = i === 0 ? hotel : route[i - 1].point
-        const next = i === route.length ? null : route[i].point
-        const add = ride(prev, u.point) + (next ? ride(u.point, next) - ride(prev, next) : 0)
-        const late = i > 0 && anchored.length && route[i - 1].best === 'night' ? 60 : 0
-        if (add + late < bestAdd) {
-          bestAdd = add + late
-          bestI = i
-        }
-      }
-      route.splice(bestI, 0, u)
-    }
-    const end = Math.min(...pres.map((p) => p.end))
-    let t = start
-    let at: Point | null = hotel
-    const wants = new Map(timed.map((x) => [x.u.id, x.want]))
-    for (const u of route) {
-      t += ride(at, u.point)
-      const w = wants.get(u.id)
-      // an evening place (sunset, dinner, bars) waits for the evening, the free hours before it are a rest;
-      // a morning or afternoon one waits only when its time is close
-      if (w != null && w > t && (w >= 17 * 60 || u.category === 'food' || w - t < 120)) t = w
-      if (u.opens != null && t < u.opens) t = u.opens
-      // step past anything fixed for these couples (a booked table, a check-in)
-      for (let guard = 0; guard < 6; guard++) {
-        const clash = couples.flatMap((c) => busy.get(c) ?? []).find(([a, b]) => t < b && t + u.mins > a)
-        if (!clash) break
-        t = clash[1] + 15
-      }
-      const s = round15(t)
-      const closes = u.closes ?? 24 * 60
-      out.set(u.id, { day: d.day, start: s, order: order++, late: s + Math.min(u.mins, 60) > closes || s > end + 30 })
-      for (const c of couples) busy.get(c)?.push([s, s + u.mins])
-      t = s + u.mins
-      at = u.point ?? at
-    }
-  }
-  return out
-}
-
-/**
  * Rough times for one day, everyone's at once: places in the order of the hour they want, each couple with its own
  * clock. A place everyone does together starts when all its couples are free; a couple's own place starts when that
  * couple is, so a couple's morning place can come before the shared afternoon instead of after all of it. Places
  * that want no hour go where they add the least travel without pushing a timed place late.
  */
-function scheduleTogether(d: Day, units: Unit[], fixed: Fixed[]) {
+function timetables(d: Day, units: Unit[], fixed: Fixed[]) {
   const couples = [...d.at.keys()]
   const meals = new Map<string, number[]>()
   const want = new Map<string, number | null>()
@@ -537,14 +506,18 @@ function scheduleTogether(d: Day, units: Unit[], fixed: Fixed[]) {
     const clock = new Map(couples.map((c) => [c, d.at.get(c)!.start]))
     const where = new Map<string, Point | null>(couples.map((c) => [c, d.at.get(c)!.hotel]))
     const busy = new Map(couples.map((c) => [c, [...fixedBusy.get(c)!]]))
+    const meal = new Map<string, number>()
     const starts = new Map<string, number>()
     let late = 0
+    let closed = 0
     for (const u of order) {
       let t = Math.max(...u.couples.map((c) => clock.get(c)! + ride(where.get(c)!, u.point)))
       const w = want.get(u.id)
       // an evening place waits for the evening; a daytime one waits only when its hour is close
       if (w != null && w > t && (w >= 17 * 60 || u.category === 'food' || w - t < 120)) t = w
       if (u.opens != null && t < u.opens) t = u.opens
+      // a full meal waits until the last one has settled (a café or dessert stop doesn't count)
+      if (u.category === 'food') for (const c of u.couples) if (meal.has(c)) t = Math.max(t, meal.get(c)! + MEAL_GAP)
       for (let guard = 0; guard < 6; guard++) {
         const clash = u.couples.flatMap((c) => busy.get(c)!).find(([a, b]) => t < b && t + u.mins > a)
         if (!clash) break
@@ -553,13 +526,15 @@ function scheduleTogether(d: Day, units: Unit[], fixed: Fixed[]) {
       const s = round15(t)
       starts.set(u.id, s)
       if (w != null && w < 17 * 60) late += Math.max(0, s - w - 30)
+      if (s + stay(u) > (u.closes ?? 24 * 60) || s > Math.min(...u.couples.map((c) => d.at.get(c)!.end)) + 30) closed++
       for (const c of u.couples) {
         clock.set(c, s + u.mins)
         where.set(c, u.point ?? where.get(c)!)
         busy.get(c)!.push([s, s + u.mins])
+        if (u.category === 'food') meal.set(c, s)
       }
     }
-    return { starts, late }
+    return { starts, late, closed }
   }
   // travel a place adds for its couples between its neighbours in the order
   const travel = (order: Unit[]) => {
@@ -571,40 +546,52 @@ function scheduleTogether(d: Day, units: Unit[], fixed: Fixed[]) {
     }
     return m
   }
-  const anchored = units.filter((u) => want.get(u.id) != null).sort((a, b) => want.get(a.id)! - want.get(b.id)! || b.couples.length - a.couples.length)
-  const loose = units.filter((u) => want.get(u.id) == null).sort((a, b) => b.mins - a.mins)
-  const order = [...anchored]
-  for (const u of loose) {
-    let best = 0
-    let bestCost = Infinity
-    for (let i = 0; i <= order.length; i++) {
-      const tried = [...order.slice(0, i), u, ...order.slice(i)]
-      // after a night place (a bar) nothing else comes that day
-      const night = i > 0 && order[i - 1].best === 'night' ? 60 : 0
-      const cost = travel(tried) + walk(tried).late * LW + night
-      if (cost < bestCost) {
-        bestCost = cost
-        best = i
+  // places in the order of their hour, each place that wants none where it adds least travel and lateness
+  const arrangeOrder = (us: Unit[], before: Unit[]) => {
+    const order = us.filter((u) => want.get(u.id) != null).sort((a, b) => want.get(a.id)! - want.get(b.id)! || b.couples.length - a.couples.length)
+    for (const u of us.filter((x) => want.get(x.id) == null).sort((a, b) => b.mins - a.mins)) {
+      let best = 0
+      let bestCost = Infinity
+      for (let i = 0; i <= order.length; i++) {
+        const tried = [...before, ...order.slice(0, i), u, ...order.slice(i)]
+        // after a night place (a bar) nothing else comes that day
+        const night = i > 0 && order[i - 1].best === 'night' ? 60 : 0
+        // a spot that leaves anything after closing (or after the day's end) only if there is no other
+        const w = walk(tried)
+        const cost = travel(tried) + w.late * LW + night + w.closed * 1000
+        if (cost < bestCost) {
+          bestCost = cost
+          best = i
+        }
       }
+      order.splice(best, 0, u)
     }
-    order.splice(best, 0, u)
+    return order
   }
-  const { starts } = walk(order)
-  const out = new Map<string, Placed>()
-  const end = (u: Unit) => Math.min(...u.couples.map((c) => d.at.get(c)!.end))
-  const sorted = [...order].sort((a, b) => starts.get(a.id)! - starts.get(b.id)!)
-  sorted.forEach((u, i) => {
-    const s = starts.get(u.id)!
-    const w = wantOf(u)
-    out.set(u.id, {
-      day: d.day,
-      start: s,
-      order: i,
-      late: s + Math.min(u.mins, 60) > (u.closes ?? 24 * 60) || s > end(u) + 30,
-      missed: w != null && w < 17 * 60 && s - w > 120,
+  const timed = (order: Unit[]) => {
+    const { starts } = walk(order)
+    const out = new Map<string, Placed>()
+    const end = (u: Unit) => Math.min(...u.couples.map((c) => d.at.get(c)!.end))
+    const sorted = [...order].sort((a, b) => starts.get(a.id)! - starts.get(b.id)!)
+    sorted.forEach((u, i) => {
+      const s = starts.get(u.id)!
+      const w = wantOf(u)
+      out.set(u.id, {
+        day: d.day,
+        start: s,
+        order: i,
+        late: s + stay(u) > (u.closes ?? 24 * 60) || s > end(u) + 30,
+        missed: w != null && w < 17 * 60 && s - w > 120,
+      })
     })
-  })
-  return out
+    return out
+  }
+  // groups: what everyone does together first, then each couple's own (the planner's first way of doing it)
+  const groups: Unit[] = []
+  const sets = new Map<string, Unit[]>()
+  for (const u of units) sets.set([...u.couples].sort().join('+'), [...(sets.get([...u.couples].sort().join('+')) ?? []), u])
+  for (const [, us] of [...sets].sort((a, b) => b[1][0].couples.length - a[1][0].couples.length)) groups.push(...arrangeOrder(us, groups))
+  return [timed(groups), timed(arrangeOrder(units, []))]
 }
 
 export const hhmm = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`

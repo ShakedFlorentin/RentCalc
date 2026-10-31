@@ -590,7 +590,13 @@ async function run(admin: SupabaseClient, tid: string, dry: boolean) {
   }
 
   // facts_pending: cards planned from their kind alone, never checked (fill their plan columns to plan them better)
-  const summary = { unplanned, warnings, facts_pending: units.filter((u) => !unitPlace.get(u.id)!.f).length }
+  // issues: what the final check found on the planner's own places (should stay empty; the app flags them if not)
+  const summary = {
+    unplanned,
+    warnings,
+    issues: out.issues.map((x) => ({ place_id: x.id, kind: x.kind })),
+    facts_pending: units.filter((u) => !unitPlace.get(u.id)!.f).length,
+  }
   const stats = {
     placed: out.placed.size,
     insert: toInsert.length,
