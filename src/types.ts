@@ -344,3 +344,22 @@ export type Report = {
   created_at: string
   resolved_at: string | null
 }
+
+/** One person's getting-to-know-you answers (profiles.answers); the planner reads `pace`. */
+export type Answers = {
+  with: ('partner' | 'baby' | 'kids' | 'friends' | 'solo')[]
+  cities: ('tokyo' | 'kyoto' | 'osaka' | 'nara' | 'daytrip')[]
+  interest: Record<InterestKind, 'love' | 'ok' | 'no'>
+  never: ('fish' | 'raw_fish' | 'beef' | 'pork' | 'alcohol')[]
+  kosher: 'any' | 'prefer' | 'only'
+  loves: ('ramen' | 'sushi' | 'yakiniku' | 'street' | 'sweets' | 'izakaya' | 'chef')[]
+  /** most yen per person for a meal; null = doesn't matter */
+  budget: 1500 | 5000 | 15000 | null
+  pace: 'relaxed' | 'balanced' | 'packed'
+}
+
+/** The kinds of place question 3 asks about (a sight with a view counts as `views`). */
+export type InterestKind = 'food' | 'cafe' | 'sights' | 'views' | 'shopping' | 'experience' | 'nightlife'
+
+/** A row of profiles: one per person, their own only. completed_at is set once the questionnaire was finished. */
+export type Profile = { user_id: string; answers: Partial<Answers>; completed_at: string | null; updated_at: string | null }

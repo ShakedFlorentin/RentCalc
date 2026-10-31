@@ -8,6 +8,8 @@ import { CardRatings } from './Ratings'
 import { t } from '../i18n'
 import { Empty, Sheet } from '../ui'
 import { MediaActions } from '../media'
+import { useProfile } from './Onboarding'
+import { answersOf, hidden, score } from '../prefs'
 import { ChevronLeft, ChevronUp, Heart, Ban, X, Lightbulb, MapPin, MessageSquare, Plus, ReceiptText, Search, Sparkles, Star, Target, Timer, Users, Utensils, UtensilsCrossed, Wine, Baby } from 'lucide-react'
 import { AUDIENCE_ICON, CARD_ICON, Icon, type LucideIcon } from '../icons'
 import '../styles/game.css'
@@ -39,6 +41,16 @@ export default function SwipeGame({ trip, userId, members, showCard, onCardShown
   const { rows: rawCandidates, loading } = useTripTable<Candidate>('candidates', trip.id)
   const media = useMediaIndex()
   const candidates = useMemo(() => rawCandidates.map((c) => withMedia(c, media)), [rawCandidates, media])
+  // this person's questionnaire: places that are no use to them stay out of everything here (deck, lists, counts),
+  // and the best fits come first. No answers: everything, as before
+  const { profile } = useProfile(userId)
+  const answers = useMemo(() => answersOf(profile), [profile])
+  const prefsLoading = profile === undefined
+  const visible = useMemo(
+    () => (prefsLoading ? [] : answers ? candidates.filter((c) => !hidden(c, answers)) : candidates),
+    [candidates, answers, prefsLoading],
+  )
+  const fit = useMemo(() => new Map(answers ? visible.map((c) => [c.id, score(c, answers)]) : []), [visible, answers])
   const { rows: swipes, loading: swipesLoading, reload: reloadSwipes } = useTripTable<Swipe>('swipes', trip.id)
   const [city, setCity] = useState('')
   const [aud, setAud] = useState('')
@@ -109,10 +121,15 @@ export default function SwipeGame({ trip, userId, members, showCard, onCardShown
   const myVote = (c: Candidate) => swipes.find((s) => s.candidate_id === c.id && s.user_id === userId)?.liked
   // the other couple already said yes: it waits on us, so it comes first
   const othersLiked = (c: Candidate) => (forWhom?.get(c.id)?.liked ?? []).filter((x) => x !== myCouple)
-  const cities = Object.keys(CITY_HE).filter((c) => candidates.some((x) => x.city === c))
-  const deck = candidates
+  const cities = Object.keys(CITY_HE).filter((c) => visible.some((x) => x.city === c))
+  const deck = visible
     .filter((c) => !mine.has(c.id) && forMe(c) && (!city || c.city === city) && (!aud || c.audience === aud))
-    .sort((a, b) => Number(othersLiked(b).length > 0) - Number(othersLiked(a).length > 0) || hash(a.id + userId) - hash(b.id + userId))
+    .sort(
+      (a, b) =>
+        (fit.get(b.id) ?? 0) - (fit.get(a.id) ?? 0) ||
+        Number(othersLiked(b).length > 0) - Number(othersLiked(a).length > 0) ||
+        hash(a.id + userId) - hash(b.id + userId),
+    )
 
   // the card stays up until the reload lands, so a second tap would swipe it again
   const pending = useRef(new Set<string>())
@@ -142,7 +159,11 @@ export default function SwipeGame({ trip, userId, members, showCard, onCardShown
     .map((m) => {
       const own = swipes.filter((s) => s.user_id === m.user_id)
       const xp = own.length * 10 + [...matchedIds].filter((id) => likes.get(id)?.includes(m.user_id)).length * 50
-      return { m, done: own.length, xp, level: [...LEVELS].reverse().find((l) => xp >= l.xp)!, twin: agreement(swipes, userId, m.user_id) }
+      // my own progress is through the places I'm shown; everyone else's through them all
+      const pool = m.user_id === userId ? visible : candidates
+      const ids = new Set(pool.map((c) => c.id))
+      const done = own.filter((s) => ids.has(s.candidate_id)).length
+      return { m, done, total: pool.length, xp, level: [...LEVELS].reverse().find((l) => xp >= l.xp)!, twin: agreement(swipes, userId, m.user_id) }
     })
     .sort((a, b) => b.xp - a.xp)
 
@@ -163,10 +184,10 @@ export default function SwipeGame({ trip, userId, members, showCard, onCardShown
   const vetoed = useMemo(() => {
     const no = new Set(swipes.filter((s) => !s.liked).map((s) => s.candidate_id))
     const split = (c: Candidate) => swipes.some((s) => s.candidate_id === c.id && s.liked)
-    return candidates
+    return visible
       .filter((c) => no.has(c.id))
       .sort((a, b) => Number(split(b)) - Number(split(a)) || a.name.localeCompare(b.name))
-  }, [candidates, swipes])
+  }, [visible, swipes])
   // a vote from a list or a card opened from search: not part of the deck's undo
   const vote = async (c: Candidate, liked: boolean) => {
     if (await mutate(supabase.from('swipes').upsert({ trip_id: trip.id, candidate_id: c.id, user_id: userId, liked }))) reloadSwipes()
@@ -297,7 +318,7 @@ export default function SwipeGame({ trip, userId, members, showCard, onCardShown
                     </span>
                   </div>
                   <div className="bar">
-                    <span style={{ width: `${candidates.length ? (b.done / candidates.length) * 100 : 0}%` }} />
+                    <span style={{ width: `${b.total ? (b.done / b.total) * 100 : 0}%` }} />
                   </div>
                   {b.m.user_id === userId && (
                     <div className="small muted">
@@ -318,11 +339,13 @@ export default function SwipeGame({ trip, userId, members, showCard, onCardShown
       )}
 
       <div className="deck">
-        {!loading && deck.length === 0 && (
+        {!loading && !prefsLoading && deck.length === 0 && (
           <Empty>
             {!candidates.length
               ? t('עוד אין מקומות בגילוי')
-              : candidates.some((c) => !mine.has(c.id) && forMe(c))
+              : !visible.length
+                ? t('אין מקומות שמתאימים להעדפות. אפשר לשנות אותן בעוד › ההעדפות שלי.')
+              : visible.some((c) => !mine.has(c.id) && forMe(c))
                 ? t('אין מקומות בסינון הזה')
                 : t('הצבעת על כל המקומות. מקום חדש שמישהו יוסיף יחכה לך כאן, ומה שקיבל מאצ׳ נמצא בלשונית מקומות.')}
           </Empty>

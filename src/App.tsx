@@ -13,6 +13,7 @@ import Places from './views/Places'
 import More, { MORE_TABS, type MoreTab } from './views/More'
 import { useRemembered } from './ui'
 import SwipeGame from './views/Swipe'
+import Onboarding, { useProfile } from './views/Onboarding'
 import Search, { type SearchTarget } from './views/Search'
 
 // solid glyphs, like Music's tab bar: every tab carries the same weight and only the colour marks the open one.
@@ -33,6 +34,8 @@ const UID_KEY = 'userId'
 
 export default function App() {
   const [userId, setUserId] = useState<string | null | undefined>(undefined)
+  // joined with an invite code: asked the getting-to-know-you questions before anything else
+  const [invited, setInvited] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data, error }) => {
@@ -40,6 +43,7 @@ export default function App() {
       if (id) writeCache(UID_KEY, id)
       // a refresh that failed for lack of network is not a sign-out: carry on as the same user
       const offlineId = !id && error?.name === 'AuthRetryableFetchError' ? readCache<string>(UID_KEY)?.data : null
+      setInvited(!!data.session?.user.user_metadata?.invite)
       setUserId(id ?? offlineId ?? null)
     })
     const { data } = supabase.auth.onAuthStateChange((e, s) => {
@@ -55,6 +59,7 @@ export default function App() {
         }
       }
       if (s) writeCache(UID_KEY, s.user.id)
+      setInvited(!!s?.user.user_metadata?.invite)
       setUserId(s?.user.id ?? null)
     })
     return () => data.subscription.unsubscribe()
@@ -62,6 +67,18 @@ export default function App() {
 
   if (userId === undefined) return <div className="center" role="status">{t('טוען…')}</div>
   if (!userId) return <Login />
+  return invited ? <ProfileGate key={userId} userId={userId} /> : <TripGate userId={userId} />
+}
+
+/**
+ * Someone who joined by invitation answers the questionnaire on their first visit, before the trips. The original
+ * members have no invite, so they never pass through here. When the server can't be asked and there is no saved copy,
+ * the app opens anyway rather than locking them out.
+ */
+function ProfileGate({ userId }: { userId: string }) {
+  const { profile, failed, saved } = useProfile(userId)
+  if (profile === undefined) return <div className="center" role="status">{t('טוען…')}</div>
+  if (!profile?.completed_at && !(failed && !profile)) return <Onboarding userId={userId} initial={profile?.answers} onDone={saved} />
   return <TripGate userId={userId} />
 }
 

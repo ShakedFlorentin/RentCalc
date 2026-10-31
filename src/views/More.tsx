@@ -1,13 +1,15 @@
-import type { KeyboardEvent } from 'react'
+import { useState, type KeyboardEvent } from 'react'
 import type { Member, Trip } from '../types'
 import Lists from './Lists'
 import Expenses from './Expenses'
 import Essentials from './Essentials'
 import Baby from './Baby'
 import Say from './Say'
+import Onboarding, { useProfile } from './Onboarding'
+import { answersOf } from '../prefs'
 import { Icon, type LucideIcon } from '../icons'
 import { isEn, t } from '../i18n'
-import { Baby as BabyIcon, Languages, ListChecks, ShieldAlert, Wallet } from 'lucide-react'
+import { Baby as BabyIcon, ChevronLeft, Languages, ListChecks, ShieldAlert, SlidersHorizontal, Wallet } from 'lucide-react'
 
 export const MORE_TABS = [
   { id: 'money', label: t('כסף'), icon: Wallet },
@@ -22,6 +24,8 @@ type Props = { trip: Trip; members: Member[]; userId: string; sub: MoreTab; setS
 
 /** The fourth-row tools: shared expenses, checklists, emergency info, talking in Japanese and the baby corner. */
 export default function More({ trip, members, userId, sub, setSub }: Props) {
+  const { profile, saved } = useProfile(userId)
+  const [prefsOpen, setPrefsOpen] = useState(false)
   // the tab pattern: one tab stop, arrows move between sections (in RTL the left arrow goes to the next one, in LTR the right)
   const arrows = (e: KeyboardEvent<HTMLDivElement>) => {
     const fwd = isEn ? 'ArrowRight' : 'ArrowLeft'
@@ -35,6 +39,25 @@ export default function More({ trip, members, userId, sub, setSub }: Props) {
   }
   return (
     <div className="stack">
+      <button className="prefs-entry" onClick={() => setPrefsOpen(true)}>
+        <Icon as={SlidersHorizontal} size="1.375em" className="lead" />
+        <span className="prefs-entry-text">
+          <b>{t('ההעדפות שלי')}</b>
+          <span className="muted small">{profile?.completed_at ? t('מה יופיע בגילוי') : t('כמה שאלות, כדי שבגילוי יופיעו רק מקומות מתאימים')}</span>
+        </span>
+        <Icon as={ChevronLeft} className="flip-ltr muted" />
+      </button>
+      {prefsOpen && (
+        <Onboarding
+          userId={userId}
+          initial={answersOf(profile) ?? profile?.answers}
+          onDone={(p) => {
+            saved(p)
+            setPrefsOpen(false)
+          }}
+          onClose={() => setPrefsOpen(false)}
+        />
+      )}
       <div className="more-tabs" role="tablist" aria-label={t('עוד')} onKeyDown={arrows}>
         {MORE_TABS.map((t) => (
           <button
