@@ -135,6 +135,13 @@ export default function Bookings({ trip, members, userId }: Props) {
 // only a unique URL-shaped name: nothing is ever fetched from it. Paths are uuids, so a saved copy never goes stale.
 const docKey = (path: string) => new URL('__doc/' + path.split('/').map(encodeURIComponent).join('/'), document.baseURI).href
 
+// Booking documents are PDFs or photos. Anything else is refused on upload, and a saved copy opens under one of these
+// types or as a plain download: a file opened from a blob: URL runs on the app's own origin, so an SVG or HTML file
+// typed as itself could run script with the viewer's session.
+const DOC_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/heic', 'image/heif']
+const DOC_ACCEPT = DOC_TYPES.join(',')
+const isDocType = (type: string) => DOC_TYPES.includes(type)
+
 async function savedDoc(path: string) {
   try {
     return (await (await caches.open('docs')).match(docKey(path))) ?? null
@@ -162,7 +169,8 @@ async function openFile(path: string) {
   const go = (href: string) => (win ? (win.location.href = href) : (location.href = href))
   const saved = await savedDoc(path)
   if (saved) {
-    const href = URL.createObjectURL(await saved.blob())
+    const raw = await saved.blob()
+    const href = URL.createObjectURL(new Blob([raw], { type: isDocType(raw.type) ? raw.type : 'application/octet-stream' }))
     go(href)
     setTimeout(() => URL.revokeObjectURL(href), 10 * 60 * 1000)
     return
@@ -298,6 +306,11 @@ function BookingForm(props: {
     setBusy(true)
     let filePath = f.file_path ?? null
     if (file) {
+      if (!isDocType(file.type)) {
+        alert(t('העלאת הקובץ נכשלה: {msg}', { msg: 'PDF, JPG, PNG' }))
+        setBusy(false)
+        return
+      }
       const ext = file.name.includes('.') ? file.name.split('.').pop() : 'bin'
       const path = `${tripId}/${crypto.randomUUID()}.${ext}`
       const { error } = await supabase.storage.from('docs').upload(path, file, { contentType: file.type })
@@ -391,7 +404,7 @@ function BookingForm(props: {
         <textarea value={f.notes ?? ''} onChange={set('notes')} rows={3} />
       </Field>
       <Field label={f.file_path ? t('החלפת מסמך (PDF / תמונה)') : t('מסמך מצורף (PDF / תמונה)')}>
-        <input type="file" accept="application/pdf,image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+        <input type="file" accept={DOC_ACCEPT} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
       </Field>
       {file && (
         <button className="secondary" onClick={readFile} disabled={reading}>
@@ -505,7 +518,8 @@ function ImportSheet(props: { trip: Trip; couples: string[]; myCouple: string | 
     // keep the original confirmation with the booking
     let filePath: string | null = null
     let lost = false
-    if (file) {
+    if (file && !isDocType(file.type)) lost = true
+    else if (file) {
       const ext = file.name.includes('.') ? file.name.split('.').pop() : 'bin'
       filePath = `${trip.id}/${crypto.randomUUID()}.${ext}`
       const up = await supabase.storage.from('docs').upload(filePath, file, { contentType: file.type })
@@ -555,7 +569,7 @@ function ImportSheet(props: { trip: Trip; couples: string[]; myCouple: string | 
         <textarea value={text} onChange={(e) => setText(e.target.value)} rows={7} dir="auto" placeholder={t('להדביק כאן…')} />
       </Field>
       <Field label={t('או קובץ')}>
-        <input type="file" accept="application/pdf,image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+        <input type="file" accept={DOC_ACCEPT} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
       </Field>
       {err && <p className="msg">{err}</p>}
       <button className="primary" onClick={run} disabled={busy || (!text.trim() && !file)}>
