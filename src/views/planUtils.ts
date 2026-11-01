@@ -224,6 +224,20 @@ export function fmtUntil(min: number) {
 
 export const minutesOf = (hhmm: string) => +hhmm.slice(0, 2) * 60 + +hhmm.slice(3, 5)
 
+type Point = { lat: number; lng: number }
+/**
+ * The way from one stop to the next as the planner counts it (ride in plan-trip/plan.ts, keep the two alike): a walk
+ * under 1.2 km, otherwise city trains with a change, or an express train further out. Null when it's the same spot.
+ */
+export function hop(a: Point, b: Point): { walk: boolean; mins: number } | null {
+  const r = Math.PI / 180
+  const x = (b.lng - a.lng) * r * Math.cos(((a.lat + b.lat) / 2) * r)
+  const y = (b.lat - a.lat) * r
+  const d = Math.sqrt(x * x + y * y) * 6371
+  if (d < 0.15) return null
+  return { walk: d < 1.2, mins: Math.min(150, Math.round(d < 1.2 ? d * 15 : Math.min(12 + d * 3.2, 30 + d * 0.9))) }
+}
+
 export type ArrivalStep = { icon: LucideIcon; text: string }
 
 const BORDER: ArrivalStep = { icon: BadgeCheck, text: t('ביקורת גבולות: Visit Japan Web (קודי QR) פתוח בטלפון.') }

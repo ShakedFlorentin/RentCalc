@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
-import { BedDouble, Check, ChevronRight, CircleAlert, Heart, MapPin, Navigation, Pencil, PlaneLanding, Plus, Undo2, Users } from 'lucide-react'
+import { BedDouble, Check, ChevronRight, CircleAlert, Footprints, Heart, MapPin, Navigation, Pencil, PlaneLanding, Plus, Route, Undo2, Users } from 'lucide-react'
 import { supabase } from '../supabase'
 import { CATEGORIES, CITY_HE, TOGETHER, WHO_OPTIONS, type Booking, type Candidate, type DayInfo, type Member, type Place, type PlanSummary, type Trip } from '../types'
 import { cityLabel, couplesOf, currentDay, dayDate, keepRanges, dayOption, dayParts, fmtDayLong, mutate, replan, useMediaIndex, useTripTable, withMedia } from '../lib'
@@ -10,6 +10,7 @@ import { CardFull } from './Swipe'
 import {
   ARRIVAL,
   dayEntries,
+  hop,
   tokyoArrival,
   hotelNights,
   nightLines,
@@ -48,6 +49,14 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
   const cards = useMemo(() => rawCards.map((c) => withMedia(c, media)), [rawCards, media])
   const placeOf = (i?: PlanItem) => (i?.place_id ? places.find((p) => p.id === i.place_id) : undefined)
   const cardOf = (p?: Place) => (p?.candidate_id ? cards.find((c) => c.id === p.candidate_id) : undefined)
+  /** Where a plan item is, from its place or that place's card; bookings and places without one have none. */
+  const pointOf = (e: Entry) => {
+    const p = placeOf(e.item)
+    const c = cardOf(p)
+    const lat = p?.lat ?? c?.lat
+    const lng = p?.lng ?? c?.lng
+    return lat != null && lng != null ? { lat, lng } : null
+  }
 
   useEffect(() => {
     stripRef.current?.querySelector('.active')?.scrollIntoView({ inline: 'center', block: 'nearest' })
@@ -155,16 +164,19 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
           )}
           {entries
             .filter((e) => owner === undefined || e.who === owner)
-            .map((e) => (
-              <EntryRow
-                key={e.key}
-                e={e}
-                kind={cardOf(placeOf(e.item))?.serves}
-                onOpen={(i) => setOpenId(i.id)}
-                onEdit={setEditItem}
-                warning={e.item && (warnings.get(e.item.id) ?? (e.item.auto && e.item.place_id ? issues.get(e.item.place_id) : undefined))}
-                onMissed={past && e.item?.place_id && !e.item.done ? missed : undefined}
-              />
+            .map((e, n, list) => (
+              <Fragment key={e.key}>
+                {/* how far the next stop is, as the planner counted it */}
+                {n > 0 && <Hop from={pointOf(list[n - 1])} to={pointOf(e)} />}
+                <EntryRow
+                  e={e}
+                  kind={cardOf(placeOf(e.item))?.serves}
+                  onOpen={(i) => setOpenId(i.id)}
+                  onEdit={setEditItem}
+                  warning={e.item && (warnings.get(e.item.id) ?? (e.item.auto && e.item.place_id ? issues.get(e.item.place_id) : undefined))}
+                  onMissed={past && e.item?.place_id && !e.item.done ? missed : undefined}
+                />
+              </Fragment>
             ))}
         </Fragment>
       ))}
@@ -281,6 +293,17 @@ function EntryRow(props: {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+/** The way between two stops in a row, as the planner counted it: on foot nearby, a ride further (train, bus or taxi). */
+function Hop({ from, to }: { from: { lat: number; lng: number } | null; to: { lat: number; lng: number } | null }) {
+  const h = from && to ? hop(from, to) : null
+  if (!h) return null
+  return (
+    <div className="plan-hop muted small">
+      <Icon as={h.walk ? Footprints : Route} /> {h.walk ? t('~{mins} דק׳ הליכה', { mins: h.mins }) : t('~{mins} דק׳ נסיעה', { mins: h.mins })}
     </div>
   )
 }
