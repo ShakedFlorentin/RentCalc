@@ -301,7 +301,7 @@ type Point = { lat: number; lng: number }
 const at = (p: Point) => `${p.lat},${p.lng}`
 
 /**
- * The way between two stops in a row, as the planner counted it: on foot nearby, a ride further (train, bus or taxi).
+ * The way between two stops in a row, as a range of minutes: on foot nearby, a ride further (train, bus or taxi).
  * A tap opens the real route from the one to the other in Google Maps.
  */
 function Hop({ from, to, pointOf }: { from: Entry; to: Entry; pointOf: (e: Entry) => Point | null }) {
@@ -309,11 +309,13 @@ function Hop({ from, to, pointOf }: { from: Entry; to: Entry; pointOf: (e: Entry
   const b = pointOf(to)
   const h = a && b ? hop(a, b) : null
   if (!a || !b || !h) return null
+  // kept left to right, or Hebrew turns 5–10 into 10–5
+  const range = `\u2066${h.from}–${h.to}\u2069`
   // the names Maps knows the places by; the coordinates when a stop has none
   const url = navUrl(to.location || at(b), from.location || at(a), h.walk ? 'walking' : 'transit')
   return (
     <a className="plan-hop muted small" href={url} target="_blank" rel="noreferrer">
-      <Icon as={h.walk ? Footprints : Route} /> {h.walk ? t('~{mins} דק׳ הליכה', { mins: h.mins }) : t('~{mins} דק׳ נסיעה', { mins: h.mins })}
+      <Icon as={h.walk ? Footprints : Route} /> {h.walk ? t('{range} דק׳ הליכה', { range }) : t('{range} דק׳ נסיעה', { range })}
       <Icon as={ChevronLeft} className="plan-hop-go flip-ltr" />
     </a>
   )

@@ -62,8 +62,8 @@ export const EN_B: Record<string, string> = {
   'בעוד {h} שעות': 'in {h} hours',
   'בעוד שעה ו-{r} דק׳': 'in 1 hour and {r} min',
   'בעוד שעתיים ו-{r} דק׳': 'in 2 hours and {r} min',
-  '~{mins} דק׳ הליכה': '~{mins} min walk',
-  '~{mins} דק׳ נסיעה': '~{mins} min ride',
+  '{range} דק׳ הליכה': '{range} min walk',
+  '{range} דק׳ נסיעה': '{range} min ride',
   'בעוד {h} שעות ו-{r} דק׳': 'in {h} hours and {r} min',
   'ביקורת גבולות: Visit Japan Web (קודי QR) פתוח בטלפון.': 'Border control: have Visit Japan Web (QR codes) open on your phone.',
   'Suica או PASMO בארנק הטלפון (iPhone), או כרטיס Welcome Suica מהמכונות בטרמינל.':
