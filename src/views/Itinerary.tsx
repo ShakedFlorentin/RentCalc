@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
-import { BedDouble, Check, ChevronRight, CircleAlert, Footprints, Heart, MapPin, Navigation, Pencil, PlaneLanding, Plus, Route, Undo2, Users } from 'lucide-react'
+import { BedDouble, Check, ChevronLeft, ChevronRight, CircleAlert, Footprints, Heart, MapPin, Navigation, Pencil, PlaneLanding, Plus, Route, Undo2, Users } from 'lucide-react'
 import { supabase } from '../supabase'
 import { CATEGORIES, CITY_HE, TOGETHER, WHO_OPTIONS, type Booking, type Candidate, type DayInfo, type Member, type Place, type PlanSummary, type Trip } from '../types'
 import { cityLabel, couplesOf, currentDay, dayDate, keepRanges, dayOption, dayParts, fmtDayLong, mutate, replan, useMediaIndex, useTripTable, withMedia } from '../lib'
@@ -167,7 +167,7 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
             .map((e, n, list) => (
               <Fragment key={e.key}>
                 {/* how far the next stop is, as the planner counted it */}
-                {n > 0 && <Hop from={pointOf(list[n - 1])} to={pointOf(e)} />}
+                {n > 0 && <Hop from={list[n - 1]} to={e} pointOf={pointOf} />}
                 <EntryRow
                   e={e}
                   kind={cardOf(placeOf(e.item))?.serves}
@@ -297,14 +297,25 @@ function EntryRow(props: {
   )
 }
 
-/** The way between two stops in a row, as the planner counted it: on foot nearby, a ride further (train, bus or taxi). */
-function Hop({ from, to }: { from: { lat: number; lng: number } | null; to: { lat: number; lng: number } | null }) {
-  const h = from && to ? hop(from, to) : null
-  if (!h) return null
+type Point = { lat: number; lng: number }
+const at = (p: Point) => `${p.lat},${p.lng}`
+
+/**
+ * The way between two stops in a row, as the planner counted it: on foot nearby, a ride further (train, bus or taxi).
+ * A tap opens the real route from the one to the other in Google Maps.
+ */
+function Hop({ from, to, pointOf }: { from: Entry; to: Entry; pointOf: (e: Entry) => Point | null }) {
+  const a = pointOf(from)
+  const b = pointOf(to)
+  const h = a && b ? hop(a, b) : null
+  if (!a || !b || !h) return null
+  // the names Maps knows the places by; the coordinates when a stop has none
+  const url = navUrl(to.location || at(b), from.location || at(a), h.walk ? 'walking' : 'transit')
   return (
-    <div className="plan-hop muted small">
+    <a className="plan-hop muted small" href={url} target="_blank" rel="noreferrer">
       <Icon as={h.walk ? Footprints : Route} /> {h.walk ? t('~{mins} דק׳ הליכה', { mins: h.mins }) : t('~{mins} דק׳ נסיעה', { mins: h.mins })}
-    </div>
+      <Icon as={ChevronLeft} className="plan-hop-go flip-ltr" />
+    </a>
   )
 }
 

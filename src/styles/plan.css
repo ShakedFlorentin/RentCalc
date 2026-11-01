@@ -128,4 +128,5 @@
 .plan-near-liked { margin-inline-start: 6px; color: var(--accent); width: 0.9em; height: 0.9em; }
 .plan-near-mins { flex: none; white-space: nowrap; }
 /* the way between two stops in a row: a quiet line in the gap, not a card of its own */
-.plan-hop { display: flex; align-items: center; gap: 6px; margin: -4px 0; padding-inline-start: 18px; }
+.plan-hop { display: flex; align-items: center; gap: 6px; margin: -4px 0; padding-inline-start: 18px; text-decoration: none; width: fit-content; }
+.plan-hop-go { opacity: 0.6; }

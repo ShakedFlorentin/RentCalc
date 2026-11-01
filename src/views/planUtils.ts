@@ -43,8 +43,10 @@ export function ymd(d: Date) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
 
-export function navUrl(destination: string) {
-  return 'https://www.google.com/maps/dir/?api=1&travelmode=transit&destination=' + encodeURIComponent(destination)
+/** Directions in Google Maps to a place; from another place when given (otherwise from where the phone is). */
+export function navUrl(destination: string, origin?: string, mode: 'transit' | 'walking' = 'transit') {
+  const from = origin ? '&origin=' + encodeURIComponent(origin) : ''
+  return `https://www.google.com/maps/dir/?api=1&travelmode=${mode}${from}&destination=` + encodeURIComponent(destination)
 }
 
 const JAPAN = /\b(HND|NRT|KIX|ITM|NGO|CTS|FUK)\b|Haneda|Narita|Kansai|הנדה|נריטה|קנסאי|טוקיו|יפן/i // he-only
