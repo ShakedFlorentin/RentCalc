@@ -279,20 +279,54 @@ async function charge(admin: SupabaseClient, userId: string, fn: string, json: (
  * The same post or the same place name gives the same key, whatever tracking bits the share link carries
  * (?igsh=, ?cplk=, a trailing slash, www): a repeat is answered from place_lookups instead of searched again.
  */
-function lookupKey(link: string, text: string) {
+async function lookupKey(link: string, text: string) {
   if (link) {
     try {
-      const u = new URL(link)
+      const u = await unshorten(new URL(link))
       const host = u.hostname.toLowerCase().replace(/^(www|m)\./, '')
       const ig = host === 'instagram.com' && u.pathname.match(/^\/(?:p|reel|reels|tv)\/([\w-]+)/)?.[1]
       if (ig) return 'ig:' + ig
+      const tt = host === 'tiktok.com' && u.pathname.match(/\/(?:video|photo)\/(\d+)/)?.[1]
+      if (tt) return 'tt:' + tt
+      // a Maps place is keyed by its name, as if it had been typed: the link and the name share one answer
+      const place = /^google\.[a-z.]+$/.test(host) && placeName(u)
+      if (place) return nameKey(place)
       return 'url:' + host + u.pathname.replace(/\/+$/, '')
     } catch {
       return null
     }
   }
-  const t = text.trim().toLowerCase().replace(/\s+/g, ' ')
+  return nameKey(text)
+}
+const nameKey = (name: string) => {
+  const t = name.trim().toLowerCase().replace(/\s+/g, ' ')
   return t ? 'q:' + t : null
+}
+/** The place a Google Maps address shows (".../maps/place/Coffee+Shop+Pinocchio/@35.0,135.7..."). */
+const placeName = (u: URL) => {
+  const m = u.pathname.match(/\/maps\/(?:place|search)\/([^/@]+)/)?.[1]
+  if (!m) return u.pathname.startsWith('/maps') ? (u.searchParams.get('q') ?? '').trim() : ''
+  try {
+    return decodeURIComponent(m.replace(/\+/g, ' ')).trim()
+  } catch {
+    return ''
+  }
+}
+// share links that are a new short code each time, so they're followed to the address they stand for
+const SHORT = new Set(['vm.tiktok.com', 'vt.tiktok.com', 'maps.app.goo.gl', 'goo.gl'])
+/** Where a short share link leads; the link itself when it isn't one, or can't be followed. */
+async function unshorten(u: URL) {
+  if (u.protocol !== 'https:' || !SHORT.has(u.hostname.toLowerCase())) return u
+  try {
+    const r = await fetch(u, { redirect: 'follow', signal: AbortSignal.timeout(5000) })
+    await r.body?.cancel()
+    const to = new URL(r.url)
+    // from the EU, Google first sends the visitor to its cookie page, with the real address in ?continue=
+    const next = /^consent\.google\./.test(to.hostname) && to.searchParams.get('continue')
+    return next ? new URL(next) : to
+  } catch {
+    return u
+  }
 }
 // a saved answer is good for a month; places don't move, but scores and hours do
 const CACHE_DAYS = 30
@@ -379,7 +413,7 @@ Deno.serve(async (req) => {
   const who = await signedIn(req, json)
   if (who instanceof Response) return who
   const { userId, admin } = who
-  const key = lookupKey(link?.trim() ?? '', text ?? '')
+  const key = await lookupKey(link?.trim() ?? '', text ?? '')
   // the app's own id for this lookup, so it can read the result back if it stopped waiting; only ever inserted, so
   // an id that's taken (someone else's lookup) gets a fresh one instead of overwriting it
   let id = typeof body?.id === 'string' && UUID.test(body.id) ? body.id : crypto.randomUUID()
@@ -402,7 +436,9 @@ Deno.serve(async (req) => {
       .order('finished_at', { ascending: false })
       .limit(1)
       .maybeSingle()
-    const places = hit?.places as unknown[] | null
+    // a name (typed, or a Maps link's) may be a place researched already for another lookup, a roundup's among them
+    const saved = hit?.places as unknown[] | null
+    const places = saved?.length ? saved : key.startsWith('q:') ? await knownPlace(admin, key.slice(2), since) : null
     if (places?.length) {
       console.log('cached', key, places.length)
       await track({ status: 'done', places, finished_at: new Date().toISOString() })
@@ -653,6 +689,36 @@ const GENERIC = new Set(
 /** The words of a name that tell this place from others. */
 const distinctive = (s: string) =>
   s.toLowerCase().normalize('NFKD').replace(/[^\p{L}\p{N}]+/gu, ' ').split(' ').filter((w) => w.length > 2 && !GENERIC.has(w))
+
+const CITIES = ['tokyo', 'kyoto', 'osaka', 'nara']
+/**
+ * The card of a place some earlier lookup already researched, when the name asked for is that place's: every word that
+ * tells it apart is in the card's name (one word alone only when it is the whole name, so "starbucks" doesn't pick a
+ * branch), in the city named if one is, and only one place fits. Null otherwise, and the name is searched.
+ */
+async function knownPlace(admin: SupabaseClient, name: string, since: string) {
+  const want = [...new Set(distinctive(name))]
+  if (!want.length) return null
+  const city = CITIES.find((c) => name.toLowerCase().split(/[^a-z]+/).includes(c))
+  const { data } = await admin
+    .from('place_lookups')
+    .select('places')
+    .eq('status', 'done')
+    .gte('finished_at', since)
+    .order('finished_at', { ascending: false })
+    .limit(300)
+  const found = new Map<string, unknown>()
+  for (const row of data ?? []) {
+    for (const card of (row.places as { name?: unknown; city?: unknown }[] | null) ?? []) {
+      const words = new Set(distinctive(typeof card.name === 'string' ? card.name : ''))
+      if (!want.every((w) => words.has(w)) || (want.length < 2 && words.size > 1)) continue
+      if (city && card.city !== city) continue
+      const same = [...words].sort().join(' ')
+      if (!found.has(same)) found.set(same, card)
+    }
+  }
+  return found.size === 1 ? [...found.values()] : null
+}
 
 /** The post's pictures as image blocks for Claude: JPEG, PNG or WebP under 5 MB; the others are left out. */
 async function pictures(urls: string[]): Promise<Anthropic.ImageBlockParam[]> {

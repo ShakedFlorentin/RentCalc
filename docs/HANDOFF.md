@@ -200,9 +200,11 @@ Offline: `public/sw.js` + localStorage cache in `useTripTable` (`src/lib.ts`).
   step `cached` at $0. Summary per day/function/step: `select * from ai_costs_daily order by day desc`. Backend only
   (no grants to app users). Prices live in `ai-log.ts`, an identical copy in each function folder (deploy it with
   the function's index.ts).
-- Edge functions (`supabase/functions/*`, deploy via MCP): `suggest-place` (v16, link/name → up to 10 place cards; every lookup is saved in `place_lookups` (by the app's id,
+- Edge functions (`supabase/functions/*`, deploy via MCP): `suggest-place` (v27, link/name → up to 10 place cards; every lookup is saved in `place_lookups` (by the app's id,
   with a key per post/name): the search finishes even if the phone stops waiting and the app reads the result back,
-  and the same post or name within 30 days is answered from there for free
+  and the same post or name within 30 days is answered from there for free (v27: TikTok/Maps short links are followed
+  first, so every share of one post or place gets the same key; a Maps link is keyed by its place's name; a typed name
+  that matches exactly one place already researched for any lookup, a roundup's included, returns that card)
   with kosher fields; structured outputs allow at most 16 nullable fields, so its text fields return "" and are
   turned into null in the function — v13 had 18 and every call failed with a 400) and `parse-booking` (v9). Model `claude-haiku-5-5`, key in Vault `anthropic_api_key`,
   30 calls/user/day. Both validate the body before charging quota and only pass http(s) links.
