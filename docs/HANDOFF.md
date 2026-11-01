@@ -3,6 +3,18 @@
 Live: https://shakedflorentin.github.io/RentCalc/ · branch `japan-trip`, deployed by fast-forwarding `main`
 (`git push origin japan-trip:main`; GitHub Pages builds on push). Supabase project `wbofjfwbdewgnwjmcpnv`.
 
+## Travel between plan stops (2026-11-02)
+- Between two stops in a row the day plan shows a quiet line: "5–10 min walk" under 1.2 km straight-line, otherwise a
+  ride range ("15–30 min"), in 5-minute steps; none under 0.15 km (same spot) or over 25 km (no data). A tap opens
+  Google Maps directions from the one stop to the other (`hop` and `navUrl` in `src/views/planUtils.ts`, `Hop` in
+  `Itinerary.tsx`). Plain math on the phone, no API or Claude call.
+- The two curves were fitted on 775 real routes between the cards (walking by OSRM, transit by Transitous, 100 checked
+  against Google Maps): the real time is inside the range 8 times in 10. The planner still spaces days with its own
+  single estimate (`ride` in `plan-trip/plan.ts`). A model with distance to the nearest station was 40% more exact but
+  needs a stations table and a value on each card; not built (a small feature).
+- Some cards' address and coordinates disagree (AWOMB Nishikiyamachi: Maps finds the neighbour or another branch), which
+  sends Navigate and the travel line to the wrong door; not fixed yet.
+
 ## Card photos (2026-10-29)
 - Photos come from `public/media.json` (95 places, collected with Claude in Chrome on 22.10) or the `photos` column.
   40 cards there showed one picture twice (two Google addresses for the same image, found by equal byte sizes at
