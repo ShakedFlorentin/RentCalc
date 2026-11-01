@@ -173,14 +173,14 @@ async function pageImages(page: string, c: Card) {
   // share image only when the page is the place's own or its title names it
   const named = new Set(significant(c.name))
   const title = new Set(significant(got.html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1] ?? ''))
-  const own = page === c.website_url || (named.size > 0 && [...named].every((w) => title.has(w)))
+  const own = page === c.website_url || (named.size > 0 && namesAll(named, title))
   const captioned: string[] = []
   for (const tag of got.html.match(/<img\b[^>]*>/gi) ?? []) {
     const label = [tag.match(/\balt=["']([^"']*)["']/i)?.[1], tag.match(/\btitle=["']([^"']*)["']/i)?.[1]].join(' ')
     const src = tag.match(/\b(?:data-src|data-lazy-src|src)=["']([^"']+)["']/i)?.[1]
     if (!src || /\.svg|logo|icon|avatar|sprite/i.test(src)) continue
     const said = new Set([...significant(label), ...significant(src.split('/').pop() ?? '')])
-    if (!named.size || ![...named].every((w) => said.has(w))) continue
+    if (!named.size || !namesAll(named, said)) continue
     const u = absolute(src, got.url)
     if (u) captioned.push(u)
   }
@@ -235,6 +235,28 @@ async function tiktokCover(link: string) {
 const GENERIC = new Set('the and main store shop branch temple shrine street shopping market cafe coffee bar restaurant park garden tower museum building center centre station tokyo kyoto osaka nara kobe japan'.split(' '))
 const significant = (s: string) =>
   s.toLowerCase().normalize('NFKD').replace(/\(.*?\)/g, ' ').replace(/[^\p{L}\p{N}]+/gu, ' ').split(' ').filter((w) => w.length > 2 && !GENERIC.has(w))
+// a page names the place when every word of its name is there. Sources spell one place differently (Nineizaka /
+// Ninenzaka, Shinjyuku / Shinjuku), so one long word may be a letter off, but only beside two exact ones: a single
+// typo must not cost a card its photos, and Ichiran Shibuya must not take Ichiban Shibuya's
+const oneOff = (a: string, b: string) => {
+  if (Math.abs(a.length - b.length) > 1) return false
+  let i = 0
+  while (i < a.length && i < b.length && a[i] === b[i]) i++
+  let j = 0
+  while (j < a.length - i && j < b.length - i && a[a.length - 1 - j] === b[b.length - 1 - j]) j++
+  return Math.max(a.length, b.length) - i - j <= 1
+}
+const namesAll = (named: Iterable<string>, words: Iterable<string>) => {
+  const have = [...words]
+  let exact = 0
+  let off = 0
+  for (const w of named) {
+    if (have.includes(w)) exact++
+    else if (w.length >= 5 && have.some((x) => x.length >= 5 && oneOff(x, w))) off++
+    else return false
+  }
+  return exact > 0 && (off === 0 || (off === 1 && exact >= 2))
+}
 const WIKI_UA = { 'User-Agent': 'JapanTripApp/1.0 (https://shakedflorentin.github.io/RentCalc/)' }
 
 /** The lead image of the Wikipedia article about the place, when the article's title is the place's name. */
@@ -252,7 +274,7 @@ async function wikipedia(c: Card): Promise<Found[]> {
       const ok =
         lang === 'ja'
           ? !!c.name_ja && (p.title.includes(c.name_ja) || c.name_ja.includes(p.title)) && p.title.length > 1
-          : named.length > 0 && named.every((w) => significant(p.title).includes(w))
+          : named.length > 0 && namesAll(named, significant(p.title))
       if (ok) return [{ url: p.thumbnail.source, from: 'wikipedia' }]
     } catch {
       // try the next one
