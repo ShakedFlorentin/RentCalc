@@ -74,7 +74,9 @@ end $$;
 alter table public.trip_stays enable row level security;
 do $$ begin
   create policy trip_stays_all on public.trip_stays as permissive for all to authenticated
-    using (public.is_trip_member(trip_id)) with check (public.is_trip_member(trip_id));
+    using (public.is_trip_member(trip_id))
+    with check (public.is_trip_member(trip_id) and (booking_id is null or exists (
+      select 1 from public.bookings b where b.id = booking_id and b.trip_id = trip_stays.trip_id)));
 exception when duplicate_object then null; end $$;
 grant select, insert, update, delete on public.trip_stays to authenticated;
 
@@ -127,7 +129,7 @@ begin
   if c is null or d2 <= d1 then return null; end if;
   update public.trip_stays
      set party = new.who, city = c, check_in = d1, check_out = d2, status = 'confirmed', locked = true
-   where booking_id = new.id;
+   where booking_id = new.id and trip_id = new.trip_id;
   if not found then
     insert into public.trip_stays (trip_id, party, city, check_in, check_out, status, locked, booking_id, source)
     values (new.trip_id, new.who, c, d1, d2, 'confirmed', true, new.id, 'booking');
