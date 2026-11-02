@@ -11,8 +11,8 @@ import { MediaActions } from '../media'
 import { useProfile } from './Onboarding'
 import { answersOf, hidden, score } from '../prefs'
 import { BATCH_SIZE, categoryMeans, learnTags, rankDeck } from '../rank'
-import { Clock, ChevronLeft, ChevronUp, Heart, Ban, X, Lightbulb, MapPin, MessageSquare, Plus, ReceiptText, Search, Sparkles, Star, Target, Timer, Users, Utensils, UtensilsCrossed, Wine, Baby } from 'lucide-react'
-import { project, reducedMotion, springTo } from '../spring'
+import { SkipForward, ChevronLeft, ChevronUp, Heart, Ban, X, Lightbulb, MapPin, MessageSquare, Plus, ReceiptText, Search, Sparkles, Star, Target, Timer, Users, Utensils, UtensilsCrossed, Wine, Baby } from 'lucide-react'
+import { reducedMotion, springTo } from '../spring'
 import { AUDIENCE_ICON, CARD_ICON, Icon, type LucideIcon } from '../icons'
 import '../styles/game.css'
 
@@ -434,7 +434,7 @@ export default function SwipeGame({ trip, userId, members, showCard, onCardShown
             <svg viewBox="0 0 24 24" aria-hidden="true"><path className="fill" d="M12 20.5s-7.5-4.6-9.2-9.4C1.6 7.7 4 4.5 7.2 4.5c1.9 0 3.4 1 4.8 2.8 1.4-1.8 2.9-2.8 4.8-2.8 3.2 0 5.6 3.2 4.4 6.6-1.7 4.8-9.2 9.4-9.2 9.4z" /></svg>
           </button>
           <button className="round small-round" onClick={() => deck[0] && notNow(deck[0])} disabled={!deck.length || batchOver} aria-label={t('לא עכשיו')}>
-            <Icon as={Clock} />
+            <Icon as={SkipForward} />
           </button>
           {deck.length > 0 && !batchOver && <span className="left-count" aria-live="polite">{Math.min(deck.length, batchLeft) === 1 ? t('נשאר אחד') : t('נשארו {n}', { n: Math.min(deck.length, batchLeft) })}</span>}
         </div>
@@ -548,10 +548,12 @@ function Card({ c, top, likedBy, prior, onSwipe }: { c: Candidate; top: boolean;
     const b = tr[tr.length - 1]
     // a finger that stopped before letting go has no speed left, whatever it had before the pause
     const v = b.t > a.t && e.timeStamp - b.t < 50 ? ((b.x - a.x) / (b.t - a.t)) * 1000 : 0
-    // decide by where the flick is going, not where the finger let go. RTL doesn't change it: right = like
-    const rest = pos.current + project(v)
-    if (rest > 110) fly(1, v)
-    else if (rest < -110) fly(-1, v)
+    // a vote takes a real drag: past about a third of the card, or a quick flick that already moved it 60px the same
+    // way. A short nudge or a sloppy scroll springs back. RTL doesn't change it: right = like
+    const x = pos.current
+    const far = Math.abs(x) > Math.min(140, (e.currentTarget as HTMLElement).offsetWidth * 0.38)
+    const flick = Math.abs(x) > 60 && Math.abs(v) > 900 && Math.sign(v) === Math.sign(x)
+    if (far || flick) fly(x > 0 ? 1 : -1, v)
     else settle(v)
   }
   const decide = (dir: 1 | -1) => {
