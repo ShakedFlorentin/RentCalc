@@ -1,7 +1,7 @@
 -- Pork and seafood badge and note only for trips where someone avoids pork or seafood.
--- True when nobody in the trip has finished the questionnaire (unknown = shown), or any member who did has pork,
--- seafood or fish among the things they don't eat (an old "fish" meant fish and seafood), or an old kosher answer
--- of 'prefer' or 'only'. profiles are readable only by their owner, so the app asks this function (members only).
+-- True when nobody in the trip has finished the questionnaire (unknown = shown), or any member who did has pork or
+-- seafood among the things they don't eat, or an old save (one with a kosher answer) with "fish" (then it meant fish
+-- and seafood) or a kosher answer of 'prefer' or 'only'. profiles are readable only by their owner, so the app asks this function (members only).
 
 CREATE OR REPLACE FUNCTION public.trip_avoids_pork_seafood(tid uuid)
  RETURNS boolean
@@ -19,7 +19,8 @@ begin
       or exists (
            select 1 from public.members m join public.profiles p on p.user_id = m.user_id
             where m.trip_id = tid and p.completed_at is not null
-              and (    (jsonb_typeof(p.answers -> 'never') = 'array' and p.answers -> 'never' ?| array['pork', 'seafood', 'fish'])
+              and (    (jsonb_typeof(p.answers -> 'never') = 'array' and p.answers -> 'never' ?| array['pork', 'seafood'])
+                    or (p.answers ? 'kosher' and p.answers -> 'never' ? 'fish')
                     or p.answers ->> 'kosher' in ('prefer', 'only')));
 end
 $function$;

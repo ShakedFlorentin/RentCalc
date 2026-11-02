@@ -165,12 +165,13 @@ export function score(card: Card, a: Answers): number {
 }
 
 /**
- * What they don't eat. Older saves: "fish" meant fish and seafood, and the kosher question (now gone) meant no pork
- * or seafood, so those carry over as the new answers.
+ * What they don't eat. Older saves (the ones with a kosher answer): "fish" meant fish and seafood, and the kosher
+ * question (now gone) meant no pork or seafood, so those carry over as the new answers. New saves have no kosher key,
+ * and their "fish" is fish only.
  */
 export function neverOf(a: Partial<Answers>): Answers['never'] {
   const never = new Set(a.never ?? [])
-  if (never.has('fish')) never.add('seafood')
+  if (a.kosher !== undefined && never.has('fish')) never.add('seafood')
   if (a.kosher === 'prefer' || a.kosher === 'only') {
     never.add('pork')
     never.add('seafood')
