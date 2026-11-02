@@ -56,6 +56,26 @@ const rules = (f, out) => {
     if (u.openDates.length && !u.openDates.includes(d.date)) errs.push(`${id}: on day ${p.day}, runs only ${u.openDates.join(',')}`)
   }
   for (const id of out.placed.keys()) if (out.unplanned.has(id)) errs.push(`${id}: both placed and unplanned`)
+  // never silently: a place outside the city its couples sleep in that day (and not a day trip) is in out.away, with its city,
+  // and nothing else is
+  for (const [id, p] of out.placed) {
+    const u = byId.get(id)
+    const d = dayOf.get(p.day)
+    const isAway = !u.far && u.couples.some((c) => d.at.get(c) && d.at.get(c).base !== u.base)
+    if (isAway && out.away.get(id) !== u.base) errs.push(`${id}: away on day ${p.day} but labelled ${out.away.get(id) ?? 'nothing'}, expected ${u.base}`)
+    if (!isAway && out.away.has(id)) errs.push(`${id}: labelled away but sits in its own city on day ${p.day}`)
+  }
+  for (const id of out.away.keys()) if (!out.placed.has(id)) errs.push(`${id}: labelled away but not placed`)
+  // own city first: a place left out for lack of room must not have a day (in its own city) that holds another city's place
+  for (const [id, why] of out.unplanned) {
+    const u = byId.get(id)
+    if (why !== 'full' || u.far) continue
+    for (const d of f.days) {
+      if (!u.couples.every((c) => d.at.get(c)?.base === u.base)) continue
+      const taker = [...out.placed].find(([o, p]) => p.day === d.day && out.away.has(o) && byId.get(o).couples.some((c) => u.couples.includes(c)))
+      if (taker) errs.push(`${id}: left out ('full') although day ${d.day}, in its city, holds ${taker[0]} from ${out.away.get(taker[0])}`)
+    }
+  }
   return errs
 }
 
@@ -74,6 +94,13 @@ const expectations = (f, out, run) => {
     if (out.placed.has(id)) errs.push(`${id}: placed, expected unplanned (${why})`)
     else if (out.unplanned.get(id) !== why) errs.push(`${id}: unplanned as ${out.unplanned.get(id)}, expected ${why}`)
   }
+  // away: id → the city it is labelled with, for the places a fixture expects to be reported
+  for (const [id, city] of Object.entries(x.away ?? {})) {
+    if (out.away.get(id) !== city) errs.push(`${id}: away label ${out.away.get(id) ?? 'none'}, expected ${city}`)
+  }
+  // noAwayOnDays: days that must hold only places of their own city
+  for (const d of x.noAwayOnDays ?? []) for (const [id, p] of out.placed) if (p.day === d && out.away.has(id)) errs.push(`${id}: away (${out.away.get(id)}) on day ${d}, expected none`)
+  if (x.awayMin != null && out.away.size < x.awayMin) errs.push(`only ${out.away.size} away, expected at least ${x.awayMin}`)
   if (x.placedMin != null && out.placed.size < x.placedMin) errs.push(`only ${out.placed.size} placed, expected at least ${x.placedMin}`)
   if (x.fillBefore) {
     const { days, first, then } = x.fillBefore
@@ -132,6 +159,7 @@ for (const file of files) {
   if (out && process.env.VERBOSE) {
     for (const [id, p] of [...out.placed].sort((a, b) => a[1].day - b[1].day || a[1].start - b[1].start)) console.log(`     day ${p.day} ${E.hhmm(p.start)} ${id}`)
     for (const [id, r] of out.unplanned) console.log(`     unplanned ${id}: ${r}`)
+    for (const [id, c] of out.away) console.log(`     away ${id}: in ${c}`)
   }
 }
 console.log(failed ? `\n${failed} fixture(s) failed` : '\nok')

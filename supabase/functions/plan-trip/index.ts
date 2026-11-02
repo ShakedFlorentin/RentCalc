@@ -638,10 +638,14 @@ async function run(admin: SupabaseClient, tid: string, dry: boolean) {
 
   // facts_pending: cards planned from their kind alone, never checked (fill their plan columns to plan them better)
   // issues: what the final check found on the planner's own places (should stay empty; the app flags them if not)
+  // away: places planned in another city than the day's (see plan.ts AWAY_COST); the app labels them
   const summary = {
     unplanned,
     warnings,
     issues: out.issues.map((x) => ({ place_id: x.id, kind: x.kind })),
+    // planned places outside the city their people sleep in that day (not day trips): the app says "in {city}" on them.
+    // city is the place's city id; day is where it sits, so a place a person moves later loses the label
+    away: [...out.away].map(([id, city]) => ({ place_id: id, day: out.placed.get(id)!.day, city })),
     facts_pending: units.filter((u) => !unitPlace.get(u.id)!.f).length,
     // per day: where each couple sleeps, and estimate:true when no hotel booking stands behind it (times are estimates)
     days: days
@@ -661,7 +665,7 @@ async function run(admin: SupabaseClient, tid: string, dry: boolean) {
   }
   if (dry) {
     const byDay = desired
-      .map((r) => ({ day: r.day, time: r.time, title: r.title, who: r.who, notes: r.notes }))
+      .map((r) => ({ day: r.day, time: r.time, title: r.title, who: r.who, notes: r.notes, away: out.away.get(r.place_id as string) ?? null }))
       .sort((a, b) => (a.day as number) - (b.day as number) || String(a.time).localeCompare(String(b.time)))
     return {
       stats,

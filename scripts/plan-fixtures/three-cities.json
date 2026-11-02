@@ -1,0 +1,429 @@
+{
+ "name": "three-cities",
+ "description": "One couple sleeps in Yokohama (days 1 and 4), Kawasaki (day 2) and Tokyo (day 3), all within 30 km of each other. Three Yokohama, two Kawasaki and ten Tokyo places, the Tokyo ones wanted more. Each city's own places go on their own city's days (the Tokyo ones, being many, may spill onto the other days, but only after, and reported as away); nothing is left out for lack of room on a day that holds another city's place.",
+ "days": [
+  {
+   "day": 1,
+   "date": "2026-11-02",
+   "weekday": 1,
+   "at": {
+    "X": {
+     "base": "yokohama",
+     "hotel": {
+      "lat": 35.444,
+      "lng": 139.638
+     },
+     "start": 540,
+     "end": 1260
+    }
+   }
+  },
+  {
+   "day": 2,
+   "date": "2026-11-03",
+   "weekday": 2,
+   "at": {
+    "X": {
+     "base": "kawasaki",
+     "hotel": {
+      "lat": 35.531,
+      "lng": 139.703
+     },
+     "start": 540,
+     "end": 1260
+    }
+   }
+  },
+  {
+   "day": 3,
+   "date": "2026-11-04",
+   "weekday": 3,
+   "at": {
+    "X": {
+     "base": "tokyo",
+     "hotel": {
+      "lat": 35.681,
+      "lng": 139.767
+     },
+     "start": 540,
+     "end": 1260
+    }
+   }
+  },
+  {
+   "day": 4,
+   "date": "2026-11-05",
+   "weekday": 4,
+   "at": {
+    "X": {
+     "base": "yokohama",
+     "hotel": {
+      "lat": 35.444,
+      "lng": 139.638
+     },
+     "start": 540,
+     "end": 1260
+    }
+   }
+  }
+ ],
+ "units": [
+  {
+   "id": "yoko-chinatown",
+   "couples": [
+    "X"
+   ],
+   "base": "yokohama",
+   "far": false,
+   "point": {
+    "lat": 35.442,
+    "lng": 139.646
+   },
+   "mins": 90,
+   "category": "shopping",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 2,
+   "current": null
+  },
+  {
+   "id": "yoko-red-brick",
+   "couples": [
+    "X"
+   ],
+   "base": "yokohama",
+   "far": false,
+   "point": {
+    "lat": 35.453,
+    "lng": 139.643
+   },
+   "mins": 90,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 2,
+   "current": null
+  },
+  {
+   "id": "yoko-cup-noodles",
+   "couples": [
+    "X"
+   ],
+   "base": "yokohama",
+   "far": false,
+   "point": {
+    "lat": 35.457,
+    "lng": 139.636
+   },
+   "mins": 90,
+   "category": "experience",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 2,
+   "current": null
+  },
+  {
+   "id": "kawa-daishi",
+   "couples": [
+    "X"
+   ],
+   "base": "kawasaki",
+   "far": false,
+   "point": {
+    "lat": 35.533,
+    "lng": 139.727
+   },
+   "mins": 90,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 2,
+   "current": null
+  },
+  {
+   "id": "kawa-museum",
+   "couples": [
+    "X"
+   ],
+   "base": "kawasaki",
+   "far": false,
+   "point": {
+    "lat": 35.607,
+    "lng": 139.569
+   },
+   "mins": 90,
+   "category": "experience",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 2,
+   "current": null
+  },
+  {
+   "id": "tokyo-skytree",
+   "couples": [
+    "X"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {
+    "lat": 35.71,
+    "lng": 139.81
+   },
+   "mins": 90,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4.5,
+   "current": null
+  },
+  {
+   "id": "tokyo-asakusa",
+   "couples": [
+    "X"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {
+    "lat": 35.714,
+    "lng": 139.797
+   },
+   "mins": 90,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4.5,
+   "current": null
+  },
+  {
+   "id": "tokyo-ueno",
+   "couples": [
+    "X"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {
+    "lat": 35.715,
+    "lng": 139.774
+   },
+   "mins": 90,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4.5,
+   "current": null
+  },
+  {
+   "id": "tokyo-ginza",
+   "couples": [
+    "X"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {
+    "lat": 35.672,
+    "lng": 139.765
+   },
+   "mins": 90,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4.5,
+   "current": null
+  },
+  {
+   "id": "tokyo-shibuya",
+   "couples": [
+    "X"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {
+    "lat": 35.659,
+    "lng": 139.702
+   },
+   "mins": 90,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4.5,
+   "current": null
+  },
+  {
+   "id": "tokyo-meiji",
+   "couples": [
+    "X"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {
+    "lat": 35.676,
+    "lng": 139.699
+   },
+   "mins": 90,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4.5,
+   "current": null
+  },
+  {
+   "id": "tokyo-shinjuku",
+   "couples": [
+    "X"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {
+    "lat": 35.693,
+    "lng": 139.703
+   },
+   "mins": 90,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4.5,
+   "current": null
+  },
+  {
+   "id": "tokyo-tsukiji",
+   "couples": [
+    "X"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {
+    "lat": 35.665,
+    "lng": 139.77
+   },
+   "mins": 90,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4.5,
+   "current": null
+  },
+  {
+   "id": "tokyo-akihabara",
+   "couples": [
+    "X"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {
+    "lat": 35.698,
+    "lng": 139.773
+   },
+   "mins": 90,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4.5,
+   "current": null
+  },
+  {
+   "id": "tokyo-odaiba",
+   "couples": [
+    "X"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {
+    "lat": 35.63,
+    "lng": 139.776
+   },
+   "mins": 90,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4.5,
+   "current": null
+  }
+ ],
+ "fixed": [],
+ "expect": {
+  "stable": true,
+  "onlyDays": {
+   "yoko-chinatown": [
+    1,
+    4
+   ],
+   "yoko-red-brick": [
+    1,
+    4
+   ],
+   "yoko-cup-noodles": [
+    1,
+    4
+   ],
+   "kawa-daishi": [
+    2
+   ],
+   "kawa-museum": [
+    2
+   ]
+  },
+  "requirePlaced": true,
+  "placedMin": 15,
+  "awayMin": 4
+ }
+}

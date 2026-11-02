@@ -81,6 +81,9 @@ export type PlanSummary = {
   // what the planner's final check found on its own places (should stay empty): overlapping, too little time to get
   // there, outside opening hours, two meals too close
   issues?: { place_id: string; kind: 'overlap' | 'tight' | 'hours' | 'meals' }[]
+  // planned places in another city than the one the day's people sleep in (day trips excepted): city is the place's
+  // city id (cities.id); day is where the planner put it
+  away?: { place_id: string; day: number; city: string }[]
   facts_pending: number
   // per day the planner worked on: where each couple sleeps, and estimate:true when no hotel booking is behind it
   days?: { day: number; estimate?: boolean; hotels: Record<string, string | null> }[]

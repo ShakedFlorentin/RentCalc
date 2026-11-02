@@ -42,7 +42,13 @@ export type Unit = {
 // late: the day's timetable only reaches it after it closes (or after the day's hours)
 // missed: it wants a time of day (a morning café, cakes that sell out) and the day only reaches it hours after
 export type Placed = { day: number; start: number; order: number; late?: boolean; missed?: boolean }
-export type Outcome = { placed: Map<string, Placed>; unplanned: Map<string, 'closed' | 'no_day' | 'full'>; issues: Issue[] }
+export type Outcome = {
+  placed: Map<string, Placed>
+  unplanned: Map<string, 'closed' | 'no_day' | 'full'>
+  issues: Issue[]
+  /** placed places that sit outside the city their people sleep in that day (not day trips): id → the place's city */
+  away: Map<string, string>
+}
 /** What the final check found on a planned place: it should never happen, and the app shows it if it does. */
 export type Issue = { id: string; kind: 'overlap' | 'tight' | 'hours' | 'meals' }
 
@@ -57,6 +63,9 @@ const TRIP_START = 11 * 60
 const TRIP_SPREAD = 20
 // a place in another city this close to where a couple sleeps can go on that day too (Tokyo from Yokohama)
 const NEAR_KM = 30
+// a place in another city than where the day's people sleep costs this much more than one in their own city: the own
+// city's places come first, and the other city's only fill what they leave (or a day with none of its own)
+const AWAY_COST = 1.5
 // at most this many of a kind a day, per couple
 const PER_DAY: Record<string, number> = { food: 2, cafe: 2, nightlife: 2 }
 
@@ -108,7 +117,27 @@ export function plan(days: Day[], units: Unit[], fixed: Fixed[]): Outcome {
     return value - missed * 2
   }
   const out = kept && worth(fresh) <= worth(kept) * 1.02 ? kept : fresh
-  return { placed: out.placed, unplanned: out.unplanned, issues: check(days, units, fixed, out.placed) }
+  return { placed: out.placed, unplanned: out.unplanned, issues: check(days, units, fixed, out.placed), away: awayOf(days, units, out.placed) }
+}
+
+/** Is this place in another city than where one of its couples sleeps on that day? A day trip is on purpose: never. */
+export function isAway(d: Day, u: Unit) {
+  return !u.far && u.couples.some((c) => {
+    const p = d.at.get(c)
+    return !!p && p.base !== u.base
+  })
+}
+
+/** The placed places that are away from the day's city, with the city they are in (the app says so on the item). */
+export function awayOf(days: Day[], units: Unit[], placed: Map<string, Placed>) {
+  const byDay = new Map(days.map((d) => [d.day, d]))
+  const away = new Map<string, string>()
+  for (const u of units) {
+    const p = placed.get(u.id)
+    const d = p && byDay.get(p.day)
+    if (d && isAway(d, u)) away.set(u.id, u.base)
+  }
+  return away
 }
 
 /**
@@ -258,6 +287,7 @@ function arrange(days: Day[], units: Unit[], fixed: Fixed[], barred: Map<string,
     if (day == null) return u.priority * 14 * (0.5 + u.mins / 120)
     let cost = 0
     const d = byDay.get(day)!
+    if (isAway(d, u)) cost += AWAY_COST
     // a couple's own place fits best on a day the other couple is elsewhere
     if (u.couples.length < together(d, u.couples[0]).length) cost += 2
     if (u.current != null && u.current !== day) cost += 1.5
@@ -283,6 +313,22 @@ function arrange(days: Day[], units: Unit[], fixed: Fixed[], barred: Map<string,
       }
       return same < (PER_DAY[u.category] ?? 99)
     })
+  // an away place waits while a place of the day's own city that could take the room is still unplaced: the city's
+  // own places are placed first, the other city's only fill what they leave (or a day with none of its own)
+  const blockedAway = (u: Unit, day: number) => {
+    const d = byDay.get(day)!
+    if (!isAway(d, u)) return false
+    return live.some(
+      (w) =>
+        w !== u &&
+        at.get(w.id) == null &&
+        !isAway(d, w) &&
+        !w.far &&
+        w.couples.some((c) => u.couples.includes(c)) &&
+        options.get(w.id)!.includes(day) &&
+        fits(w, day),
+    )
+  }
   const tripRide = (day: number, c: string) => {
     const hotel = byDay.get(day)!.at.get(c)!.hotel
     let trip = 0
@@ -327,56 +373,74 @@ function arrange(days: Day[], units: Unit[], fixed: Fixed[], barred: Map<string,
   const order = [...live].sort((a, b) => b.priority - a.priority || options.get(a.id)!.length - options.get(b.id)!.length)
   for (const u of order) at.set(u.id, null)
   for (const u of order) if (u.current != null && options.get(u.id)!.includes(u.current) && fits(u, u.current)) put(u, u.current)
-  // then the rest, greedy: the most wanted first, each where it adds least
-  for (const u of order) {
-    if (at.get(u.id) != null) continue
-    let best: number | null = null
-    let bestD = 0
-    for (const day of options.get(u.id)!) {
-      if (!fits(u, day)) continue
-      const dl = delta(u, day)
-      if (dl < bestD) {
-        bestD = dl
-        best = day
-      }
-    }
-    put(u, best)
-  }
-
-  // then improve: move single places, or swap a place in for a less wanted one on a full day (not when settling:
-  // then the plan stays as it stands and only new places are added)
-  for (let pass = 0; !settle && pass < 40; pass++) {
-    let improved = false
+  // then the rest, greedy: the most wanted first, each where it adds least. First round: places of another city wait
+  // while the day's own city has places that could take the room; second round: they fill what is left
+  const greedy = (round: number) => {
     for (const u of order) {
-      const was = at.get(u.id) ?? null
-      let best: { day: number | null; ev?: Unit; dl: number } = { day: was, dl: -0.01 }
-      const tries: (number | null)[] = [null, ...options.get(u.id)!]
-      for (const day of tries) {
-        if (day === was) continue
-        if (day == null || fitsWithout(u, day, null)) {
-          const dl = delta(u, day)
-          if (dl < best.dl) best = { day, dl }
-        } else {
-          // the day is full: try taking off one less wanted place to make room
-          for (const c of u.couples) {
-            // a copy: trying a swap takes places off the day and puts them back, which would re-run a live Set
-            for (const id of [...group(day, c)]) {
-              const v = unitById.get(id)!
-              if (v.priority > u.priority || !fitsWithout(u, day, v)) continue
-              const dl = delta(u, day, v)
-              if (dl < best.dl) best = { day, ev: v, dl }
+      if (at.get(u.id) != null) continue
+      let best: number | null = null
+      let bestD = 0
+      for (const day of options.get(u.id)!) {
+        if (!fits(u, day) || (round === 0 && blockedAway(u, day))) continue
+        const dl = delta(u, day)
+        if (dl < bestD) {
+          bestD = dl
+          best = day
+        }
+      }
+      put(u, best)
+    }
+  }
+  // then improve: move single places, or swap a place in for a less wanted one on a full day (not when settling:
+  // then the plan stays as it stands and only new places are added). homeOnly: no move onto a day in another city
+  // than the place's own, so the own city's places settle before the other city's fill what they leave
+  const improve = (homeOnly: boolean) => {
+    for (let pass = 0; !settle && pass < 40; pass++) {
+      let improved = false
+      for (const u of order) {
+        const was = at.get(u.id) ?? null
+        let best: { day: number | null; ev?: Unit; dl: number } = { day: was, dl: -0.01 }
+        const tries: (number | null)[] = [null, ...options.get(u.id)!]
+        for (const day of tries) {
+          if (day === was) continue
+          if (homeOnly && day != null && isAway(byDay.get(day)!, u)) continue
+          // a place on a day in its own city stays there once the own city's places are settled: the other city's
+          // places that arrived since must not push it off (a day crowded only by what fills its leftover room)
+          if (!homeOnly && was != null && !isAway(byDay.get(was)!, u)) continue
+          if (day == null || fitsWithout(u, day, null)) {
+            if (day != null && blockedAway(u, day)) continue
+            const dl = delta(u, day)
+            if (dl < best.dl) best = { day, dl }
+          } else {
+            // the day is full: try taking off one less wanted place to make room
+            for (const c of u.couples) {
+              // a copy: trying a swap takes places off the day and puts them back, which would re-run a live Set
+              for (const id of [...group(day, c)]) {
+                const v = unitById.get(id)!
+                // a place of the day's own city may take the room of a higher one from another city, never the reverse
+                const awayV = isAway(byDay.get(day)!, v)
+                const awayU = isAway(byDay.get(day)!, u)
+                if (awayU && !awayV) continue
+                if ((v.priority > u.priority && !(awayV && !awayU)) || !fitsWithout(u, day, v)) continue
+                const dl = delta(u, day, v)
+                if (dl < best.dl) best = { day, ev: v, dl }
+              }
             }
           }
         }
+        if (best.day !== was) {
+          if (best.ev) put(best.ev, null)
+          put(u, best.day)
+          improved = true
+        }
       }
-      if (best.day !== was) {
-        if (best.ev) put(best.ev, null)
-        put(u, best.day)
-        improved = true
-      }
+      if (!improved) break
     }
-    if (!improved) break
   }
+  greedy(0)
+  improve(true)
+  greedy(1)
+  improve(false)
 
   function fitsWithout(u: Unit, day: number, v: Unit | null) {
     const vDay = v ? at.get(v.id) ?? null : null

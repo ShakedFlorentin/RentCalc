@@ -43,6 +43,8 @@ export const EN_B: Record<string, string> = {
   'פעילות חדשה': 'New activity',
   'בוצע': 'Done',
   'שעה משוערת': 'Estimated time',
+  'ב{city}': 'in {city}',
+  'בעיר אחרת מזו שישנים בה היום': 'In a different city than where you sleep today',
   'הזמנה': 'Booking',
   'ניווט': 'Directions',
   'עוד מקום אחד שאהבתם בעיר ולא נכנס למסלול': "One more place you liked here didn't fit in the plan",
