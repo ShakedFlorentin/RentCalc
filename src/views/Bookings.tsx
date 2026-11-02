@@ -268,7 +268,7 @@ function BookingForm(props: {
     let data: { bookings?: Extracted[] } | null = null
     try {
       const res = await supabase.functions.invoke('parse-booking', {
-        body: { text: '', file: { data: await toBase64(file), media_type: file.type } },
+        body: { text: '', file: { data: await toBase64(file), media_type: file.type }, trip_id: props.trip.id },
       })
       if (res.error) setReadNote(await aiError(res.error, t('לא הצלחתי לקרוא את הקובץ. אפשר למלא ידנית.')))
       data = res.data
@@ -459,7 +459,7 @@ function ImportSheet(props: { trip: Trip; couples: string[]; myCouple: string | 
     if (!text.trim() && !file) return
     setBusy(true)
     setErr('')
-    const payload: { text: string; file?: { data: string; media_type: string } } = { text }
+    const payload: { text: string; trip_id: string; file?: { data: string; media_type: string } } = { text, trip_id: props.trip.id }
     try {
       if (file) payload.file = { data: await toBase64(file), media_type: file.type }
     } catch {

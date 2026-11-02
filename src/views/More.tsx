@@ -79,7 +79,7 @@ export default function More({ trip, members, userId, sub, setSub }: Props) {
         {sub === 'money' && <Expenses trip={trip} members={members} userId={userId} />}
         {sub === 'lists' && <Lists tripId={trip.id} members={members} userId={userId} />}
         {sub === 'info' && <Essentials trip={trip} members={members} userId={userId} />}
-        {sub === 'say' && <Say />}
+        {sub === 'say' && <Say tripId={trip.id} />}
         {sub === 'baby' && <Baby trip={trip} members={members} userId={userId} />}
       </div>
     </div>

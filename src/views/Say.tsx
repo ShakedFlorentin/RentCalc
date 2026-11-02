@@ -7,10 +7,10 @@ import Translator from './Translator'
 import '../styles/info.css'
 
 /** Talking to people in Japan: the voice translator, then ready phrases to show. The baby phrases live in the baby corner. */
-export default function Say() {
+export default function Say({ tripId }: { tripId: string }) {
   return (
     <div className="stack">
-      <Translator />
+      <Translator tripId={tripId} />
       <section className="info-sec">
         <h2 className="info-h"><Icon as={Languages} /> {t('משפטים מוכנים')}</h2>
         <p className="muted small info-note">{t('לוחצים על כרטיס כדי להציג אותו במסך מלא למי שמולכם.')}</p>

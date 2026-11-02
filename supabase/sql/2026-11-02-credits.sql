@@ -77,6 +77,17 @@ end $$;
 -- (ok=false, needs_credits=true) when the trip alone, or the caller's free + paid together, cannot cover it.
 -- Locks are always taken user first, then trip, so two calls cannot wait on each other.
 -- Rows of one hold: p_op_id, and p_op_id || ':b' for the paid part of a split.
+-- Trips that are never charged (the app owner's own trips). Backend only: RLS on, no policies.
+create table if not exists public.credit_unlimited_trips (
+  trip_id uuid primary key references public.trips(id) on delete cascade,
+  note text,
+  created_at timestamptz not null default now()
+);
+alter table public.credit_unlimited_trips enable row level security;
+insert into public.credit_unlimited_trips (trip_id, note)
+values ('a779ec4d-a64a-4fa1-bfee-17fda9e433f6', 'Japan trip (owner)')
+on conflict (trip_id) do nothing;
+
 create or replace function public.reserve_credits(p_op_id text, p_user uuid, p_trip uuid, p_fn text, p_cost int)
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare
@@ -99,6 +110,14 @@ begin
   if found then
     return jsonb_build_object('ok', true, 'repeat', true, 'state', existing.state, 'owner_kind', existing.owner_kind,
       'owner_id', existing.owner_id, 'cost', abs(existing.delta));
+  end if;
+
+  -- the owner's own trips are never charged: a zero row keeps op_id, settle and refund working as usual
+  if trip_ok and exists (select 1 from public.credit_unlimited_trips u where u.trip_id = p_trip) then
+    insert into public.credit_ledger (owner_kind, owner_id, delta, reason, fn, op_id, state)
+    values ('trip', p_trip, 0, 'unlimited trip', p_fn, p_op_id, 'reserved');
+    return jsonb_build_object('ok', true, 'repeat', false, 'state', 'reserved', 'owner_kind', 'trip', 'owner_id', p_trip,
+      'cost', 0, 'unlimited', true);
   end if;
 
   perform public.grant_daily_free(p_user);

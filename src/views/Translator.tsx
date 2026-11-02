@@ -74,7 +74,7 @@ async function translateError(error: unknown) {
   return t('התרגום נכשל{detail}.', { detail })
 }
 
-export default function Translator() {
+export default function Translator({ tripId }: { tripId: string }) {
   const [lang, setLang] = useState<Lang>(HOME)
   const [listening, setListening] = useState(false)
   const [heard, setHeard] = useState('')
@@ -143,7 +143,7 @@ export default function Translator() {
     setBusy(true)
     note(t('שולח לתרגום'))
     const sent = performance.now()
-    const { data, error } = await supabase.functions.invoke('translate', { body: { text, from: from.slice(0, 2), lang: isEn ? 'en' : 'he' } })
+    const { data, error } = await supabase.functions.invoke('translate', { body: { text, from: from.slice(0, 2), lang: isEn ? 'en' : 'he', trip_id: tripId } })
     setBusy(false)
     const took = Math.round(performance.now() - sent)
     if (error || !data?.translation) {
