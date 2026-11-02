@@ -417,7 +417,13 @@ Deno.serve(async (req) => {
   const key = await lookupKey(link?.trim() ?? '', text ?? '')
   // the app's own id for this lookup, so it can read the result back if it stopped waiting; only ever inserted, so
   // an id that's taken (someone else's lookup) gets a fresh one instead of overwriting it
-  let id = typeof body?.id === 'string' && UUID.test(body.id) ? body.id : crypto.randomUUID()
+  // The client's id is used (for the result and the credit op id) only if no lookup with it exists or it is the
+  // caller's own; someone else's id is never used.
+  let id = crypto.randomUUID()
+  if (typeof body?.id === 'string' && UUID.test(body.id)) {
+    const { data: owner } = await admin.from('place_lookups').select('user_id').eq('id', body.id).maybeSingle()
+    if (!owner || owner.user_id === userId) id = body.id
+  }
   const track = async (row: Record<string, unknown>) => {
     const { error } = await admin.from('place_lookups').insert({ id, user_id: userId, lookup_key: key, ...row })
     if (error?.code === '23505') {
@@ -459,6 +465,25 @@ Deno.serve(async (req) => {
   let creditOp: string | null = null
   if (creditsOn()) {
     const h = await hold(admin, userId, tripIdOf(body?.trip_id), 'suggest-place', id)
+    if (h.repeat) {
+      // this lookup id was already charged: never new AI work. Give back its finished result if it has one.
+      const { data: done } = await admin
+        .from('place_lookups')
+        .select('places')
+        .eq('id', id)
+        .eq('user_id', userId)
+        .eq('status', 'done')
+        .maybeSingle()
+      const places = done?.places as unknown[] | null
+      if (!places?.length) return json(h.body, h.status)
+      if (live) {
+        return streamed(async (send) => {
+          send({ type: 'cached', places: places.map(spot) })
+          send({ type: 'done', places, cached: true })
+        })
+      }
+      return json({ places, cached: true })
+    }
     if (!h.ok) return json(h.body, h.status)
     creditOp = h.opId
   }

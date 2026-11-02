@@ -106,7 +106,8 @@ Deno.serve(async (req) => {
   if (text.length > MAX_CHARS) return json({ error: 'text too long' }, 413)
 
   const t0 = performance.now()
-  const opKey = typeof body?.id === 'string' && tripIdOf(body.id) ? body.id : crypto.randomUUID()
+  // the operation id is made here, never taken from the request: a repeated id must not be a way to skip the charge
+  const opKey = crypto.randomUUID()
   const admitted = await admit(req, 'translate', json, { tripId: tripIdOf(body?.trip_id), key: opKey })
   if (admitted instanceof Response) return admitted
   const t1 = performance.now()

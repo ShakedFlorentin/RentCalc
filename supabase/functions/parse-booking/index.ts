@@ -104,7 +104,8 @@ Deno.serve(async (req) => {
   if ((text?.length ?? 0) > 50_000) return json({ error: 'text too long' }, 413)
   if (file && file.data.length * 0.75 > MAX_BYTES) return json({ error: 'file too large' }, 413)
 
-  const key = typeof body?.id === 'string' && tripIdOf(body.id) ? body.id : crypto.randomUUID()
+  // the operation id is made here, never taken from the request: a repeated id must not be a way to skip the charge
+  const key = crypto.randomUUID()
   const admitted = await admit(req, 'parse-booking', json, { tripId: tripIdOf(body?.trip_id), key })
   if (admitted instanceof Response) return admitted
   const { admin, userId, creditOp } = admitted

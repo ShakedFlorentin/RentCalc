@@ -13,12 +13,18 @@ export const creditsOn = () => ['1', 'true'].includes((Deno.env.get('CREDITS_ON'
 /** The trip id from a request body when it is well formed, else null. Membership is checked in reserve_credits. */
 export const tripIdOf = (v: unknown) => (typeof v === 'string' && UUID.test(v) ? v : null)
 
-export type Hold = { ok: true; opId: string } | { ok: false; status: number; body: Record<string, unknown> }
+export type Hold =
+  | { ok: true; opId: string }
+  | { ok: false; repeat?: undefined; status: number; body: Record<string, unknown> }
+  // this operation id was already charged (held, or settled) and is not refunded: it is NOT admitted, so no new AI work
+  // may run for it. status/body are the answer for callers with nothing cached to return.
+  | { ok: false; repeat: true; opId: string; state: string; status: number; body: Record<string, unknown> }
 
 /**
  * Holds the price of `fn` for this operation. `key` is the operation's own id (a lookup id, or a fresh uuid), made
- * unique per user and function so nobody can reuse another's id for a free ride. The same key twice is one charge.
- * A hold already given back (refunded) by an earlier attempt is replaced by a new one under a numbered key.
+ * unique per user and function. The same key twice is one charge and is NOT admitted the second time (`repeat: true`):
+ * the caller must not run new AI work for it. A hold already given back (refunded) by an earlier attempt is replaced
+ * by a new one under a numbered key.
  */
 export async function hold(admin: SupabaseClient, userId: string, tripId: string | null, fn: string, key: string): Promise<Hold> {
   const { data: price } = await admin.from('credit_prices').select('cost').eq('fn', fn).maybeSingle()
@@ -33,6 +39,7 @@ export async function hold(admin: SupabaseClient, userId: string, tripId: string
     const r = data as { ok: boolean; repeat?: boolean; state?: string; cost?: number; balance?: number; trip_balance?: number }
     if (!r.ok) return { ok: false, status: 402, body: { needs_credits: true, cost: r.cost ?? cost, balance: r.balance ?? 0, trip_balance: r.trip_balance ?? 0 } }
     if (r.repeat && r.state === 'refunded') continue
+    if (r.repeat) return { ok: false, repeat: true, opId, state: r.state ?? '', status: 409, body: { error: 'operation already charged' } }
     return { ok: true, opId }
   }
   return { ok: false, status: 503, body: { error: 'credits unavailable, try again' } }
