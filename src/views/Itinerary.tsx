@@ -380,7 +380,10 @@ function SwipeRow({ children, onEdit, onRemove }: { children: React.ReactNode; o
   const sign = () => (document.documentElement.dir === 'rtl' ? 1 : -1) // which way the row slides
   const show = (x: number) => {
     pos.current = x
-    if (row.current) (row.current.firstElementChild as HTMLElement).style.transform = x ? `translateX(${x}px)` : ''
+    if (!row.current) return
+    ;(row.current.firstElementChild as HTMLElement).style.transform = x ? `translateX(${x}px)` : ''
+    // the strip stays hidden while the row is shut, so its red can't show at the rounded corners
+    ;(row.current.lastElementChild as HTMLElement).style.visibility = x ? 'visible' : ''
   }
   const settle = (to: number, v = 0) => {
     stop.current?.()

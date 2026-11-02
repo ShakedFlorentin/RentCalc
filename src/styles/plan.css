@@ -144,7 +144,7 @@
 /* swipe a plan item for its actions: the row slides over a flat strip of two iOS-style buttons on its end side */
 .swipe-row { position: relative; border-radius: 20px; overflow: hidden; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
 .swipe-row > .item { position: relative; z-index: 1; border-radius: 0; will-change: transform; }
-.swipe-acts { position: absolute; z-index: 0; inset-block: 0; inset-inline-end: 0; display: flex; }
+.swipe-acts { position: absolute; z-index: 0; inset-block: 0; inset-inline-end: 0; display: flex; visibility: hidden; }
 .swipe-acts button {
   width: 76px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
   border: 0; border-radius: 0; font: inherit; font-size: 0.75rem; font-weight: 600; cursor: pointer;
