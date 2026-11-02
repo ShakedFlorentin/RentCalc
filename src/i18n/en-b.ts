@@ -287,7 +287,6 @@ export const EN_B: Record<string, string> = {
   "בקושי": "Barely",
   "תודה! הדירוג נשמר.": "Thanks! Your rating is saved.",
   "איך היה ב{name}?": "How was {name}?",
-  "לא עכשיו": "Not now",
   "להפסיק את השיתוף? הקישור יפסיק לעבוד.": "Stop sharing? The link will stop working.",
   "המסלול שלנו": "Our itinerary",
   "הקישור הועתק": "Link copied",
