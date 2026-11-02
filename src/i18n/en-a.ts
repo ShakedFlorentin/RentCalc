@@ -331,4 +331,14 @@ export const EN_A: Record<string, string> = {
   'אפשר לשנות את התשובות בכל רגע: עוד › ההעדפות שלי.': 'You can change your answers any time: More › My preferences.',
   'שומרים…': 'Saving…',
   'סיום': 'Done',
+  // reviews and sharing
+  "הקישור הזה כבר לא משותף.": "This link is no longer shared.",
+  "לאפליקציה": "To the app",
+  "מסלול משותף": "Shared itinerary",
+  "מסלול משותף, לקריאה בלבד.": "A shared itinerary, read-only.",
+  "לתכנן טיול כזה": "Plan a trip like this",
+  "טיול חדש": "New trip",
+  "ניצור טיול חדש ונעתיק אליו {n} מקומות מהמסלול כרשימה להצבעה. התאריכים והלינות נשארים לכם.": "We'll create a new trip and copy {n} places from the itinerary into it as cards to vote on. Dates and stays are yours to set.",
+  "יוצרים…": "Creating…",
+  "יצירת טיול והעתקת המקומות": "Create the trip and copy the places",
 }

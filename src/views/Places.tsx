@@ -238,6 +238,18 @@ export default function Places({ trip, me, userId, members }: Props) {
   )
 }
 
+/**
+ * Tick or untick "we were there". The time of the visit (visited_at) is sent only when the rows we got carry that
+ * column, so nothing breaks before the database has it; the server's trigger sets it too.
+ */
+async function setVisited(p: Place) {
+  const next = !p.visited
+  const row = 'visited_at' in p ? { visited: next, visited_at: next ? new Date().toISOString() : null } : { visited: next }
+  let { error } = await supabase.from('places').update(row).eq('id', p.id)
+  if (error && /visited_at/.test(error.message)) ({ error } = await supabase.from('places').update({ visited: next }).eq('id', p.id))
+  if (error) alert(errorText(error.message))
+}
+
 function PlaceRow(props: { p: Place; card?: Candidate; planned: boolean; onEdit: (p: Place) => void; onPlan: (p: Place) => void; children?: ReactNode }) {
   const { p } = props
   const mapLink = safeUrl(p.url) || mapsUrl([p.name, p.area, p.city].filter(Boolean).join(', '))
@@ -247,7 +259,7 @@ function PlaceRow(props: { p: Place; card?: Candidate; planned: boolean; onEdit:
         className="check"
         aria-label={t('היינו')}
         aria-pressed={p.visited}
-        onClick={() => mutate(supabase.from('places').update({ visited: !p.visited }).eq('id', p.id))}
+        onClick={() => setVisited(p)}
       >
         {p.visited ? <Icon as={Check} size="1em" strokeWidth={3} /> : null}
       </button>

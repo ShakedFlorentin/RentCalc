@@ -133,7 +133,7 @@ export function RateBox(props: { libraryId: string; tripId: string; userId: stri
 }
 
 /** Five stars to tap, a radio group for screen readers and the keyboard (arrows move, as in any radio group). */
-function StarsInput({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+export function StarsInput({ value, onChange }: { value: number; onChange: (n: number) => void }) {
   const onKey = (e: KeyboardEvent<HTMLButtonElement>) => {
     // right to left, the next star is on the left
     const rtl = getComputedStyle(e.currentTarget).direction === 'rtl'

@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
-import { BedDouble, Check, ChevronLeft, ChevronRight, CircleAlert, Footprints, Heart, MapPin, Navigation, Pencil, PlaneLanding, Plus, Route, Undo2, Users } from 'lucide-react'
+import { BedDouble, Check, ChevronLeft, ChevronRight, CircleAlert, Footprints, Heart, MapPin, Navigation, Pencil, PlaneLanding, Plus, Route, Share2, Undo2, Users } from 'lucide-react'
 import { supabase } from '../supabase'
 import { CATEGORIES, CITY_HE, TOGETHER, WHO_OPTIONS, type Booking, type Candidate, type DayInfo, type Member, type Place, type PlanSummary, type Trip } from '../types'
 import { cityLabel, couplesOf, currentDay, dayDate, keepRanges, dayOption, dayParts, fmtDayLong, mutate, replan, useMediaIndex, useTripTable, withMedia } from '../lib'
@@ -7,6 +7,7 @@ import { isEn, t } from '../i18n'
 import { Empty, Field, Sheet, useRemembered } from '../ui'
 import { CARD_ICON, Icon } from '../icons'
 import { CardFull } from './Swipe'
+import { ShareSheet } from './Share'
 import {
   ARRIVAL,
   dayEntries,
@@ -38,6 +39,7 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
   const mode: WhoMode = saved === 'group' || saved === 'all' ? saved : 'mine'
   const [editItem, setEditItem] = useState<Partial<PlanItem> | null>(null)
   const [editDay, setEditDay] = useState(false)
+  const [sharing, setSharing] = useState(false)
   // the item whose sheet is open: what the place is and what else is around it
   const [openId, setOpenId] = useState<string | null>(null)
   const stripRef = useRef<HTMLDivElement>(null)
@@ -182,6 +184,12 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
       ))}
 
       {spare.length > 0 && <Spare trip={trip} day={day} spare={spare} places={places} />}
+
+      <button className="link" onClick={() => setSharing(true)}>
+        <Icon as={Share2} /> {t('שיתוף המסלול')}
+      </button>
+
+      {sharing && <ShareSheet trip={trip} days={days} items={items} places={places} cards={cards} onClose={() => setSharing(false)} />}
 
       <button className="fab" aria-label={t('פעילות חדשה')} onClick={() => setEditItem({ day, category: 'sight', who: defaultWho })}>
         <Plus size={28} strokeWidth={2} aria-hidden="true" />
