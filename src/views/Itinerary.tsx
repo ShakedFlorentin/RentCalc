@@ -1,11 +1,12 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
-import { BedDouble, Check, ChevronLeft, ChevronRight, CircleAlert, Footprints, Heart, MapPin, Navigation, Pencil, PlaneLanding, Plus, Route, Share2, Undo2, Users } from 'lucide-react'
+import { BedDouble, Check, ChevronLeft, ChevronRight, CircleAlert, Footprints, Heart, MapPin, Navigation, Pencil, PlaneLanding, Plus, Route, Share2, Trash2, Undo2, Users } from 'lucide-react'
 import { supabase } from '../supabase'
 import { CATEGORIES, CITY_HE, TOGETHER, whoOptions, type Booking, type Candidate, type DayInfo, type Member, type Place, type PlanSummary, type Trip } from '../types'
 import { cityLabel, couplesOf, currentDay, dayDate, keepRanges, dayOption, dayParts, fmtDayLong, mutate, replan, useMediaIndex, useTripTable, withMedia } from '../lib'
 import { isEn, t } from '../i18n'
 import { Empty, Field, Sheet, useRemembered } from '../ui'
 import { CARD_ICON, Icon } from '../icons'
+import { project, reducedMotion, springTo } from '../spring'
 import { CardFull } from './Swipe'
 import { ShareSheet } from './Share'
 import StaysSheet from './Stays'
@@ -77,8 +78,13 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
   const missed = async (i: PlanItem) => {
     if (!(await mutate(supabase.from('itinerary_items').delete().eq('id', i.id)))) return
     // a new place to the planner again, not one somebody took out
-    await mutate(supabase.from('places').update({ auto_planned: false }).eq('id', i.place_id!))
+    if (!i.place_id) return
+    await mutate(supabase.from('places').update({ auto_planned: false }).eq('id', i.place_id))
     replan(trip.id)
+  }
+  // swipe-to-remove: the same as "didn't make it" (deleted, and the planner doesn't put the place back), after a confirm
+  const remove = async (i: PlanItem) => {
+    if (confirm(t('להסיר מהמסלול?'))) await missed(i)
   }
   const date = trip.start_date ? ymd(dayDate(trip.start_date, day)!) : ''
   const entries = dayEntries(items, bookings, day, date, mode, myCouple)
@@ -199,6 +205,7 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
                   kind={cardOf(placeOf(e.item))?.serves}
                   onOpen={(i) => setOpenId(i.id)}
                   onEdit={setEditItem}
+                  onRemove={remove}
                   away={awayCity(e.item)}
                   warning={e.item && (warnings.get(e.item.id) ?? (e.item.auto && e.item.place_id ? issues.get(e.item.place_id) : undefined))}
                   onMissed={past && e.item?.place_id && !e.item.done ? missed : undefined}
@@ -270,14 +277,15 @@ function EntryRow(props: {
   kind?: string | null
   onOpen: (i: PlanItem) => void
   onEdit: (i: PlanItem) => void
+  onRemove: (i: PlanItem) => void
   warning?: string
   /** the city this place is in, when the planner put it on a day the people sleep in another city */
   away?: string
   onMissed?: (i: PlanItem) => void
 }) {
-  const { e, kind, onOpen, onEdit, warning, away, onMissed } = props
+  const { e, kind, onOpen, onEdit, onRemove, warning, away, onMissed } = props
   const i = e.item
-  return (
+  const body = (
     <div className={'item card' + (i ? '' : ' plan-booking') + (e.done ? ' done' : '')}>
       {i ? (
         <button
@@ -345,6 +353,144 @@ function EntryRow(props: {
             )}
           </div>
         )}
+      </div>
+    </div>
+  )
+  return i ? (
+    <SwipeRow onEdit={() => onEdit(i)} onRemove={() => onRemove(i)}>
+      {body}
+    </SwipeRow>
+  ) : (
+    body
+  )
+}
+
+// the one row that is open: opening another (or tapping elsewhere, or scrolling) closes it
+let openRow: (() => void) | null = null
+const ACTS_W = 152
+
+/** A plan item that slides over Edit / Remove on its end side (right in Hebrew, left in English), like iOS lists. */
+function SwipeRow({ children, onEdit, onRemove }: { children: React.ReactNode; onEdit: () => void; onRemove: () => void }) {
+  const row = useRef<HTMLDivElement>(null)
+  const [open, setOpen] = useState(false)
+  const pos = useRef(0)
+  const stop = useRef<(() => void) | null>(null)
+  const g = useRef<{ x: number; y: number; from: number; lock: 'h' | 'v' | null; trail: { t: number; x: number }[] } | null>(null)
+  const moved = useRef(false)
+  const sign = () => (document.documentElement.dir === 'rtl' ? 1 : -1) // which way the row slides
+  const show = (x: number) => {
+    pos.current = x
+    if (row.current) (row.current.firstElementChild as HTMLElement).style.transform = x ? `translateX(${x}px)` : ''
+  }
+  const settle = (to: number, v = 0) => {
+    stop.current?.()
+    stop.current = null
+    setOpen(to !== 0)
+    if (to !== 0) {
+      openRow?.()
+      openRow = () => settle(0)
+    }
+    if (reducedMotion()) return show(to)
+    stop.current = springTo(pos.current, to, v, { damping: 0.85, response: 0.35 }, (x) => show(x), () => (stop.current = null))
+  }
+  useEffect(() => {
+    if (!open) return
+    const close = (ev: Event) => {
+      if (ev.type === 'pointerdown' && row.current?.contains(ev.target as Node)) return
+      settle(0)
+    }
+    document.addEventListener('pointerdown', close, true)
+    document.addEventListener('scroll', close, true)
+    return () => {
+      document.removeEventListener('pointerdown', close, true)
+      document.removeEventListener('scroll', close, true)
+    }
+  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => stop.current?.(), [])
+
+  const down = (ev: React.PointerEvent) => {
+    if (ev.pointerType === 'mouse' && ev.button !== 0) return
+    if ((ev.target as HTMLElement).closest('.swipe-acts')) return
+    stop.current?.() // grabs the row mid-flight
+    stop.current = null
+    moved.current = false
+    g.current = { x: ev.clientX, y: ev.clientY, from: pos.current, lock: null, trail: [{ t: ev.timeStamp, x: ev.clientX }] }
+  }
+  const move = (ev: React.PointerEvent) => {
+    const s = g.current
+    if (!s) return
+    const dx = ev.clientX - s.x
+    const dy = ev.clientY - s.y
+    if (!s.lock) {
+      if (Math.hypot(dx, dy) < 8) return
+      s.lock = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'
+      if (s.lock === 'h') row.current?.setPointerCapture(ev.pointerId)
+    }
+    if (s.lock !== 'h') return
+    moved.current = true
+    s.trail.push({ t: ev.timeStamp, x: ev.clientX })
+    if (s.trail.length > 6) s.trail.shift()
+    const k = sign()
+    // only toward the actions, never far past them
+    const along = Math.max(0, Math.min(ACTS_W * 1.15, (s.from + dx) * k))
+    show(along * k)
+  }
+  const up = () => {
+    const s = g.current
+    g.current = null
+    if (!s || s.lock !== 'h') return
+    const k = sign()
+    const a = s.trail[0]
+    const b = s.trail[s.trail.length - 1]
+    const v = b.t > a.t ? ((b.x - a.x) / (b.t - a.t)) * 1000 : 0
+    const rest = (pos.current + project(v)) * k
+    settle(rest > ACTS_W * 0.4 ? k * ACTS_W : 0, v)
+  }
+  // a drag (or a tap that only closes an open row) must not also click what is underneath
+  const click = (ev: React.MouseEvent) => {
+    if (moved.current || (open && !(ev.target as HTMLElement).closest('.swipe-acts'))) {
+      ev.stopPropagation()
+      ev.preventDefault()
+      moved.current = false
+    }
+  }
+
+  return (
+    <div
+      ref={row}
+      className={'swipe-row' + (open ? ' open' : '')}
+      onPointerDown={down}
+      onPointerMove={move}
+      onPointerUp={up}
+      onPointerCancel={up}
+      onClickCapture={click}
+    >
+      {children}
+      <div className="swipe-acts" aria-hidden={!open}>
+        <button
+          className="swipe-edit"
+          tabIndex={open ? 0 : -1}
+          aria-label={t('עריכה')}
+          onClick={() => {
+            settle(0)
+            onEdit()
+          }}
+        >
+          <Icon as={Pencil} size="1.375rem" aria-hidden="true" />
+          {t('עריכה')}
+        </button>
+        <button
+          className="swipe-del"
+          tabIndex={open ? 0 : -1}
+          aria-label={t('הסרה')}
+          onClick={() => {
+            settle(0)
+            onRemove()
+          }}
+        >
+          <Icon as={Trash2} size="1.375rem" aria-hidden="true" />
+          {t('הסרה')}
+        </button>
       </div>
     </div>
   )

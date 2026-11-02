@@ -195,6 +195,8 @@ export const EN_B: Record<string, string> = {
   'מקומי': 'Local',
   'שוגון': 'Shogun',
   'לא הגענו': "Didn't make it",
+  'הסרה': 'Remove',
+  'להסיר מהמסלול?': 'Remove from the plan?',
   'קיסר': 'Emperor',
   'דרקון': 'Dragon',
   'קאמי': 'Kami',
