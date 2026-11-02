@@ -60,3 +60,12 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* the day-after question on Home (views/Review.tsx) */
+.review-card { --star: #b07a00; display: grid; gap: 8px; }
+@media (prefers-color-scheme: dark) {
+  .review-card { --star: #ffc933; }
+}
+.review-card h3 { margin: 0; }
+.review-x { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; color: var(--muted); }
+.review-q { display: grid; gap: 4px; }

@@ -115,6 +115,8 @@ export type Place = {
   url: string | null
   notes: string | null
   visited: boolean
+  /** when it was ticked as visited (set by the server; absent until that column exists) */
+  visited_at?: string | null
   added_by: string | null
   candidate_id: string | null
   area: string | null
@@ -287,6 +289,8 @@ export type PlaceRating = {
   trip_id: string
   stars: number
   note: string | null
+  /** the one quick question after a visit, e.g. { crowd: 'packed', stroller: 'yes' } */
+  answers?: Record<string, string> | null
   updated_at: string
 }
 

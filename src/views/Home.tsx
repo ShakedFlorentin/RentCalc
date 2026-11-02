@@ -44,6 +44,7 @@ import { BOOKING_ICON, Icon } from '../icons'
 import type { MoreTab } from './More'
 import { dayEntries, fmtUntil, hotelFor, nightLines, stayInJapan, minutesOf, navUrl, ymd, type Entry, type PlanItem } from './planUtils'
 import ReportSheet from './Report'
+import ReviewCard from './Review'
 import '../styles/plan.css'
 
 type Props = {
@@ -132,6 +133,8 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
           <Icon as={Clock} /> {t('עכשיו ביפן: {time}', { time: tokyoTime })}
         </div>
       </section>
+
+      <ReviewCard tripId={trip.id} userId={userId} />
 
       {today && (
         <>
