@@ -6,7 +6,7 @@
 --    from their trips), so the app adds rows + summary without counting anything twice.
 -- 2. User-added cards no longer go live for everyone on insert. card_to_library now creates the shared library card with
 --    active = false and added_from_trip = the adding trip. It turns active when (a) cards for the same place
---    (same_place_name) exist in at least 2 different trips, or (b) an admin sets place_library.active = true. The adding
+--    (same_place_name) exist in at least 2 trips created by at least 2 different users (trips.created_by), or (b) an admin sets place_library.active = true. The adding
 --    trip keeps its own candidate exactly as before. Links on library cards are http(s) only (trigger, any writer).
 --    The 238 library cards that are active today stay active (no UPDATE of `active` here).
 --    place_library_read now also hides inactive cards from everyone except members of the trip that added them.
@@ -128,12 +128,14 @@ begin
     on_now := false;
   end if;
   new.library_id := lid;
-  -- promotion: the same place added in at least 2 different trips switches the card on for everyone
+  -- promotion: the same place added in at least 2 trips made by at least 2 different people switches the card on
   if not on_now and (
-       select count(*) from (
-         select c.trip_id from public.candidates c
+       select count(distinct t.who) from (
+         select coalesce(tr.created_by::text, tr.id::text) as who
+           from public.candidates c join public.trips tr on tr.id = c.trip_id
           where c.trip_id <> new.trip_id and (c.library_id = lid or public.same_place_name(c.name, new.name))
-         union select new.trip_id) t) >= 2 then
+         union all
+         select coalesce(tr.created_by::text, tr.id::text) from public.trips tr where tr.id = new.trip_id) t) >= 2 then
     update public.place_library set active = true where id = lid;
   end if;
   return new;
