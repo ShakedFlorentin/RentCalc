@@ -7,6 +7,7 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
 import { hhmm, km, plan, type BestTime, type Day, type Fixed, type Point, type Unit } from './plan.ts'
 import { buildDays, type Sleep } from './presence.ts'
+import { partyStretch, suggestSplit, type SplitCity, type SplitPlace, type SplitStay } from './split.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -43,7 +44,7 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
-  const body = (await req.json().catch(() => null)) as { trip_id?: unknown; dry?: unknown; wait?: unknown } | null
+  const body = (await req.json().catch(() => null)) as { trip_id?: unknown; dry?: unknown; wait?: unknown; suggest_stays?: unknown } | null
   const tid = typeof body?.trip_id === 'string' && UUID.test(body.trip_id) ? body.trip_id : null
   if (!tid) return json({ error: 'trip_id missing' }, 400)
 
@@ -63,6 +64,15 @@ Deno.serve(async (req) => {
     if (!auth.user) return json({ error: 'not signed in' }, 401)
     const { data: member } = await user.rpc('is_trip_member', { tid })
     if (!member) return json({ error: 'not a trip member' }, 403)
+  }
+
+  // alternative splits of the open nights between cities: reads, writes nothing
+  if (body?.suggest_stays === true) {
+    try {
+      return json(await suggestStays(admin, tid))
+    } catch (e) {
+      return json({ error: String(e instanceof Error ? e.message : e) }, 500)
+    }
   }
 
   // a dry run (planner token only) returns the plan it would write, for checking
@@ -690,4 +700,65 @@ function groupBy<T>(xs: T[], key: (x: T) => string) {
   const m = new Map<string, T[]>()
   for (const x of xs) m.set(key(x), [...(m.get(key(x)) ?? []), x])
   return m
+}
+
+/** Alternative splits of the open nights between cities (see split.ts). Reads only; writes nothing. */
+async function suggestStays(admin: SupabaseClient, tid: string) {
+  const q = async <T>(p: PromiseLike<{ data: T | null; error: { message: string } | null }>) => {
+    const { data, error } = await p
+    if (error) throw new Error(error.message)
+    return data as T
+  }
+  const [trip, members, bookings, places, votes, mediaIdx, stayRows, cityRowsDb] = await Promise.all([
+    q<{ start_date: string | null; num_days: number }>(admin.from('trips').select('start_date,num_days').eq('id', tid).single()),
+    q<{ couple: string | null }[]>(admin.from('members').select('couple').eq('trip_id', tid)),
+    q<Booking[]>(admin.from('bookings').select('id,kind,title,starts_at,ends_at,who,location').eq('trip_id', tid)),
+    q<Place[]>(admin.from('places').select('id,candidate_id,name,city,area,lat,lng,who,visited,auto_planned').eq('trip_id', tid).not('candidate_id', 'is', null)),
+    q<{ candidate_id: string; couples: string[]; voted: string[]; yes: string[] }[]>(admin.rpc('plan_place_couples', { tid })),
+    media(),
+    optional<(StayRow & { locked: boolean; source: string | null })[]>(
+      admin.from('trip_stays').select('id,party,city,lat,lng,area,check_in,check_out,status,booking_id,locked,source').eq('trip_id', tid),
+    ),
+    optional<CityRow[]>(admin.from('cities').select('id,name_en,name_he,lat,lng')),
+  ])
+  if (!trip.start_date || trip.num_days < 2) return { alternatives: [] }
+  const cities: SplitCity[] = cityRowsDb?.length
+    ? cityRowsDb.map((c) => ({ id: c.id, lat: c.lat, lng: c.lng }))
+    : Object.entries(BASE_POINT).map(([id, p]) => ({ id, ...p }))
+  const couples = [...new Set(members.map((m) => m.couple).filter((c): c is string => !!c))].sort()
+  const flights = bookings.filter((b) => b.kind === 'flight')
+  const parties = couples.map((c) => partyStretch(flights, c, trip.start_date!, trip.num_days))
+  // where people sleep now: the stays table, else the hotel bookings (like the planner does)
+  const stays: SplitStay[] = stayRows?.length
+    ? stayRows.map((s) => ({ party: s.party, city: s.city, checkIn: s.check_in, checkOut: s.check_out, status: s.status, locked: s.locked, source: s.source }))
+    : bookings
+        .filter((b) => b.kind === 'hotel' && b.starts_at && b.ends_at)
+        .flatMap((b) => {
+          const city = hotelBase(b.title + ' ' + (b.location ?? ''))
+          return city ? [{ party: b.who, city, checkIn: b.starts_at!.slice(0, 10), checkOut: b.ends_at!.slice(0, 10), status: 'confirmed', locked: true, source: 'booking' }] : []
+        })
+  // the liked places: a yes from someone, not visited yet
+  const candIds = places.map((p) => p.candidate_id)
+  const cands = candIds.length ? await q<Cand[]>(admin.from('candidates').select(CAND_COLUMNS).in('id', candIds).returns<Cand[]>()) : []
+  const candById = new Map(cands.map((c) => [c.id, c]))
+  const voteById = new Map(votes.map((v) => [v.candidate_id, v]))
+  const liked: SplitPlace[] = []
+  for (const p of places) {
+    const c = candById.get(p.candidate_id)
+    const v = voteById.get(p.candidate_id)
+    if (!c || p.visited || !v?.yes.length) continue
+    const m = mediaIdx[c.name]
+    const own = m?.lat != null ? { lat: m.lat, lng: m.lng! } : c.lat != null ? { lat: c.lat, lng: c.lng! } : p.lat != null ? { lat: p.lat, lng: p.lng! } : null
+    const f = factsOf(c)
+    liked.push({
+      id: p.id,
+      city: c.city ?? p.city,
+      lat: own?.lat ?? null,
+      lng: own?.lng ?? null,
+      mins: visitMins(f, c.time_needed, c.category ?? 'sight'),
+      openDates: (f?.open_dates ?? []).map((d) => d.slice(0, 10)),
+      parties: v.yes.length >= couples.length ? [] : v.yes,
+    })
+  }
+  return { alternatives: suggestSplit({ startDate: trip.start_date, numDays: trip.num_days, parties, stays, cities, places: liked }) }
 }

@@ -23,3 +23,22 @@ export function useStays(tripId: string) {
   }, [])
   return { stays, cities, available: !error }
 }
+
+/** One suggested split of the open nights (answer of plan-trip with suggest_stays; see plan-trip/split.ts). */
+export type SplitAlt = {
+  rows: { city: string; nights: number; party: string | null; checkIn: string; checkOut: string }[]
+  reason: {
+    kind: 'fewer_moves' | 'more_places' | 'balanced'
+    moves: number
+    coveredPlaces: number
+    totalPlaces: number
+    dayTrips: { city: string; from: string; places: number }[]
+  }
+}
+
+/** Asks the planner for 2-3 ways to split the open nights between cities. Writes nothing. Null when it can't answer. */
+export async function suggestSplits(tripId: string): Promise<SplitAlt[] | null> {
+  const { data, error } = await supabase.functions.invoke('plan-trip', { body: { trip_id: tripId, suggest_stays: true } })
+  if (error || !data || !Array.isArray((data as { alternatives?: unknown }).alternatives)) return null
+  return (data as { alternatives: SplitAlt[] }).alternatives
+}
