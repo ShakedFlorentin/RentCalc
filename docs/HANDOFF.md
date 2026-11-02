@@ -26,8 +26,16 @@ Live: https://shakedflorentin.github.io/trip-planner/ · branch `japan-trip`, de
   trip) is never charged; other members are. Shared code: `supabase/functions/_shared/credits.ts`.
 - Deployed: suggest-place v30, parse-booking v10, translate v8 (each with `../_shared/credits.ts`). Their source was
   sent by hand in the deploy call and could not be diffed against the repo afterwards; all three start and answer.
-- Open: the Yokohama report (cause not found in plan.ts; look at the real input), booking links (P4), rating notes
-  readable by every signed-in user, user-added cards auto-promoted into the shared library.
+- Places in another city (2026-11-02, plan-trip v22): own-city places come first; a place outside the day's city is
+  planned only when the day's city has nothing left, and the summary's `away` list puts an "in {city}" pill on it.
+  Cause of the Yokohama report: the library has no Yokohama place and the Yokohama stay has no hotel point. Report fixed.
+- Split of nights: "Suggest a split" in Where we sleep (`split.ts`, `{trip_id, suggest_stays:true}`), writes proposed rows.
+- Privacy (applied): rating notes from other trips only through `rating_summary` (no names); user-added library cards
+  start inactive and switch on once trips by 2 different creators have them; no TRUNCATE for app roles, DELETE only on
+  the 10 tables the app deletes from.
+- Baby details show only when the trip has a baby: hidden when some member answered the questionnaire and nobody chose
+  'baby' (nobody answered = shown). `trip_has_baby(tid)`; match_place copies the baby line only then.
+- Open: booking links (P4), Stripe for credits.
 
 ## Travel between plan stops (2026-11-02)
 - Between two stops in a row the day plan shows a quiet line: "5–10 min walk" under 1.2 km straight-line, otherwise a
