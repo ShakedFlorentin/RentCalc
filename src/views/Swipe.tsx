@@ -135,7 +135,7 @@ export default function SwipeGame({ trip, userId, members, showCard, onCardShown
   const cities = Object.keys(CITY_HE).filter((c) => visible.some((x) => x.city === c))
   const ratings = useRatings(visible.map((c) => c.library_id))
   const catMean = useMemo(
-    () => categoryMeans(visible.filter((c) => c.library_id).map((c) => ({ category: c.category, stars: ratings.of(c.library_id!).map((r) => r.stars) }))),
+    () => categoryMeans(visible.filter((c) => c.library_id).map((c) => ({ category: c.category, stars: ratings.stars(c.library_id!) }))),
     [visible, ratings],
   )
   const votesOn = useMemo(() => {
@@ -153,7 +153,7 @@ export default function SwipeGame({ trip, userId, members, showCard, onCardShown
         fit: (c) => fit.get(c.id) ?? 0,
         othersLiked: (c) => othersLiked(c as Candidate).length,
         swipeCount: (c) => votesOn.get(c.id) ?? 0,
-        stars: (c) => ratings.of((c as Candidate).library_id ?? '').map((r) => r.stars),
+        stars: (c) => ratings.stars((c as Candidate).library_id ?? ''),
         categoryMean: (cat) => catMean.get(cat),
         tagWeights,
         notNow: (c) => notNowIds.has(c.id) || skippedByMe.includes(c.id),

@@ -9,49 +9,82 @@ import { smoothedStars } from '../rank'
 import '../styles/ratings.css'
 
 // Ratings hang on the shared library card, not on the trip's copy, so a later trip with the same place sees what
-// earlier travellers thought. Anyone signed in can read them; each person writes only their own row.
+// earlier travellers thought. Full rows (with who wrote them) are readable only for your own ratings and the trips you
+// are in; everyone else's arrive as a count, a star total and a couple of anonymous notes (rating_summary). Each person
+// writes only their own row.
 
 const COLS = 'library_id, user_id, trip_id, stars, note, updated_at'
-const CACHE = 'place_ratings'
+const CACHE = 'place_ratings_v2'
 const NOTE_MAX = 500
+/** rating_summary reads at most this many cards per call */
+const SUMMARY_BATCH = 200
 
-type Saved = Record<string, PlaceRating[]>
+/** What other travellers (outside your trips) said about one card: how many, the star total, anonymous notes. */
+type Extra = { n: number; sum: number; notes: string[] }
+type Saved = { rows: Record<string, PlaceRating[]>; extra: Record<string, Extra> }
+type SummaryRow = { library_id: string; n: number; stars_sum: number; notes: string[] | null }
 
-/** The ratings of these library cards, in one query, newest first. The last copy is kept on the phone for offline. */
+/** n ratings adding up to sum, as a list of stars: the mean and the count are exact, which is all smoothing reads. */
+function starsFrom(n: number, sum: number): number[] {
+  if (n <= 0) return []
+  const base = Math.floor(sum / n)
+  const high = sum - base * n
+  return Array.from({ length: n }, (_, i) => (i < high ? base + 1 : base))
+}
+
+/** The ratings of these library cards, in two queries, newest first. The last copy is kept on the phone for offline. */
 export function useRatings(ids: (string | null | undefined)[]) {
   // a stable key, so a new array with the same cards doesn't ask again
   const key = [...new Set(ids.filter((x): x is string => !!x))].sort().join(',')
-  const [rows, setRows] = useState<Saved>(() => readCache<Saved>(CACHE)?.data ?? {})
+  const [saved, setSaved] = useState<Saved>(() => readCache<Saved>(CACHE)?.data ?? { rows: {}, extra: {} })
 
   useEffect(() => {
     if (!key) return
     const list = key.split(',')
     let live = true
-    supabase
-      .from('place_ratings')
-      .select(COLS)
-      .in('library_id', list)
-      .order('updated_at', { ascending: false })
-      .then(({ data, error }) => {
-        // offline or refused: keep what's on screen
-        if (!live || error || !data) return
-        const fresh: Saved = Object.fromEntries(list.map((id) => [id, []]))
-        for (const r of data as PlaceRating[]) (fresh[r.library_id] ??= []).push(r)
-        setRows((old) => ({ ...old, ...fresh }))
-        writeCache(CACHE, { ...(readCache<Saved>(CACHE)?.data ?? {}), ...fresh })
-      })
+    const own = supabase.from('place_ratings').select(COLS).in('library_id', list).order('updated_at', { ascending: false })
+    const others = Promise.all(
+      Array.from({ length: Math.ceil(list.length / SUMMARY_BATCH) }, (_, i) =>
+        supabase.rpc('rating_summary', { library_ids: list.slice(i * SUMMARY_BATCH, (i + 1) * SUMMARY_BATCH) }),
+      ),
+    )
+    Promise.all([own, others]).then(([mine, sums]) => {
+      // offline or refused: keep what's on screen
+      if (!live || mine.error || !mine.data || sums.some((r) => r.error)) return
+      const rows: Saved['rows'] = Object.fromEntries(list.map((id) => [id, []]))
+      for (const r of mine.data as PlaceRating[]) (rows[r.library_id] ??= []).push(r)
+      const extra: Saved['extra'] = Object.fromEntries(list.map((id) => [id, { n: 0, sum: 0, notes: [] }]))
+      for (const r of sums.flatMap((x) => (x.data ?? []) as SummaryRow[]))
+        extra[r.library_id] = { n: r.n, sum: r.stars_sum, notes: r.notes ?? [] }
+      setSaved((old) => ({ rows: { ...old.rows, ...rows }, extra: { ...old.extra, ...extra } }))
+      const was = readCache<Saved>(CACHE)?.data
+      writeCache(CACHE, { rows: { ...(was?.rows ?? {}), ...rows }, extra: { ...(was?.extra ?? {}), ...extra } })
+    })
     return () => {
       live = false
     }
   }, [key])
 
+  const rowsOf = (id: string) => saved.rows[id] ?? []
   return {
-    of: (id: string) => rows[id] ?? [],
+    /** the full rows you may read: yours and your trips' */
+    of: rowsOf,
+    /** every star given to this card, yours and other travellers' (for averages and ranking) */
+    stars: (id: string) => [...rowsOf(id).map((r) => r.stars), ...starsFrom(saved.extra[id]?.n ?? 0, saved.extra[id]?.sum ?? 0)],
+    /** the same without one person's own rating, plus up to two notes (newest first, no names) */
+    others: (id: string, userId?: string) => {
+      const rows = rowsOf(id).filter((r) => r.user_id !== userId)
+      const e = saved.extra[id]
+      return {
+        stars: [...rows.map((r) => r.stars), ...starsFrom(e?.n ?? 0, e?.sum ?? 0)],
+        notes: [...rows.flatMap((r) => r.note?.trim() ?? []), ...(e?.notes ?? [])].slice(0, 2),
+      }
+    },
     /** lay a saved rating over the list at once, without asking the server again */
     put: (r: PlaceRating) =>
-      setRows((old) => ({
+      setSaved((old) => ({
         ...old,
-        [r.library_id]: [r, ...(old[r.library_id] ?? []).filter((x) => x.user_id !== r.user_id)],
+        rows: { ...old.rows, [r.library_id]: [r, ...(old.rows[r.library_id] ?? []).filter((x) => x.user_id !== r.user_id)] },
       })),
   }
 }
@@ -127,7 +160,7 @@ export function RateBox(props: { libraryId: string; tripId: string; userId: stri
           </div>
         </div>
       )}
-      <RatingSummary ratings={all.filter((r) => r.user_id !== userId)} label={t('מטיילים אחרים')} prior={prior} />
+      <RatingSummary {...ratings.others(libraryId, userId)} label={t('מטיילים אחרים')} prior={prior} />
     </div>
   )
 }
@@ -175,12 +208,10 @@ export function StarsInput({ value, onChange }: { value: number; onChange: (n: n
  * "★ 4.5 · 3 ratings" and the latest notes; nothing at all when nobody has rated yet. The number is a Bayesian mean
  * (see rank.ts): `prior` is the average of the place's category, so three 5-star ratings don't read as a perfect 5.0.
  */
-export function RatingSummary({ ratings, label, prior }: { ratings: PlaceRating[]; label?: string; prior?: number }) {
-  if (!ratings.length) return null
-  const avg = smoothedStars(ratings.map((r) => r.stars), prior)
+export function RatingSummary({ stars, notes, label, prior }: { stars: number[]; notes: string[]; label?: string; prior?: number }) {
+  if (!stars.length) return null
+  const avg = smoothedStars(stars, prior)
   const avgText = avg.toLocaleString(locale, { maximumFractionDigits: 1 })
-  // newest first already; a few short lines are enough on a card
-  const notes = ratings.filter((r) => r.note?.trim()).slice(0, 2)
   return (
     <div className="rate-sum">
       <div className="rate-avg">
@@ -188,11 +219,11 @@ export function RatingSummary({ ratings, label, prior }: { ratings: PlaceRating[
         <span className="rate-star" aria-hidden="true">
           ★
         </span>
-        <span className="rate-sr">{t('ממוצע כוכבים')}</span> <bdi>{avgText}</bdi> · {countLabel(ratings.length)}
+        <span className="rate-sr">{t('ממוצע כוכבים')}</span> <bdi>{avgText}</bdi> · {countLabel(stars.length)}
       </div>
-      {notes.map((r) => (
-        <p key={r.user_id} className="rate-note clamp">
-          <bdi>{r.note}</bdi>
+      {notes.map((n, i) => (
+        <p key={i} className="rate-note clamp">
+          <bdi>{n}</bdi>
         </p>
       ))}
     </div>
@@ -203,14 +234,14 @@ export function RatingSummary({ ratings, label, prior }: { ratings: PlaceRating[
 export function CardRatings({ libraryId, prior }: { libraryId?: string | null; prior?: number }) {
   const ratings = useRatings([libraryId])
   if (!libraryId) return null
-  const all = ratings.of(libraryId)
-  if (!all.length) return null
+  const all = ratings.others(libraryId)
+  if (!all.stars.length) return null
   return (
     <div className="fact">
       <b className="fact-label">
         <Icon as={Star} /> {t('מטיילים שהיו שם')}
       </b>
-      <RatingSummary ratings={all} prior={prior} />
+      <RatingSummary {...all} prior={prior} />
     </div>
   )
 }
