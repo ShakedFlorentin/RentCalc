@@ -1,6 +1,7 @@
-import { useState } from 'react'
-import { BedDouble, Lock, Plus } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { BedDouble, Lock, Plus, Wand2 } from 'lucide-react'
 import { supabase } from '../supabase'
+import { suggestSplits, type SplitAlt } from '../stays'
 import { TOGETHER, whoOptions, type Booking, type City, type TripStay } from '../types'
 import { mutate } from '../lib'
 import { t } from '../i18n'
@@ -29,6 +30,7 @@ type Props = {
 /** "Where we sleep": the nights of each party in each city, before and after any hotel is booked. */
 export default function StaysSheet({ tripId, date, couples, stays, cities, bookings, available, onClose }: Props) {
   const [edit, setEdit] = useState<Partial<TripStay> | null>(null)
+  const [split, setSplit] = useState(false)
   // everyone first, then each couple, then any other party a stay names
   const parties: (string | null)[] = [null, ...new Set([...whoOptions(couples), ...stays.map((s) => s.party).filter((p): p is string => !!p)])]
 
@@ -74,13 +76,90 @@ export default function StaysSheet({ tripId, date, couples, stays, cities, booki
             <Icon as={Plus} /> {t('הוספת לינה')}
           </button>
         )}
+        {available && (
+          <button onClick={() => setSplit(true)}>
+            <Icon as={Wand2} /> {t('הצעה לחלוקת לילות')}
+          </button>
+        )}
       </Sheet>
-      {edit && <StayForm tripId={tripId} couples={couples} cities={cities} bookings={bookings} stay={edit} onClose={() => setEdit(null)} />}
+      {split && <SplitSheet tripId={tripId} stays={stays} cities={cities} onClose={() => setSplit(false)} />}
+      {edit &&<StayForm tripId={tripId} couples={couples} cities={cities} bookings={bookings} stay={edit} onClose={() => setEdit(null)} />}
     </>
   )
 }
 
 const nights = (n: number) => (n === 1 ? t('לילה אחד') : t('{n} לילות', { n }))
+
+/** Why an alternative is worth considering, in words. */
+function reasonText(r: SplitAlt['reason']) {
+  const places = t('{n} מתוך {total} המקומות שאהבתם', { n: r.coveredPlaces, total: r.totalPlaces })
+  const moves = r.moves === 0 ? t('בלי החלפת מלון') : r.moves === 1 ? t('החלפת מלון אחת') : t('{n} החלפות מלון', { n: r.moves })
+  if (r.kind === 'fewer_moves') return t('הכי פחות החלפות מלון: {moves}. {places}.', { moves, places })
+  if (r.kind === 'more_places') return t('מכסה הכי הרבה ממה שאהבתם: {places}. {moves}.', { moves, places })
+  return t('איזון בין מקומות להחלפות: {places}. {moves}.', { moves, places })
+}
+
+/** "Suggest a split": 2-3 ways to spread the open nights between cities; "use this" saves one as proposed stays. */
+function SplitSheet({ tripId, stays, cities, onClose }: { tripId: string; stays: TripStay[]; cities: City[]; onClose: () => void }) {
+  const [alts, setAlts] = useState<SplitAlt[] | 'loading' | 'error'>('loading')
+  const [saving, setSaving] = useState(false)
+  useEffect(() => {
+    let live = true
+    suggestSplits(tripId).then((a) => live && setAlts(a ?? 'error'))
+    return () => {
+      live = false
+    }
+  }, [tripId])
+
+  /** Replaces the planner's earlier proposals with this one. Confirmed, locked and typed-in stays are never touched. */
+  const use = async (a: SplitAlt) => {
+    setSaving(true)
+    const old = stays.filter((s) => s.source === 'auto' && s.status === 'proposed' && !s.locked).map((s) => s.id)
+    const ok =
+      (!old.length || (await mutate(supabase.from('trip_stays').delete().in('id', old)))) &&
+      (await mutate(
+        supabase.from('trip_stays').insert(
+          a.rows.map((r) => ({ trip_id: tripId, party: r.party, city: r.city, check_in: r.checkIn, check_out: r.checkOut, status: 'proposed', locked: false, source: 'auto' })),
+        ),
+      ))
+    setSaving(false)
+    if (ok) onClose()
+  }
+
+  return (
+    <Sheet title={t('הצעה לחלוקת לילות')} onClose={onClose}>
+      {alts === 'loading' && <Empty>{t('מחשבים חלוקות אפשריות…')}</Empty>}
+      {alts === 'error' && <Empty>{t('לא הצלחנו להציע חלוקה כרגע. נסו שוב עוד רגע.')}</Empty>}
+      {Array.isArray(alts) && alts.length === 0 && <Empty>{t('אין לילות פתוחים לחלוקה, או שעוד אין ערים להציע.')}</Empty>}
+      {Array.isArray(alts) &&
+        alts.map((a, i) => (
+          <div key={i} className="card stack">
+            {a.rows.map((r, k) => (
+              <div key={k} className="row spread">
+                <b>
+                  <Icon as={BedDouble} /> {cityName(r.city, cities)}
+                </b>
+                <span className="small muted">
+                  {r.party ? `${t(r.party)} · ` : ''}
+                  {shortDate(r.checkIn)} – {shortDate(r.checkOut)} · {nights(r.nights)}
+                </span>
+              </div>
+            ))}
+            <div className="small muted">{reasonText(a.reason)}</div>
+            {a.reason.dayTrips.map((d) => (
+              <div key={d.city} className="small muted">
+                {t('טיול יום ל{city} מ{from}: {n} מקומות', { city: cityName(d.city, cities), from: cityName(d.from, cities), n: d.places })}
+              </div>
+            ))}
+            <button className="primary" disabled={saving} onClick={() => use(a)}>
+              {t('להשתמש בזה')}
+            </button>
+          </div>
+        ))}
+      {Array.isArray(alts) && alts.length > 0 && <div className="small muted">{t('נשמר כהצעה בלבד, רק בלילות הפנויים. לינות מאושרות ונעולות לא משתנות.')}</div>}
+    </Sheet>
+  )
+}
 
 function StayForm(props: { tripId: string; couples: string[]; cities: City[]; bookings: Booking[]; stay: Partial<TripStay>; onClose: () => void }) {
   const { stay, cities } = props
