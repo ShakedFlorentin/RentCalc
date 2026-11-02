@@ -141,13 +141,14 @@
 .stay-row { display: block; width: 100%; text-align: start; font: inherit; color: inherit; cursor: pointer; }
 .stay-row > * + * { margin-top: 4px; }
 
-/* swipe a plan item for its actions: the row slides over a flat strip of two iOS-style buttons on its end side */
-.swipe-row { position: relative; border-radius: 20px; overflow: hidden; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
-.swipe-row > .item { position: relative; z-index: 1; border-radius: 0; will-change: transform; }
-.swipe-acts { position: absolute; z-index: 0; inset-block: 0; inset-inline-end: 0; display: flex; visibility: hidden; }
+/* swipe a plan item for its actions: the card slides aside and two round capsules grow in behind it, on its end side
+   (their size and fade come from the row's position, see SwipeRow) */
+.swipe-row { position: relative; overflow-x: clip; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.swipe-row > .item { position: relative; z-index: 1; will-change: transform; }
+.swipe-acts { position: absolute; z-index: 0; inset-block: 0; inset-inline-end: 0; width: 152px; padding-inline: 8px; gap: 8px; display: flex; align-items: center; justify-content: flex-end; visibility: hidden; }
 .swipe-acts button {
-  width: 76px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-  border: 0; border-radius: 0; font: inherit; font-size: 0.75rem; font-weight: 600; cursor: pointer;
+  flex: none; width: 64px; height: 44px; display: grid; place-items: center; padding: 0;
+  border: 0; border-radius: 999px; cursor: pointer; opacity: 0; transform: scale(0.3); will-change: transform, opacity;
 }
 .swipe-edit { background: var(--muted); color: var(--bg); }
 .swipe-del { background: var(--accent-fill); color: var(--on-accent); }

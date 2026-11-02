@@ -381,9 +381,26 @@ function SwipeRow({ children, onEdit, onRemove }: { children: React.ReactNode; o
   const show = (x: number) => {
     pos.current = x
     if (!row.current) return
-    ;(row.current.firstElementChild as HTMLElement).style.transform = x ? `translateX(${x}px)` : ''
-    // the strip stays hidden while the row is shut, so its red can't show at the rounded corners
-    ;(row.current.lastElementChild as HTMLElement).style.visibility = x ? 'visible' : ''
+    const [card, acts] = [row.current.firstElementChild as HTMLElement, row.current.lastElementChild as HTMLElement]
+    card.style.transform = x ? `translateX(${x}px)` : ''
+    // the capsules grow and fade in with how far the row is open: the outer one (Remove) leads, Edit follows a little later
+    const px = Math.abs(x)
+    const p = Math.min(1, px / ACTS_W)
+    const still = reducedMotion()
+    const [edit, del] = acts.children as unknown as HTMLElement[]
+    // steeper than the row: a dot that grows and brightens while the row slides, and is gone just before the row is home
+    const c01 = (v: number) => Math.max(0, Math.min(1, v))
+    const grow = (b: HTMLElement, q: number, wide = 0) => {
+      const sc = c01((q - 0.1) / 0.6)
+      const op = c01((q - 0.05) / 0.5)
+      b.style.opacity = still ? (q > 0 ? '1' : '0') : String(op)
+      b.style.transform = still ? '' : `scale(${0.3 + 0.7 * sc})`
+      b.style.width = wide ? `${64 + wide}px` : ''
+    }
+    // dragged past the end: the outer capsule stretches by half the extra, up to 40px
+    grow(del, p, Math.min(40, Math.max(0, px - ACTS_W) / 2))
+    grow(edit, p - 0.15)
+    acts.style.visibility = x ? 'visible' : ''
   }
   const settle = (to: number, v = 0) => {
     stop.current?.()
@@ -394,7 +411,7 @@ function SwipeRow({ children, onEdit, onRemove }: { children: React.ReactNode; o
       openRow = () => settle(0)
     }
     if (reducedMotion()) return show(to)
-    stop.current = springTo(pos.current, to, v, { damping: 0.85, response: 0.35 }, (x) => show(x), () => (stop.current = null))
+    stop.current = springTo(pos.current, to, v, { damping: 0.8, response: 0.35 }, (x) => show(x), () => (stop.current = null))
   }
   useEffect(() => {
     if (!open) return
@@ -435,7 +452,7 @@ function SwipeRow({ children, onEdit, onRemove }: { children: React.ReactNode; o
     if (s.trail.length > 6) s.trail.shift()
     const k = sign()
     // only toward the actions, never far past them
-    const along = Math.max(0, Math.min(ACTS_W * 1.15, (s.from + dx) * k))
+    const along = Math.max(0, Math.min(ACTS_W * 1.6, (s.from + dx) * k))
     show(along * k)
   }
   const up = () => {
@@ -480,7 +497,6 @@ function SwipeRow({ children, onEdit, onRemove }: { children: React.ReactNode; o
           }}
         >
           <Icon as={Pencil} size="1.375rem" aria-hidden="true" />
-          {t('עריכה')}
         </button>
         <button
           className="swipe-del"
@@ -492,7 +508,6 @@ function SwipeRow({ children, onEdit, onRemove }: { children: React.ReactNode; o
           }}
         >
           <Icon as={Trash2} size="1.375rem" aria-hidden="true" />
-          {t('הסרה')}
         </button>
       </div>
     </div>
