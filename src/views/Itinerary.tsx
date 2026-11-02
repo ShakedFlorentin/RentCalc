@@ -271,7 +271,7 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
 }
 
 /** One line of the day: a plan item you can tick, open and edit, or a booking moment that is read-only here. */
-function EntryRow(props: {
+export function EntryRow(props: {
   e: Entry
   /** what the card says it serves: "food" alone doesn't tell a cake shop from a ramen counter */
   kind?: string | null
