@@ -5,6 +5,7 @@ import type { PlaceRating } from '../types'
 import { mutate, readCache, writeCache } from '../lib'
 import { locale, t } from '../i18n'
 import { Icon } from '../icons'
+import { smoothedStars } from '../rank'
 import '../styles/ratings.css'
 
 // Ratings hang on the shared library card, not on the trip's copy, so a later trip with the same place sees what
@@ -61,8 +62,8 @@ const starsLabel = (n: number) => (n === 1 ? t('כוכב אחד') : t('{n} כו�
 const countLabel = (n: number) => (n === 1 ? t('דירוג אחד') : t('{n} דירוגים', { n }))
 
 /** Your stars and note for a place you went to, with what other travellers said under them. */
-export function RateBox(props: { libraryId: string; tripId: string; userId: string; ratings: Ratings }) {
-  const { libraryId, tripId, userId, ratings } = props
+export function RateBox(props: { libraryId: string; tripId: string; userId: string; ratings: Ratings; prior?: number }) {
+  const { libraryId, tripId, userId, ratings, prior } = props
   const all = ratings.of(libraryId)
   const mine = all.find((r) => r.user_id === userId)
   // the star tapped, shown until the save answers
@@ -126,7 +127,7 @@ export function RateBox(props: { libraryId: string; tripId: string; userId: stri
           </div>
         </div>
       )}
-      <RatingSummary ratings={all.filter((r) => r.user_id !== userId)} label={t('מטיילים אחרים')} />
+      <RatingSummary ratings={all.filter((r) => r.user_id !== userId)} label={t('מטיילים אחרים')} prior={prior} />
     </div>
   )
 }
@@ -170,10 +171,13 @@ function StarsInput({ value, onChange }: { value: number; onChange: (n: number) 
   )
 }
 
-/** "★ 4.5 · 3 ratings" and the latest notes; nothing at all when nobody has rated yet. */
-export function RatingSummary({ ratings, label }: { ratings: PlaceRating[]; label?: string }) {
+/**
+ * "★ 4.5 · 3 ratings" and the latest notes; nothing at all when nobody has rated yet. The number is a Bayesian mean
+ * (see rank.ts): `prior` is the average of the place's category, so three 5-star ratings don't read as a perfect 5.0.
+ */
+export function RatingSummary({ ratings, label, prior }: { ratings: PlaceRating[]; label?: string; prior?: number }) {
   if (!ratings.length) return null
-  const avg = ratings.reduce((s, r) => s + r.stars, 0) / ratings.length
+  const avg = smoothedStars(ratings.map((r) => r.stars), prior)
   const avgText = avg.toLocaleString(locale, { maximumFractionDigits: 1 })
   // newest first already; a few short lines are enough on a card
   const notes = ratings.filter((r) => r.note?.trim()).slice(0, 2)
@@ -196,7 +200,7 @@ export function RatingSummary({ ratings, label }: { ratings: PlaceRating[]; labe
 }
 
 /** A card's ratings from everyone who rated it (the swipe card's full view); loads them itself, one query. */
-export function CardRatings({ libraryId }: { libraryId?: string | null }) {
+export function CardRatings({ libraryId, prior }: { libraryId?: string | null; prior?: number }) {
   const ratings = useRatings([libraryId])
   if (!libraryId) return null
   const all = ratings.of(libraryId)
@@ -206,7 +210,7 @@ export function CardRatings({ libraryId }: { libraryId?: string | null }) {
       <b className="fact-label">
         <Icon as={Star} /> {t('מטיילים שהיו שם')}
       </b>
-      <RatingSummary ratings={all} />
+      <RatingSummary ratings={all} prior={prior} />
     </div>
   )
 }

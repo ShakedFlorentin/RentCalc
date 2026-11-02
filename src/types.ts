@@ -290,7 +290,7 @@ export type PlaceRating = {
   updated_at: string
 }
 
-export type Swipe = { trip_id: string; candidate_id: string; user_id: string; liked: boolean; created_at: string }
+export type Swipe = { trip_id: string; candidate_id: string; user_id: string; liked: boolean; /** "not now": no opinion yet (column added by sql/2026-11-02-discovery.sql) */ skipped?: boolean; created_at: string }
 
 export const CITY_HE: Record<string, string> = {
   tokyo: 'טוקיו', // he-only

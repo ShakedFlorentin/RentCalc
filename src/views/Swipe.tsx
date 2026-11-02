@@ -4,13 +4,14 @@ import { supabase } from '../supabase'
 import { AUDIENCES, CARD_STYLE, CITY_HE, KOSHER, VERDICTS, type Candidate, type Member, type Swipe, type Trip } from '../types'
 import { cityLabel, couplesOf, keepRanges, mutate, safeUrl, useMediaIndex, useTripTable, withMedia } from '../lib'
 import AddPlace from './AddPlace'
-import { CardRatings } from './Ratings'
+import { CardRatings, useRatings } from './Ratings'
 import { t } from '../i18n'
 import { Empty, Sheet } from '../ui'
 import { MediaActions } from '../media'
 import { useProfile } from './Onboarding'
 import { answersOf, hidden, score } from '../prefs'
-import { ChevronLeft, ChevronUp, Heart, Ban, X, Lightbulb, MapPin, MessageSquare, Plus, ReceiptText, Search, Sparkles, Star, Target, Timer, Users, Utensils, UtensilsCrossed, Wine, Baby } from 'lucide-react'
+import { BATCH_SIZE, categoryMeans, learnTags, rankDeck } from '../rank'
+import { Clock, ChevronLeft, ChevronUp, Heart, Ban, X, Lightbulb, MapPin, MessageSquare, Plus, ReceiptText, Search, Sparkles, Star, Target, Timer, Users, Utensils, UtensilsCrossed, Wine, Baby } from 'lucide-react'
 import { AUDIENCE_ICON, CARD_ICON, Icon, type LucideIcon } from '../icons'
 import '../styles/game.css'
 
@@ -51,7 +52,17 @@ export default function SwipeGame({ trip, userId, members, showCard, onCardShown
     [candidates, answers, prefsLoading],
   )
   const fit = useMemo(() => new Map(answers ? visible.map((c) => [c.id, score(c, answers)]) : []), [visible, answers])
-  const { rows: swipes, loading: swipesLoading, reload: reloadSwipes } = useTripTable<Swipe>('swipes', trip.id)
+  const { rows: allSwipes, loading: swipesLoading, reload: reloadSwipes } = useTripTable<Swipe>('swipes', trip.id)
+  // a "not now" kept in the database (swipes.skipped) is not a vote: it never counts as a like or a no
+  const swipes = useMemo(() => allSwipes.filter((s) => !s.skipped), [allSwipes])
+  const skippedByMe = useMemo(() => allSwipes.filter((s) => s.skipped && s.user_id === userId).map((s) => s.candidate_id), [allSwipes, userId])
+  const skipCol = useSkipColumn()
+  const [notNowIds, setNotNowIds] = useState<Set<string>>(() => readNotNow(trip.id, userId))
+  // this session's learning from swipes (tag weights) and how far into the batch we are
+  const [tagWeights, setTagWeights] = useState<Map<string, number>>(() => new Map())
+  const [batchDone, setBatchDone] = useState(0)
+  const [recent, setRecent] = useState<string[]>([])
+  const [sessionNotNow, setSessionNotNow] = useState<Set<string>>(() => new Set())
   const [city, setCity] = useState('')
   const [aud, setAud] = useState('')
   const [match, setMatch] = useState<{ c: Candidate; names: string[]; who: string | null } | null>(null)
@@ -122,14 +133,38 @@ export default function SwipeGame({ trip, userId, members, showCard, onCardShown
   // the other couple already said yes: it waits on us, so it comes first
   const othersLiked = (c: Candidate) => (forWhom?.get(c.id)?.liked ?? []).filter((x) => x !== myCouple)
   const cities = Object.keys(CITY_HE).filter((c) => visible.some((x) => x.city === c))
-  const deck = visible
-    .filter((c) => !mine.has(c.id) && forMe(c) && (!city || c.city === city) && (!aud || c.audience === aud))
-    .sort(
-      (a, b) =>
-        (fit.get(b.id) ?? 0) - (fit.get(a.id) ?? 0) ||
-        Number(othersLiked(b).length > 0) - Number(othersLiked(a).length > 0) ||
-        hash(a.id + userId) - hash(b.id + userId),
-    )
+  const ratings = useRatings(visible.map((c) => c.library_id))
+  const catMean = useMemo(
+    () => categoryMeans(visible.filter((c) => c.library_id).map((c) => ({ category: c.category, stars: ratings.of(c.library_id!).map((r) => r.stars) }))),
+    [visible, ratings],
+  )
+  const votesOn = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const s of swipes) m.set(s.candidate_id, (m.get(s.candidate_id) ?? 0) + 1)
+    return m
+  }, [swipes])
+  const pool = visible.filter(
+    (c) => !mine.has(c.id) && forMe(c) && (!city || c.city === city) && (!aud || c.audience === aud) && !sessionNotNow.has(c.id),
+  )
+  const batchLeft = Math.max(0, BATCH_SIZE - batchDone)
+  const deck = useMemo(
+    () =>
+      rankDeck(pool, {
+        fit: (c) => fit.get(c.id) ?? 0,
+        othersLiked: (c) => othersLiked(c as Candidate).length,
+        swipeCount: (c) => votesOn.get(c.id) ?? 0,
+        stars: (c) => ratings.of((c as Candidate).library_id ?? '').map((r) => r.stars),
+        categoryMean: (cat) => catMean.get(cat),
+        tagWeights,
+        notNow: (c) => notNowIds.has(c.id) || skippedByMe.includes(c.id),
+        recent,
+        hash: (c) => hash(c.id + userId),
+        size: Math.max(batchLeft, 2),
+      }) as Candidate[],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [pool.map((c) => c.id).join(), fit, votesOn, ratings, catMean, tagWeights, notNowIds, skippedByMe, recent, batchLeft, forWhom],
+  )
+  const batchOver = batchLeft === 0 && pool.length > 0
 
   // the card stays up until the reload lands, so a second tap would swipe it again
   const pending = useRef(new Set<string>())
@@ -137,14 +172,32 @@ export default function SwipeGame({ trip, userId, members, showCard, onCardShown
     if (pending.current.has(c.id)) return false
     pending.current.add(c.id)
     const ok = await mutate(
-      supabase.from('swipes').upsert({ trip_id: trip.id, candidate_id: c.id, user_id: userId, liked }),
+      supabase.from('swipes').upsert({ trip_id: trip.id, candidate_id: c.id, user_id: userId, liked, ...(skipCol ? { skipped: false } : {}) }),
     )
     if (ok) {
       setHistory((h) => (h[h.length - 1] === c.id ? h : [...h, c.id]))
+      // learn from it for the next cards, and move on in the batch
+      setTagWeights((w) => learnTags(w, c, liked))
+      setRecent((r) => [...r, c.category].slice(-3))
+      setBatchDone((n) => n + 1)
       await reloadSwipes()
     }
     pending.current.delete(c.id)
     return ok
+  }
+
+  // "not now": not a vote. Kept in the database when swipes.skipped exists, always on this phone; the card goes
+  // to the back of the line and is not held against its tags
+  const notNow = (c: Candidate) => {
+    if (pending.current.has(c.id)) return false
+    const next = new Set(notNowIds).add(c.id)
+    setNotNowIds(next)
+    writeNotNow(trip.id, userId, next)
+    setSessionNotNow((s) => new Set(s).add(c.id))
+    setRecent((r) => [...r, c.category].slice(-3))
+    setBatchDone((n) => n + 1)
+    if (skipCol) void mutate(supabase.from('swipes').upsert({ trip_id: trip.id, candidate_id: c.id, user_id: userId, liked: false, skipped: true })).then(() => reloadSwipes())
+    return true
   }
 
   const undo = async () => {
@@ -152,6 +205,7 @@ export default function SwipeGame({ trip, userId, members, showCard, onCardShown
     if (!last) return
     await mutate(supabase.from('swipes').delete().eq('candidate_id', last).eq('user_id', userId))
     setHistory((h) => h.slice(0, -1))
+    setBatchDone((n) => Math.max(0, n - 1))
     reloadSwipes()
   }
 
@@ -190,7 +244,7 @@ export default function SwipeGame({ trip, userId, members, showCard, onCardShown
   }, [visible, swipes])
   // a vote from a list or a card opened from search: not part of the deck's undo
   const vote = async (c: Candidate, liked: boolean) => {
-    if (await mutate(supabase.from('swipes').upsert({ trip_id: trip.id, candidate_id: c.id, user_id: userId, liked }))) reloadSwipes()
+    if (await mutate(supabase.from('swipes').upsert({ trip_id: trip.id, candidate_id: c.id, user_id: userId, liked, ...(skipCol ? { skipped: false } : {}) }))) reloadSwipes()
   }
   const me = members.find((m) => m.user_id === userId)?.display_name ?? ''
 
@@ -276,7 +330,7 @@ export default function SwipeGame({ trip, userId, members, showCard, onCardShown
               {[cityLabel(CITY_HE[focused.city] ?? focused.city), focused.area].filter(Boolean).join(' · ')}
             </div>
             <FocusVotes c={focused} swipes={swipes} members={members} userId={userId} />
-            <CardFull c={focused} />
+            <CardFull c={focused} prior={catMean.get(focused.category)} />
           </div>
           {forMe(focused) && (
             <div className="sheet-decide">
@@ -350,25 +404,37 @@ export default function SwipeGame({ trip, userId, members, showCard, onCardShown
                 : t('הצבעת על כל המקומות. מקום חדש שמישהו יוסיף יחכה לך כאן, ומה שקיבל מאצ׳ נמצא בלשונית מקומות.')}
           </Empty>
         )}
-        {deck
-          .slice(0, 2)
-          .reverse()
-          .map((c, i, arr) => (
-            <Card key={c.id} c={c} likedBy={othersLiked(c)} top={i === arr.length - 1} onSwipe={(liked) => swipe(c, liked)} />
-          ))}
+        {batchOver && (
+          <div className="empty more-batch">
+            <p>{t('סיימת חבילה של {n} מקומות', { n: BATCH_SIZE })}</p>
+            <button className="primary" onClick={() => setBatchDone(0)}>
+              {t('עוד מקומות?')}
+            </button>
+          </div>
+        )}
+        {!batchOver &&
+          deck
+            .slice(0, 2)
+            .reverse()
+            .map((c, i, arr) => (
+              <Card key={c.id} c={c} likedBy={othersLiked(c)} prior={catMean.get(c.category)} top={i === arr.length - 1} onSwipe={(liked) => swipe(c, liked)} />
+            ))}
       </div>
-      {(deck.length > 0 || history.length > 0) && (
+      {((deck.length > 0 && !batchOver) || history.length > 0) && (
         <div className="swipe-buttons">
           <button className="round small-round" onClick={undo} disabled={!history.length} aria-label={t('ביטול החלקה אחרונה')}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3" /></svg>
           </button>
-          <button className="round nope" onClick={() => deck[0] && swipe(deck[0], false)} disabled={!deck.length} aria-label={t('דלג')}>
+          <button className="round nope" onClick={() => deck[0] && swipe(deck[0], false)} disabled={!deck.length || batchOver} aria-label={t('דלג')}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
           </button>
-          <button className="round like" onClick={() => deck[0] && swipe(deck[0], true)} disabled={!deck.length} aria-label={t('אהבתי')}>
+          <button className="round small-round" onClick={() => deck[0] && notNow(deck[0])} disabled={!deck.length || batchOver} aria-label={t('לא עכשיו')}>
+            <Icon as={Clock} />
+          </button>
+          <button className="round like" onClick={() => deck[0] && swipe(deck[0], true)} disabled={!deck.length || batchOver} aria-label={t('אהבתי')}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path className="fill" d="M12 20.5s-7.5-4.6-9.2-9.4C1.6 7.7 4 4.5 7.2 4.5c1.9 0 3.4 1 4.8 2.8 1.4-1.8 2.9-2.8 4.8-2.8 3.2 0 5.6 3.2 4.4 6.6-1.7 4.8-9.2 9.4-9.2 9.4z" /></svg>
           </button>
-          {deck.length > 0 && <span className="left-count" aria-live="polite">{deck.length === 1 ? t('נשאר אחד') : t('נשארו {n}', { n: deck.length })}</span>}
+          {deck.length > 0 && !batchOver && <span className="left-count" aria-live="polite">{Math.min(deck.length, batchLeft) === 1 ? t('נשאר אחד') : t('נשארו {n}', { n: Math.min(deck.length, batchLeft) })}</span>}
         </div>
       )}
 
@@ -430,7 +496,7 @@ function springTo(
 const project = (v: number) => ((v / 1000) * 0.998) / (1 - 0.998)
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches
 
-function Card({ c, top, likedBy, onSwipe }: { c: Candidate; top: boolean; likedBy: string[]; onSwipe: (liked: boolean) => Promise<boolean> }) {
+function Card({ c, top, likedBy, prior, onSwipe }: { c: Candidate; top: boolean; likedBy: string[]; prior?: number; onSwipe: (liked: boolean) => Promise<boolean> }) {
   const [dx, setDx] = useState(0)
   const [more, setMore] = useState(false)
   const [photo, setPhoto] = useState(0)
@@ -649,7 +715,7 @@ function Card({ c, top, likedBy, onSwipe }: { c: Candidate; top: boolean; likedB
         createPortal(
           <Sheet title={c.name} onClose={() => setMore(false)}>
             <div className="card-full">
-              <CardFull c={c} />
+              <CardFull c={c} prior={prior} />
             </div>
             <div className="sheet-decide">
               <button className="round nope" onClick={() => decide(-1)} aria-label={t('דלג')}>
@@ -669,7 +735,7 @@ function Card({ c, top, likedBy, onSwipe }: { c: Candidate; top: boolean; likedB
 }
 
 /** Everything a card says, as the full sheet shows it. */
-export function CardFull({ c }: { c: Candidate }) {
+export function CardFull({ c, prior }: { c: Candidate; prior?: number }) {
   return (
     <>
       <Tags c={c} />
@@ -741,7 +807,7 @@ export function CardFull({ c }: { c: Candidate }) {
         </div>
       )}
       {/* what travellers on earlier trips thought, once someone has rated it */}
-      <CardRatings libraryId={c.library_id} />
+      <CardRatings libraryId={c.library_id} prior={prior} />
       <MediaActions name={c.name} maps={c.maps_url} website={c.website_url} m={c} />
       {c.sources.some((s) => safeUrl(s)) && (
         <div className="row">
@@ -846,4 +912,45 @@ function hash(s: string) {
   let h = 0
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0
   return h
+}
+
+/** Whether the swipes table has the `skipped` column yet (sql/2026-11-02-discovery.sql): asked once per page load. */
+let skipColumn: boolean | null = null
+function useSkipColumn() {
+  const [has, setHas] = useState(skipColumn === true)
+  useEffect(() => {
+    if (skipColumn !== null) return
+    let live = true
+    supabase
+      .from('swipes')
+      .select('skipped')
+      .limit(1)
+      .then(({ error }) => {
+        skipColumn = !error
+        if (live) setHas(skipColumn)
+      })
+    return () => {
+      live = false
+    }
+  }, [])
+  return has
+}
+
+// "not now" cards on this phone, per trip and person; storage can be missing or full, so every access is guarded
+const notNowKey = (tripId: string, userId: string) => `notnow:${tripId}:${userId}`
+function readNotNow(tripId: string, userId: string): Set<string> {
+  try {
+    const raw = localStorage.getItem(notNowKey(tripId, userId))
+    const list = raw ? JSON.parse(raw) : []
+    return new Set(Array.isArray(list) ? list.filter((x): x is string => typeof x === 'string') : [])
+  } catch {
+    return new Set()
+  }
+}
+function writeNotNow(tripId: string, userId: string, ids: Set<string>) {
+  try {
+    localStorage.setItem(notNowKey(tripId, userId), JSON.stringify([...ids].slice(-500)))
+  } catch {
+    /* private mode or full: the card just isn't remembered */
+  }
 }
