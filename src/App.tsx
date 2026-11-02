@@ -15,6 +15,7 @@ import { useRemembered } from './ui'
 import SwipeGame from './views/Swipe'
 import Onboarding, { useProfile } from './views/Onboarding'
 import Search, { type SearchTarget } from './views/Search'
+import SharedPlan, { ImportShared, forgetPendingShare, pendingShare, slugInUrl } from './views/SharedPlan'
 
 // solid glyphs, like Music's tab bar: every tab carries the same weight and only the colour marks the open one.
 // The glyphs differ in width (the pin is narrow, the ticket wide), so `nudge` moves each one by a fraction of a pixel
@@ -32,7 +33,13 @@ type Tab = (typeof TABS)[number]['id']
 // who was signed in, so the app still opens when an expired login can't be refreshed without a network
 const UID_KEY = 'userId'
 
+// a shared plan's link (?share=…) opens the read-only page for anyone, before the login gate
 export default function App() {
+  const [slug] = useState(slugInUrl)
+  return slug ? <SharedPlan slug={slug} /> : <AppMain />
+}
+
+function AppMain() {
   const [userId, setUserId] = useState<string | null | undefined>(undefined)
   // joined with an invite code: asked the getting-to-know-you questions before anything else
   const [invited, setInvited] = useState(false)
@@ -95,6 +102,8 @@ function TripGate({ userId }: { userId: string }) {
   const [tripId, setTripId] = useState<string | null | undefined>(() => savedTrip() ?? undefined)
   const [failed, setFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
+  // a shared plan the person asked to copy before signing in: offered once they are in
+  const [offer, setOffer] = useState(pendingShare)
 
   const choose = (id: string | null) => {
     try {
@@ -126,6 +135,21 @@ function TripGate({ userId }: { userId: string }) {
       })
   }, [userId, attempt])
 
+  if (offer)
+    return (
+      <ImportShared
+        slug={offer}
+        userId={userId}
+        onDone={(id) => {
+          setOffer(null)
+          choose(id)
+        }}
+        onSkip={() => {
+          forgetPendingShare()
+          setOffer(null)
+        }}
+      />
+    )
   if (failed) return <LoadError onRetry={() => setAttempt((a) => a + 1)} />
   if (tripId === undefined) return <div className="center" role="status">{t('טוען…')}</div>
   if (!tripId) return <TripPicker onPick={choose} />

@@ -3,6 +3,16 @@
 Live: https://shakedflorentin.github.io/trip-planner/ · branch `japan-trip`, deployed by fast-forwarding `main`
 (`git push origin japan-trip:main`; GitHub Pages builds on push). Supabase project `wbofjfwbdewgnwjmcpnv`.
 
+## Reviews and plan sharing (2026-11-02, built, SQL not applied)
+- `supabase/sql/2026-11-02-reviews-sharing.sql` must be run by hand first: places.visited_at (trigger), place_ratings.answers,
+  table shared_plans (members only) and rpc get_shared_plan(slug) for anon. The app works without it (visited_at is sent only
+  when the rows carry it; answers are retried without; the share sheet says it can't publish).
+- Home: the day after a visit, "How was X?" (stars + one quick question by category, stroller question if the profile says
+  baby), `views/Review.tsx`; dismissals in localStorage `reviewDismissed`.
+- Plan tab: "Share plan" sheet (`views/Share.tsx`) previews the snapshot (days, city, place name, category, card tip, lat/lng;
+  trip name optional) and publishes it; `?share=<slug>` opens `views/SharedPlan.tsx` before login; "Plan a trip like this"
+  copies the places as candidates into a new trip (localStorage `pendingShare` carries it through login).
+
 ## Travel between plan stops (2026-11-02)
 - Between two stops in a row the day plan shows a quiet line: "5–10 min walk" under 1.2 km straight-line, otherwise a
   ride range ("15–30 min"), in 5-minute steps; none under 0.15 km (same spot) or over 25 km (no data). A tap opens

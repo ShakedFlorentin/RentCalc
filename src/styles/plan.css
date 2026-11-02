@@ -130,3 +130,7 @@
 /* the way between two stops in a row: a quiet line in the gap, not a card of its own */
 .plan-hop { display: flex; align-items: center; gap: 6px; margin: -4px 0; padding-inline-start: 18px; text-decoration: none; width: fit-content; }
 .plan-hop-go { opacity: 0.6; }
+
+/* sharing the plan (views/Share.tsx) */
+.share-stops { margin: 0; padding-inline-start: 1.25em; display: grid; gap: 6px; }
+.check-row { display: flex; align-items: center; gap: 8px; }
