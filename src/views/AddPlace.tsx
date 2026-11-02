@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabase'
 import { AUDIENCES, CARD_STYLE, CITY_HE, VERDICTS, type Candidate } from '../types'
-import { aiError, cityLabel, localizeCard, mutate, safeUrl, samePlace, useTripHasBaby } from '../lib'
+import { aiError, cityLabel, localizeCard, mutate, safeUrl, samePlace, useTripAvoidsPorkSeafood, useTripHasBaby } from '../lib'
 import { isEn, t } from '../i18n'
 import { ArrowRight, Check, Heart, List, LoaderCircle, Search, Star, X } from 'lucide-react'
 import { Field, Sheet } from '../ui'
@@ -154,6 +154,7 @@ async function lookupLive(body: object, opened: () => void, on: (e: Step) => voi
 export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Props) {
   // one field: a link or a place's name
   const hasBaby = useTripHasBaby(tripId)
+  const avoidsPork = useTripAvoidsPorkSeafood(tripId)
   const [query, setQuery] = useState('')
   // a link that couldn't be read: kept for the card, while the place's name is searched instead
   const [failedLink, setFailedLink] = useState('')
@@ -509,6 +510,7 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
       <Sheet title={t('זה המקום?')} onClose={onClose}>
         <DraftForm
           hasBaby={hasBaby}
+          avoidsPork={avoidsPork}
           draft={typed ?? draft}
           busy={busy}
           err={err}
@@ -542,7 +544,7 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
   return (
     <Sheet title={t('הצעת מקום')} onClose={onClose}>
       <p className="muted small">
-        {t('הדביקו קישור מאינסטגרם, טיקטוק או גוגל מפות, או כתבו שם של מקום. נבדוק דירוג, כתובת, כשרות והתאמה לתינוק.')}
+        {t('הדביקו קישור מאינסטגרם, טיקטוק או גוגל מפות, או כתבו שם של מקום. נבדוק דירוג, כתובת, מה יש בתפריט והתאמה לתינוק.')}
       </p>
       <Field label={t('קישור או שם של מקום')}>
         <input
@@ -689,6 +691,7 @@ function Steps({ p, live }: { p: Progress; live: boolean }) {
 
 function DraftForm(props: {
   hasBaby: boolean
+  avoidsPork: boolean
   draft: Draft
   busy: boolean
   err: string
@@ -757,9 +760,9 @@ function DraftForm(props: {
           <b>{t('מה מגישים:')}</b> <span dir="auto">{shown.serves}</span>
         </div>
       )}
-      {d.kosher_note && (
+      {props.avoidsPork && d.kosher_note && (
         <div className="small">
-          <b>{t('כשרות:')}</b> <span dir="auto">{shown.kosher_note}</span>
+          <b>{t('חזיר ופירות ים:')}</b> <span dir="auto">{shown.kosher_note}</span>
         </div>
       )}
       {d.todo && (

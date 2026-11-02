@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabase'
 import { readCache, writeCache } from '../lib'
+import { neverOf } from '../prefs'
 import { t } from '../i18n'
 import type { Answers, InterestKind, Profile } from '../types'
 import { Icon } from '../icons'
@@ -78,17 +79,13 @@ const LEVELS: Opt<Answers['interest'][InterestKind]>[] = [
   { id: 'ok', label: t('אפשר') },
   { id: 'no', label: t('לא בשבילנו') },
 ]
-const NEVER: Opt<Answers['never'][number]>[] = [
-  { id: 'fish', label: t('דגים ופירות ים') },
-  { id: 'raw_fish', label: t('דג נא (סושי, סשימי)') },
-  { id: 'beef', label: t('בשר בקר') },
+// question 4 asks what they eat; whatever is left unticked is saved as `never`
+const EATS: Opt<Answers['never'][number]>[] = [
+  { id: 'chicken', label: t('עוף') },
+  { id: 'beef', label: t('בקר') },
   { id: 'pork', label: t('חזיר') },
-  { id: 'alcohol', label: t('אלכוהול') },
-]
-const KOSHER: Opt<Answers['kosher']>[] = [
-  { id: 'any', label: t('לא משנה') },
-  { id: 'prefer', label: t('מעדיפים כשר כשיש') },
-  { id: 'only', label: t('רק מקומות כשרים או ידידותיים לכשרות') },
+  { id: 'fish', label: t('דגים') },
+  { id: 'seafood', label: t('פירות ים'), sub: t('שרימפס, קלמרי, תמנון, צדפות') },
 ]
 const LOVES: Opt<Answers['loves'][number]>[] = [
   { id: 'ramen', label: t('ראמן') },
@@ -115,7 +112,6 @@ const MAX_LOVES = 3
 /** The answers so far: a single choice not made yet is undefined (budget's "doesn't matter" is null). */
 type Draft = Omit<Answers, 'interest' | 'kosher' | 'budget' | 'pace'> & {
   interest: Partial<Answers['interest']>
-  kosher?: Answers['kosher']
   budget?: Answers['budget']
   pace?: Answers['pace']
 }
@@ -124,8 +120,7 @@ const QUESTIONS: { title: string; hint?: string; ready: (d: Draft) => boolean }[
   { title: t('עם מי אתם נוסעים?'), hint: t('אפשר לבחור כמה'), ready: (d) => d.with.length > 0 },
   { title: t('אילו ערים בתוכנית?'), hint: t('אפשר לבחור כמה'), ready: (d) => d.cities.length > 0 },
   { title: t('כמה כל סוג מקום מעניין אתכם?'), ready: (d) => KINDS.every((k) => d.interest[k.id]) },
-  { title: t('מה לא אוכלים בשום מצב?'), hint: t('אפשר לבחור כמה, או להשאיר ריק'), ready: () => true },
-  { title: t('כמה חשובה לכם כשרות?'), ready: (d) => !!d.kosher },
+  { title: t('מה אתם אוכלים?'), hint: t('מסמנים את כל מה שאוכלים'), ready: () => true },
   { title: t('מה הכי מושך אתכם באוכל ביפן?'), hint: t('עד שלושה'), ready: (d) => d.loves.length > 0 },
   { title: t('כמה מוכנים להוציא על ארוחה, לאדם?'), ready: (d) => d.budget !== undefined },
   { title: t('איזה קצב יום מתאים לכם?'), ready: (d) => !!d.pace },
@@ -146,8 +141,7 @@ export default function Onboarding({ userId, initial, onDone, onClose }: Props) 
     with: initial?.with ?? [],
     cities: initial?.cities ?? [],
     interest: initial?.interest ?? {},
-    never: initial?.never ?? [],
-    kosher: initial?.kosher,
+    never: initial ? neverOf(initial) : [],
     loves: initial?.loves ?? [],
     budget: initial?.budget,
     pace: initial?.pace,
@@ -181,7 +175,6 @@ export default function Onboarding({ userId, initial, onDone, onClose }: Props) 
       cities: d.cities,
       interest: d.interest as Answers['interest'],
       never: d.never,
-      kosher: d.kosher!,
       loves: d.loves,
       budget: d.budget ?? null,
       pace: d.pace!,
@@ -273,9 +266,14 @@ export default function Onboarding({ userId, initial, onDone, onClose }: Props) 
               ))}
             </div>
           )}
-          {step === 3 && <Chips opts={NEVER} on={d.never} pick={(v) => set('never', toggle(d.never, v))} />}
-          {step === 4 && <Choice opts={KOSHER} on={d.kosher} pick={(v) => set('kosher', v)} />}
-          {step === 5 && (
+          {step === 3 && (
+            <Chips
+              opts={EATS}
+              on={EATS.map((o) => o.id).filter((id) => !d.never.includes(id))}
+              pick={(v) => set('never', toggle(d.never, v))}
+            />
+          )}
+          {step === 4 && (
             <Chips
               opts={LOVES}
               on={d.loves}
@@ -284,8 +282,8 @@ export default function Onboarding({ userId, initial, onDone, onClose }: Props) 
               pick={(v) => set('loves', toggle(d.loves, v))}
             />
           )}
-          {step === 6 && <Choice opts={BUDGETS} on={d.budget} pick={(v) => set('budget', v)} />}
-          {step === 7 && <Choice opts={PACES} on={d.pace} pick={(v) => set('pace', v)} />}
+          {step === 5 && <Choice opts={BUDGETS} on={d.budget} pick={(v) => set('budget', v)} />}
+          {step === 6 && <Choice opts={PACES} on={d.pace} pick={(v) => set('pace', v)} />}
           {last && (
             <div className="ob-final">
               <span className="ob-final-mark" aria-hidden="true">

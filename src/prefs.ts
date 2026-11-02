@@ -19,14 +19,28 @@ const EATING = ['food', 'cafe', 'nightlife']
 
 /** What never to show to someone who never has this, and which cards it applies to. */
 const NEVER: Record<Answers['never'][number], { categories: string[]; words: string[] }> = {
+  chicken: {
+    categories: EATING,
+    words: [
+      'chicken', 'yakitori', 'karaage', 'oyakodon', 'tori paitan', 'tsukune', 'chicken ramen', 'chicken katsu',
+      'fried chicken', 'chicken skewers',
+      'עוף', 'בשר עוף', 'יקיטורי', 'יאקיטורי', 'קראגה', 'אויאקודון', 'צוקנה', 'טורי פייטן', 'ראמן עוף', 'שיפודי עוף', // he-only
+    ],
+  },
   fish: {
     categories: ['food', 'cafe'],
     words: [
-      'fish', 'seafood', 'sushi', 'sashimi', 'raw fish', 'nigiri', 'sushiya', 'sushi counter', 'sushi bar', 'tuna',
-      'fatty tuna', 'salmon', 'eel', 'unagi', 'crab', 'shrimp', 'shrimp tempura', 'oyster', 'oysters', 'octopus',
-      'takoyaki', 'grilled fish', 'fresh fish', 'kaisendon',
-      'דגים', 'דג', 'פירות ים', 'סושי', 'סשימי', 'דג נא', 'דגים נאים', 'ניגירי', 'טונה', 'סלמון', 'צלופח', // he-only
-      'סרטן', 'שרימפס', 'צדפות', 'תמנון', 'טאקויאקי', 'דגים טריים', // he-only
+      'fish', 'sushi', 'sashimi', 'raw fish', 'nigiri', 'sushiya', 'sushi counter', 'sushi bar', 'tuna',
+      'fatty tuna', 'salmon', 'eel', 'unagi', 'grilled fish', 'fresh fish',
+      'דגים', 'דג', 'סושי', 'סשימי', 'דג נא', 'דגים נאים', 'ניגירי', 'טונה', 'סלמון', 'צלופח', 'דגים טריים', // he-only
+    ],
+  },
+  seafood: {
+    categories: ['food', 'cafe'],
+    words: [
+      'seafood', 'crab', 'shrimp', 'shrimp tempura', 'oyster', 'oysters', 'octopus', 'squid', 'takoyaki', 'scallop',
+      'shellfish', 'kaisendon', 'clam', 'clams',
+      'פירות ים', 'סרטן', 'שרימפס', 'צדפות', 'תמנון', 'קלמרי', 'דיונון', 'טאקויאקי', 'קאיסנדון', // he-only
     ],
   },
   raw_fish: {
@@ -126,11 +140,10 @@ export function hidden(card: Card, a: Answers): boolean {
   for (const n of a.never) {
     const rule = NEVER[n]
     if (rule.categories.includes(card.category) && has(card, rule.words)) return true
-    if (n === 'pork' && card.kosher === 'hard') return true
     if (n === 'alcohol' && card.category === 'nightlife') return true
   }
-  const eats = card.category === 'food' || card.category === 'cafe'
-  if (a.kosher === 'only' && eats && (!card.kosher || card.kosher === 'hard')) return true
+  // a place that is mostly pork or seafood is no use to someone who eats neither
+  if (card.kosher === 'hard' && EATING.includes(card.category) && (a.never.includes('pork') || a.never.includes('seafood'))) return true
   if (a.with.includes('baby') && card.baby_block?.trim()) return true
   if (a.budget && EATING.includes(card.category)) {
     const yen = pricePerPerson(card.price)
@@ -145,10 +158,24 @@ export function score(card: Card, a: Answers): number {
   const kind = typeOf(card)
   if (kind && a.interest[kind] === 'love') s += 2
   for (const l of a.loves) if (has(card, LOVES[l])) s += 2
-  if (a.kosher === 'prefer' && (card.kosher === 'friendly' || card.kosher === 'options')) s += 1
+  if ((card.kosher === 'friendly' || card.kosher === 'options') && (a.never.includes('pork') || a.never.includes('seafood'))) s += 1
   if (card.verdict === 'gem') s += 1
   if (card.verdict === 'trap' || card.verdict === 'overhyped') s -= 1
   return s
+}
+
+/**
+ * What they don't eat. Older saves: "fish" meant fish and seafood, and the kosher question (now gone) meant no pork
+ * or seafood, so those carry over as the new answers.
+ */
+export function neverOf(a: Partial<Answers>): Answers['never'] {
+  const never = new Set(a.never ?? [])
+  if (never.has('fish')) never.add('seafood')
+  if (a.kosher === 'prefer' || a.kosher === 'only') {
+    never.add('pork')
+    never.add('seafood')
+  }
+  return [...never]
 }
 
 const KINDS: InterestKind[] = ['food', 'cafe', 'sights', 'views', 'shopping', 'experience', 'nightlife']
@@ -164,8 +191,7 @@ export function answersOf(p: { answers: Partial<Answers> | null; completed_at: s
     with: a.with ?? [],
     cities: a.cities ?? [],
     interest: Object.fromEntries(KINDS.map((k) => [k, a.interest?.[k] ?? 'ok'])) as Answers['interest'],
-    never: a.never ?? [],
-    kosher: a.kosher ?? 'any',
+    never: neverOf(a),
     loves: a.loves ?? [],
     budget: a.budget ?? null,
     pace: a.pace ?? 'balanced',

@@ -2,7 +2,7 @@ import { PointerEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../supabase'
 import { AUDIENCES, CARD_STYLE, CITY_HE, KOSHER, VERDICTS, type Candidate, type Member, type Swipe, type Trip } from '../types'
-import { cityLabel, couplesOf, keepRanges, mutate, safeUrl, useMediaIndex, useTripHasBaby, useTripTable, withMedia } from '../lib'
+import { cityLabel, couplesOf, keepRanges, mutate, safeUrl, useMediaIndex, useTripAvoidsPorkSeafood, useTripHasBaby, useTripTable, withMedia } from '../lib'
 import AddPlace from './AddPlace'
 import { CardRatings, useRatings } from './Ratings'
 import { t } from '../i18n'
@@ -700,6 +700,7 @@ function Card({ c, top, likedBy, prior, onSwipe }: { c: Candidate; top: boolean;
 /** Everything a card says, as the full sheet shows it. */
 export function CardFull({ c, prior }: { c: Candidate; prior?: number }) {
   const hasBaby = useTripHasBaby(c.trip_id)
+  const avoidsPork = useTripAvoidsPorkSeafood(c.trip_id)
   return (
     <>
       <Tags c={c} />
@@ -718,9 +719,9 @@ export function CardFull({ c, prior }: { c: Candidate; prior?: number }) {
           )}
         </div>
       )}
-      {c.kosher_note && (
+      {avoidsPork && c.kosher_note && (
         <div className="fact">
-          <Label icon={UtensilsCrossed}>{t('כשרות (בלי חזיר ופירות ים)')}</Label>
+          <Label icon={UtensilsCrossed}>{t('חזיר ופירות ים')}</Label>
           <p dir="auto">{keepRanges(c.kosher_note)}</p>
         </div>
       )}
@@ -820,7 +821,8 @@ function FocusVotes({ c, swipes, members, userId }: { c: Candidate; swipes: Swip
 
 function Tags({ c }: { c: Candidate }) {
   const verdict = c.verdict ? VERDICTS[c.verdict] : null
-  const kosher = c.kosher ? KOSHER[c.kosher] : null
+  const avoidsPork = useTripAvoidsPorkSeafood(c.trip_id)
+  const kosher = avoidsPork && c.kosher ? KOSHER[c.kosher] : null
   return (
     <>
       <div className="row tags">

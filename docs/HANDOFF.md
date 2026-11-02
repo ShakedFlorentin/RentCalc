@@ -284,10 +284,14 @@ finger's speed, and likes/skips by where the flick projects, not where it was le
   sign-up goes through edge function `sign-up` (service role createUser, email confirmed: the built-in mail only
   reaches the team) and then signs in; TripPicker auto-joins the invited trip. Invited people answer the questionnaire
   (`profiles.answers`, shape in src/types.ts `Answers`) before the app; the four original accounts never see it unless
-  they open More › ההעדפות שלי. src/prefs.ts hides cards that don't fit (city, "not for us", never-eat, kosher only,
-  baby blocker, budget) from everything Discover shows and orders the rest by score. plan-trip reads `pace` per
+  they open More › ההעדפות שלי. src/prefs.ts hides cards that don't fit (city, "not for us", never-eat, pork/seafood-heavy
+  places for anyone who avoids them, baby blocker, budget) from everything Discover shows and orders the rest by score. plan-trip reads `pace` per
   person; a couple's day cap is the calmer half's (relaxed 360 / balanced 480 / packed 600 min, else 510).
-  With a baby, about half the library has a blocker and is hidden; kosher "only" hides food with no kosher info.
+  With a baby, about half the library has a blocker and is hidden; The word "kosher" is gone from the app: question 4 asks what they
+  eat (chicken, beef, pork, fish, seafood; unticked = saved in `never`), and old saves are folded in by `neverOf`
+  (old "fish" = fish + seafood, old kosher prefer/only = no pork or seafood). The card's `kosher` / `kosher_note`
+  columns keep their names; the badge and note ("pork and seafood") show only when `trip_avoids_pork_seafood(tid)`
+  is true (supabase/sql/2026-11-02-food.sql, NOT yet applied; hook `useTripAvoidsPorkSeafood`, same pattern as baby).
 - Ratings (`place_ratings`, on the shared library card; read by any signed-in user, write your own for a trip you're
   in): stars on visited places in Places, a summary in the swipe card.
 - Shared library (2026-10-31, migration added_places_join_library): every card people add (link, name, map) gets a

@@ -63,6 +63,46 @@ export function useTripHasBaby(tripId: string): boolean {
   return has
 }
 
+/**
+ * Whether to show the pork and seafood badge and note: false only when some member answered the profile questions and none who did avoids
+ * pork or seafood (an old "no fish" or kosher answer counts as avoiding). Profiles are private, so the database answers
+ * (trip_avoids_pork_seafood). The last answer is kept on the phone for offline; until the first one arrives (and when
+ * nobody has answered) they are shown.
+ */
+const foodAsks = new Map<string, Promise<boolean | null>>()
+export function useTripAvoidsPorkSeafood(tripId: string): boolean {
+  const key = 'food:' + tripId
+  const [avoids, setAvoids] = useState<boolean>(() => readCache<boolean>(key)?.data ?? true)
+  useEffect(() => {
+    let live = true
+    const load = () => {
+      let ask = foodAsks.get(tripId)
+      if (!ask) {
+        ask = Promise.resolve(supabase.rpc('trip_avoids_pork_seafood', { tid: tripId }))
+          .then(({ data, error }) => (error || typeof data !== 'boolean' ? null : data))
+          .catch(() => null)
+          .finally(() => setTimeout(() => foodAsks.delete(tripId), 1000))
+        foodAsks.set(tripId, ask)
+      }
+      ask.then((v) => {
+        if (v === null) return
+        writeCache(key, v)
+        if (live) setAvoids(v)
+      })
+    }
+    load()
+    const refresh = () => document.visibilityState === 'visible' && load()
+    document.addEventListener('visibilitychange', refresh)
+    window.addEventListener('online', load)
+    return () => {
+      live = false
+      document.removeEventListener('visibilitychange', refresh)
+      window.removeEventListener('online', load)
+    }
+  }, [tripId, key])
+  return avoids
+}
+
 /** Forget every saved copy (on sign-out, so the next person on this phone doesn't see the old data). */
 export function clearCache() {
   try {

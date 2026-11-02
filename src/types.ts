@@ -351,11 +351,11 @@ export const VERDICTS: Record<string, { label: string; tone: string }> = {
   trap: { label: t('מלכודת תיירים'), tone: 'bad' },
 }
 
-// no place in Japan is certified, so these describe eating without pork or seafood
+// how easy the place is for someone who eats no pork or seafood (the card's `kosher` column keeps its old name)
 export const KOSHER: Record<string, { label: string; tone: string }> = {
-  friendly: { label: t('קל לשומרי כשרות'), tone: 'good' },
-  options: { label: t('יש אפשרויות כשרות'), tone: 'meh' },
-  hard: { label: t('קשה לשומרי כשרות'), tone: 'bad' },
+  friendly: { label: t('רוב התפריט בלי חזיר ופירות ים'), tone: 'good' },
+  options: { label: t('יש מנות בלי חזיר ופירות ים'), tone: 'meh' },
+  hard: { label: t('בעיקר חזיר או פירות ים'), tone: 'bad' },
 }
 
 export const AUDIENCES: Record<string, string> = {
@@ -384,8 +384,10 @@ export type Answers = {
   with: ('partner' | 'baby' | 'kids' | 'friends' | 'solo')[]
   cities: ('tokyo' | 'kyoto' | 'osaka' | 'nara' | 'daytrip')[]
   interest: Record<InterestKind, 'love' | 'ok' | 'no'>
-  never: ('fish' | 'raw_fish' | 'beef' | 'pork' | 'alcohol')[]
-  kosher: 'any' | 'prefer' | 'only'
+  /** what they don't eat (question 4 asks what they do eat; 'raw_fish' and 'alcohol' only come from older saves) */
+  never: ('chicken' | 'beef' | 'pork' | 'fish' | 'seafood' | 'raw_fish' | 'alcohol')[]
+  /** only in older saves (the kosher question is gone); answersOf folds it into `never` */
+  kosher?: 'any' | 'prefer' | 'only'
   loves: ('ramen' | 'sushi' | 'yakiniku' | 'street' | 'sweets' | 'izakaya' | 'chef')[]
   /** most yen per person for a meal; null = doesn't matter */
   budget: 1500 | 5000 | 15000 | null
