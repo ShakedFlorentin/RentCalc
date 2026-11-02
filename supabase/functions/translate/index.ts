@@ -3,6 +3,7 @@
 import Anthropic from 'npm:@anthropic-ai/sdk@1.1.0'
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
 import { logCall } from './ai-log.ts'
+import { creditsOn, hold, refund, settle, tripIdOf } from './credits.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -59,7 +60,7 @@ function claimedUser(authorization: string) {
  * A translation waits on this, so the lookups run together in one round trip instead of one after another: the
  * token's claimed user starts them, and nothing is spent unless getUser() confirms that same user.
  */
-async function admit(req: Request, fn: string, json: (body: unknown, status?: number) => Response) {
+async function admit(req: Request, fn: string, json: (body: unknown, status?: number) => Response, credits?: { tripId: string | null; key: string }) {
   const authorization = req.headers.get('Authorization') ?? ''
   const claimed = claimedUser(authorization)
   if (!claimed) return json({ error: 'not signed in' }, 401)
@@ -78,9 +79,16 @@ async function admit(req: Request, fn: string, json: (body: unknown, status?: nu
   if (!auth.user || auth.user.id !== claimed) return json({ error: 'not signed in' }, 401)
   if (!trips) return json({ error: 'not a trip member' }, 403)
   if ((used ?? 0) >= DAILY_LIMIT) return json({ error: 'daily limit reached' }, 429)
+  // credits (behind CREDITS_ON): hold the price first; the caller settles or refunds it
+  let creditOp: string | null = null
+  if (credits && creditsOn()) {
+    const h = await hold(admin, claimed, credits.tripId, fn, credits.key)
+    if (!h.ok) return json(h.body, h.status)
+    creditOp = h.opId
+  }
   // recorded alongside the Claude call rather than before it; the caller awaits it with the call
   const record = admin.from('ai_usage').insert({ user_id: claimed, fn })
-  return { key, record, admin, userId: claimed }
+  return { key, record, admin, userId: claimed, creditOp }
 }
 
 Deno.serve(async (req) => {
@@ -90,7 +98,7 @@ Deno.serve(async (req) => {
 
   // check the request before admit(), so a malformed one doesn't use up the daily quota
   // from: the language spoken; lang: the app's language, which Japanese is translated into (Hebrew unless English)
-  const body = (await req.json().catch(() => null)) as { text?: unknown; from?: unknown; lang?: unknown } | null
+  const body = (await req.json().catch(() => null)) as { text?: unknown; from?: unknown; lang?: unknown; id?: unknown; trip_id?: unknown } | null
   const text = typeof body?.text === 'string' ? body.text.trim() : ''
   const from = body?.from === 'he' || body?.from === 'en' || body?.from === 'ja' ? body.from : null
   const home = from === 'en' || (from === 'ja' && body?.lang === 'en') ? 'English' : 'Hebrew'
@@ -98,7 +106,8 @@ Deno.serve(async (req) => {
   if (text.length > MAX_CHARS) return json({ error: 'text too long' }, 413)
 
   const t0 = performance.now()
-  const admitted = await admit(req, 'translate', json)
+  const opKey = typeof body?.id === 'string' && tripIdOf(body.id) ? body.id : crypto.randomUUID()
+  const admitted = await admit(req, 'translate', json, { tripId: tripIdOf(body?.trip_id), key: opKey })
   if (admitted instanceof Response) return admitted
   const t1 = performance.now()
 
@@ -116,12 +125,17 @@ Deno.serve(async (req) => {
     const t2 = performance.now()
     logCall(admitted.admin, { fn: 'translate', step: from, userId: admitted.userId, model: MODEL, usage: response.usage, ms: t2 - t1, stopReason: response.stop_reason })
     const reply = response.content.map((b) => (b.type === 'text' ? b.text : '')).join('')
-    if (response.stop_reason === 'refusal' || !reply.trim()) return json({ error: 'could not translate' }, 422)
+    if (response.stop_reason === 'refusal' || !reply.trim()) {
+      if (admitted.creditOp) await refund(admitted.admin, admitted.creditOp)
+      return json({ error: 'could not translate' }, 422)
+    }
+    if (admitted.creditOp) await settle(admitted.admin, admitted.creditOp)
     const { translation, romaji, back } = parse(reply)
     // where the time went, for the app's technical details
     const ms = { checks: Math.round(t1 - t0), claude: Math.round(t2 - t1) }
     return json({ translation, romaji: from !== 'ja' ? romaji : '', back: from !== 'ja' ? back : '', ms })
   } catch (error) {
+    if (admitted.creditOp) await refund(admitted.admin, admitted.creditOp)
     logCall(admitted.admin, { fn: 'translate', step: from, userId: admitted.userId, model: MODEL, ms: performance.now() - t1, error: String(error instanceof Error ? error.message : error) })
     if (error instanceof Anthropic.AuthenticationError) return json({ error: 'ANTHROPIC_API_KEY is missing or invalid' }, 500)
     if (error instanceof Anthropic.RateLimitError) return json({ error: 'busy, try again in a minute' }, 429)
