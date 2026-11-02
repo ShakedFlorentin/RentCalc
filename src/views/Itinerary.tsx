@@ -92,6 +92,13 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
   const warnings = new Map(summary?.warnings.map((w) => [w.item_id, warningText(w)]))
   // the planner's own items are keyed by place: what its final check found on them
   const issues = new Map(summary?.issues?.map((x) => [x.place_id, ISSUE[x.kind]]))
+  // places planned in another city than the day's: "in Tokyo" (only while the item is still on the day the planner put it)
+  const awayCity = (i?: PlanItem) => {
+    const a = i?.place_id ? summary?.away?.find((x) => x.place_id === i.place_id && x.day === i.day) : undefined
+    if (!a) return undefined
+    const c = cities.find((x) => x.id === a.city)
+    return isEn && c ? c.name_en : cityLabel(c?.name_he ?? CITY_HE[a.city] ?? a.city)
+  }
   // places you liked in today's city that didn't fit into any day: ready to swap in
   const dayCities = (info?.city ?? '').split(' / ').filter(Boolean)
   const spare = (summary?.unplanned ?? []).filter(
@@ -192,6 +199,7 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
                   kind={cardOf(placeOf(e.item))?.serves}
                   onOpen={(i) => setOpenId(i.id)}
                   onEdit={setEditItem}
+                  away={awayCity(e.item)}
                   warning={e.item && (warnings.get(e.item.id) ?? (e.item.auto && e.item.place_id ? issues.get(e.item.place_id) : undefined))}
                   onMissed={past && e.item?.place_id && !e.item.done ? missed : undefined}
                 />
@@ -263,9 +271,11 @@ function EntryRow(props: {
   onOpen: (i: PlanItem) => void
   onEdit: (i: PlanItem) => void
   warning?: string
+  /** the city this place is in, when the planner put it on a day the people sleep in another city */
+  away?: string
   onMissed?: (i: PlanItem) => void
 }) {
-  const { e, kind, onOpen, onEdit, warning, onMissed } = props
+  const { e, kind, onOpen, onEdit, warning, away, onMissed } = props
   const i = e.item
   return (
     <div className={'item card' + (i ? '' : ' plan-booking') + (e.done ? ' done' : '')}>
@@ -295,6 +305,11 @@ function EntryRow(props: {
             {kind && <> · {keepRanges(firstSentence(kind))}</>}
           </span>
           {e.who && <span className="who-pill">{t(e.who)}</span>}
+          {away && (
+            <span className="who-pill away-pill" title={t('בעיר אחרת מזו שישנים בה היום')}>
+              {t('ב{city}', { city: away })}
+            </span>
+          )}
         </div>
         {/* the planner's notes are one short line (and a baby line when it matters); people's own notes can run long */}
         {e.sub && <div className={'notes' + (i?.auto ? ' plan-auto-notes' : ' plan-notes')}>{keepRanges(e.sub)}</div>}

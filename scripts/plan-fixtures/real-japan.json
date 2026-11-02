@@ -1,0 +1,2869 @@
+{
+ "name": "real-japan",
+ "description": "Dry run of the live Japan trip (2026-11-02): place names as slugs, couples S (sleeps in Yokohama days 1-3, the only couple in Japan then) and A. There is no Yokohama place in the library (the four 'yokohama' units are Hakone / Fuji day trips), so days 1-3 can only hold Tokyo places: the Yokohama stay has no hotel booking, so its point is the city centre, and Tokyo is within NEAR_KM (30 km) of it. Those Tokyo places are allowed there (nothing of Yokohama's is eligible) but must be reported as away (in Tokyo); the Hakone day trip on day 2 is not.",
+ "days": [
+  {
+   "day": 1,
+   "date": "2026-12-12",
+   "weekday": 6,
+   "at": {
+    "S": {
+     "base": "yokohama",
+     "hotel": {"lat":35.444,"lng":139.638},
+     "start": 735,
+     "end": 1290
+    }
+   }
+  },
+  {
+   "day": 2,
+   "date": "2026-12-13",
+   "weekday": 0,
+   "at": {
+    "S": {
+     "base": "yokohama",
+     "hotel": {"lat":35.444,"lng":139.638},
+     "start": 570,
+     "end": 1290
+    }
+   }
+  },
+  {
+   "day": 3,
+   "date": "2026-12-14",
+   "weekday": 1,
+   "at": {
+    "S": {
+     "base": "yokohama",
+     "hotel": {"lat":35.444,"lng":139.638},
+     "start": 570,
+     "end": 1290
+    }
+   }
+  },
+  {
+   "day": 4,
+   "date": "2026-12-15",
+   "weekday": 2,
+   "at": {
+    "S": {
+     "base": "tokyo",
+     "hotel": {"lat":35.681,"lng":139.767},
+     "start": 840,
+     "end": 1290
+    },
+    "A": {
+     "base": "tokyo",
+     "hotel": {"lat":35.681,"lng":139.767},
+     "start": 800,
+     "end": 1290
+    }
+   }
+  },
+  {
+   "day": 5,
+   "date": "2026-12-16",
+   "weekday": 3,
+   "at": {
+    "S": {
+     "base": "tokyo",
+     "hotel": {"lat":35.681,"lng":139.767},
+     "start": 570,
+     "end": 1290
+    },
+    "A": {
+     "base": "tokyo",
+     "hotel": {"lat":35.681,"lng":139.767},
+     "start": 570,
+     "end": 1290
+    }
+   }
+  },
+  {
+   "day": 6,
+   "date": "2026-12-17",
+   "weekday": 4,
+   "at": {
+    "S": {
+     "base": "tokyo",
+     "hotel": {"lat":35.681,"lng":139.767},
+     "start": 570,
+     "end": 1290
+    },
+    "A": {
+     "base": "tokyo",
+     "hotel": {"lat":35.681,"lng":139.767},
+     "start": 570,
+     "end": 1290
+    }
+   }
+  },
+  {
+   "day": 7,
+   "date": "2026-12-18",
+   "weekday": 5,
+   "at": {
+    "S": {
+     "base": "tokyo",
+     "hotel": {"lat":35.681,"lng":139.767},
+     "start": 570,
+     "end": 1290
+    },
+    "A": {
+     "base": "tokyo",
+     "hotel": {"lat":35.681,"lng":139.767},
+     "start": 570,
+     "end": 1290
+    }
+   }
+  },
+  {
+   "day": 8,
+   "date": "2026-12-19",
+   "weekday": 6,
+   "at": {
+    "S": {
+     "base": "kyoto",
+     "hotel": {"lat":35.003,"lng":135.759},
+     "start": 840,
+     "end": 1290
+    },
+    "A": {
+     "base": "kyoto",
+     "hotel": {"lat":35.003,"lng":135.759},
+     "start": 840,
+     "end": 1290
+    }
+   }
+  },
+  {
+   "day": 9,
+   "date": "2026-12-20",
+   "weekday": 0,
+   "at": {
+    "S": {
+     "base": "kyoto",
+     "hotel": {"lat":35.003,"lng":135.759},
+     "start": 570,
+     "end": 1290
+    },
+    "A": {
+     "base": "kyoto",
+     "hotel": {"lat":35.003,"lng":135.759},
+     "start": 570,
+     "end": 1290
+    }
+   }
+  },
+  {
+   "day": 10,
+   "date": "2026-12-21",
+   "weekday": 1,
+   "at": {
+    "S": {
+     "base": "kyoto",
+     "hotel": {"lat":35.003,"lng":135.759},
+     "start": 570,
+     "end": 1290
+    },
+    "A": {
+     "base": "kyoto",
+     "hotel": {"lat":35.003,"lng":135.759},
+     "start": 570,
+     "end": 1290
+    }
+   }
+  },
+  {
+   "day": 11,
+   "date": "2026-12-22",
+   "weekday": 2,
+   "at": {
+    "S": {
+     "base": "kyoto",
+     "hotel": {"lat":35.003,"lng":135.759},
+     "start": 570,
+     "end": 1290
+    },
+    "A": {
+     "base": "kyoto",
+     "hotel": {"lat":35.003,"lng":135.759},
+     "start": 570,
+     "end": 1290
+    }
+   }
+  },
+  {
+   "day": 12,
+   "date": "2026-12-23",
+   "weekday": 3,
+   "at": {
+    "S": {
+     "base": "osaka",
+     "hotel": {"lat":34.686,"lng":135.502},
+     "start": 840,
+     "end": 1290
+    },
+    "A": {
+     "base": "osaka",
+     "hotel": {"lat":34.686,"lng":135.502},
+     "start": 840,
+     "end": 1290
+    }
+   }
+  },
+  {
+   "day": 13,
+   "date": "2026-12-24",
+   "weekday": 4,
+   "at": {
+    "S": {
+     "base": "osaka",
+     "hotel": {"lat":34.686,"lng":135.502},
+     "start": 570,
+     "end": 1290
+    },
+    "A": {
+     "base": "osaka",
+     "hotel": {"lat":34.686,"lng":135.502},
+     "start": 570,
+     "end": 1290
+    }
+   }
+  },
+  {
+   "day": 14,
+   "date": "2026-12-25",
+   "weekday": 5,
+   "at": {
+    "S": {
+     "base": "osaka",
+     "hotel": {"lat":34.686,"lng":135.502},
+     "start": 570,
+     "end": 1290
+    },
+    "A": {
+     "base": "osaka",
+     "hotel": {"lat":34.686,"lng":135.502},
+     "start": 570,
+     "end": 1290
+    }
+   }
+  },
+  {
+   "day": 15,
+   "date": "2026-12-26",
+   "weekday": 6,
+   "at": {
+    "S": {
+     "base": "tokyo",
+     "hotel": {"lat":35.681,"lng":139.767},
+     "start": 840,
+     "end": 1290
+    },
+    "A": {
+     "base": "tokyo",
+     "hotel": {"lat":35.681,"lng":139.767},
+     "start": 840,
+     "end": 1290
+    }
+   }
+  },
+  {
+   "day": 16,
+   "date": "2026-12-27",
+   "weekday": 0,
+   "at": {
+    "S": {
+     "base": "tokyo",
+     "hotel": {"lat":35.681,"lng":139.767},
+     "start": 570,
+     "end": 1290
+    },
+    "A": {
+     "base": "tokyo",
+     "hotel": {"lat":35.681,"lng":139.767},
+     "start": 570,
+     "end": 1290
+    }
+   }
+  },
+  {
+   "day": 17,
+   "date": "2026-12-28",
+   "weekday": 1,
+   "at": {
+    "S": {
+     "base": "tokyo",
+     "hotel": {"lat":35.681,"lng":139.767},
+     "start": 570,
+     "end": 570
+    },
+    "A": {
+     "base": "tokyo",
+     "hotel": {"lat":35.681,"lng":139.767},
+     "start": 570,
+     "end": 1290
+    }
+   }
+  },
+  {
+   "day": 18,
+   "date": "2026-12-29",
+   "weekday": 2,
+   "at": {
+    "A": {
+     "base": "tokyo",
+     "hotel": {"lat":35.681,"lng":139.767},
+     "start": 570,
+     "end": 1290
+    }
+   }
+  },
+  {
+   "day": 19,
+   "date": "2026-12-30",
+   "weekday": 3,
+   "at": {
+    "A": {
+     "base": "tokyo",
+     "hotel": {"lat":35.681,"lng":139.767},
+     "start": 570,
+     "end": 1290
+    }
+   }
+  },
+  {
+   "day": 20,
+   "date": "2026-12-31",
+   "weekday": 4,
+   "at": {
+    "A": {
+     "base": "tokyo",
+     "hotel": {"lat":35.681,"lng":139.767},
+     "start": 570,
+     "end": 1165
+    }
+   }
+  }
+ ],
+ "units": [
+  {
+   "id": "den-den-town-nipponbashi1",
+   "couples": [
+    "A"
+   ],
+   "base": "osaka",
+   "far": false,
+   "point": {"lat":34.659,"lng":135.506},
+   "mins": 120,
+   "category": "shopping",
+   "best": "morning",
+   "opens": 600,
+   "closes": 1200,
+   "closedWeekdays": [],
+   "closedDates": [
+    "2026-12-29",
+    "2026-12-30",
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 1.5,
+   "current": 14
+  },
+  {
+   "id": "gotemba-premium-outlets2",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "yokohama",
+   "far": true,
+   "point": {"lat":35.308,"lng":138.953},
+   "mins": 240,
+   "category": "shopping",
+   "best": "morning",
+   "opens": 600,
+   "closes": 1140,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": null
+  },
+  {
+   "id": "kobe-motomachi-and-sanno3",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "osaka",
+   "far": true,
+   "point": {"lat":34.689,"lng":135.187},
+   "mins": 240,
+   "category": "shopping",
+   "best": "morning",
+   "opens": 600,
+   "closes": 1170,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": null
+  },
+  {
+   "id": "lake-shoji-fuji-five-lak4",
+   "couples": [
+    "S"
+   ],
+   "base": "yokohama",
+   "far": true,
+   "point": {"lat":35.49,"lng":138.608},
+   "mins": 90,
+   "category": "sight",
+   "best": "evening",
+   "opens": 540,
+   "closes": 1020,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": null
+  },
+  {
+   "id": "owakudani-black-eggs-and5",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "yokohama",
+   "far": true,
+   "point": {"lat":35.244,"lng":139.02},
+   "mins": 90,
+   "category": "sight",
+   "best": "morning",
+   "opens": 540,
+   "closes": 975,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": null
+  },
+  {
+   "id": "himeji-castle6",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "osaka",
+   "far": true,
+   "point": {"lat":34.839,"lng":134.694},
+   "mins": 150,
+   "category": "sight",
+   "best": "morning",
+   "opens": 540,
+   "closes": 1020,
+   "closedWeekdays": [],
+   "closedDates": [
+    "2026-12-29",
+    "2026-12-30"
+   ],
+   "openDates": [],
+   "priority": 4,
+   "current": null
+  },
+  {
+   "id": "arima-onsen-kin-no-yu-pu7",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "osaka",
+   "far": true,
+   "point": {"lat":34.797,"lng":135.248},
+   "mins": 90,
+   "category": "experience",
+   "best": "morning",
+   "opens": 480,
+   "closes": 1320,
+   "closedWeekdays": [
+    2
+   ],
+   "closedDates": [
+    "2026-12-22"
+   ],
+   "openDates": [],
+   "priority": 4,
+   "current": null
+  },
+  {
+   "id": "kikukawa-shoten-castella8",
+   "couples": [
+    "S"
+   ],
+   "base": "yokohama",
+   "far": true,
+   "point": {"lat":35.233,"lng":139.104},
+   "mins": 15,
+   "category": "food",
+   "best": "morning",
+   "opens": 540,
+   "closes": 1080,
+   "closedWeekdays": [
+    4
+   ],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": 2
+  },
+  {
+   "id": "daimaru-kyoto9",
+   "couples": [
+    "S"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":35.003,"lng":135.762},
+   "mins": 90,
+   "category": "shopping",
+   "best": "afternoon",
+   "opens": 600,
+   "closes": 1200,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3.5,
+   "current": 10
+  },
+  {
+   "id": "g-itoya10",
+   "couples": [
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.672,"lng":139.765},
+   "mins": 90,
+   "category": "shopping",
+   "best": "any",
+   "opens": 600,
+   "closes": 1200,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4.5,
+   "current": 18
+  },
+  {
+   "id": "nakamura-tokichi-honten-11",
+   "couples": [
+    "S"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":34.89,"lng":135.802},
+   "mins": 90,
+   "category": "cafe",
+   "best": "morning",
+   "opens": 600,
+   "closes": 1050,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": 9
+  },
+  {
+   "id": "kiyomizu-dera-temple12",
+   "couples": [
+    "A"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":34.995,"lng":135.785},
+   "mins": 90,
+   "category": "sight",
+   "best": "morning",
+   "opens": 360,
+   "closes": 1080,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": 9
+  },
+  {
+   "id": "gokago-japanese-tea-spec13",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":34.996,"lng":135.782},
+   "mins": 40,
+   "category": "cafe",
+   "best": "afternoon",
+   "opens": 630,
+   "closes": 1080,
+   "closedWeekdays": [],
+   "closedDates": [
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 4,
+   "current": 11
+  },
+  {
+   "id": "muromachi-wakuden14",
+   "couples": [
+    "A"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":35.01,"lng":135.763},
+   "mins": 120,
+   "category": "food",
+   "best": "midday",
+   "opens": 720,
+   "closes": 1260,
+   "closedWeekdays": [
+    3
+   ],
+   "closedDates": [
+    "2026-12-25",
+    "2026-12-27",
+    "2026-12-28",
+    "2026-12-29",
+    "2026-12-30",
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 3.3,
+   "current": 10
+  },
+  {
+   "id": "menya-inoichi15",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":35.001,"lng":135.767},
+   "mins": 90,
+   "category": "food",
+   "best": "midday",
+   "opens": 660,
+   "closes": 1260,
+   "closedWeekdays": [
+    3
+   ],
+   "closedDates": [
+    "2026-12-30",
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 4,
+   "current": 8
+  },
+  {
+   "id": "kyo-kaiseki-kichisen16",
+   "couples": [
+    "A"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":35.004,"lng":135.776},
+   "mins": 120,
+   "category": "food",
+   "best": "evening",
+   "opens": 720,
+   "closes": 1260,
+   "closedWeekdays": [
+    3
+   ],
+   "closedDates": [
+    "2026-12-30",
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 3.3,
+   "current": 11
+  },
+  {
+   "id": "shoju-in-shojuin-temple17",
+   "couples": [
+    "A"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":34.85,"lng":135.921},
+   "mins": 45,
+   "category": "sight",
+   "best": "morning",
+   "opens": 570,
+   "closes": 930,
+   "closedWeekdays": [],
+   "closedDates": [
+    "2026-12-12",
+    "2026-12-13",
+    "2026-12-14",
+    "2026-12-15",
+    "2026-12-16",
+    "2026-12-17",
+    "2026-12-18",
+    "2026-12-19",
+    "2026-12-20",
+    "2026-12-21",
+    "2026-12-22",
+    "2026-12-23",
+    "2026-12-24",
+    "2026-12-25",
+    "2026-12-26",
+    "2026-12-27",
+    "2026-12-28",
+    "2026-12-29",
+    "2026-12-30",
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 4,
+   "current": null
+  },
+  {
+   "id": "gio-ji-temple-moss-garde18",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":35.023,"lng":135.667},
+   "mins": 30,
+   "category": "sight",
+   "best": "morning",
+   "opens": 540,
+   "closes": 1020,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 5,
+   "current": 10
+  },
+  {
+   "id": "matcha-roastery-uji19",
+   "couples": [
+    "S"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":34.89,"lng":135.804},
+   "mins": 60,
+   "category": "cafe",
+   "best": "midday",
+   "opens": 600,
+   "closes": 1050,
+   "closedWeekdays": [],
+   "closedDates": [
+    "2026-12-28",
+    "2026-12-29",
+    "2026-12-30",
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 4,
+   "current": 9
+  },
+  {
+   "id": "miyako-yasai-kamo20",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":35.002,"lng":135.761},
+   "mins": 75,
+   "category": "food",
+   "best": "midday",
+   "opens": 660,
+   "closes": 1260,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 5,
+   "current": 9
+  },
+  {
+   "id": "nishiki-market21",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":35.005,"lng":135.765},
+   "mins": 75,
+   "category": "food",
+   "best": "morning",
+   "opens": 540,
+   "closes": 1080,
+   "closedWeekdays": [],
+   "closedDates": [
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 4,
+   "current": 8
+  },
+  {
+   "id": "aritsugu22",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":35.005,"lng":135.764},
+   "mins": 30,
+   "category": "shopping",
+   "best": "morning",
+   "opens": 540,
+   "closes": 1050,
+   "closedWeekdays": [],
+   "closedDates": [
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 4,
+   "current": 11
+  },
+  {
+   "id": "higashimuki-and-mochiido23",
+   "couples": [
+    "A"
+   ],
+   "base": "osaka",
+   "far": true,
+   "point": {"lat":34.684,"lng":135.829},
+   "mins": 120,
+   "category": "shopping",
+   "best": "morning",
+   "opens": 600,
+   "closes": 1140,
+   "closedWeekdays": [
+    4
+   ],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "takeshita-street24",
+   "couples": [
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.67,"lng":139.704},
+   "mins": 60,
+   "category": "shopping",
+   "best": "morning",
+   "opens": 660,
+   "closes": 1200,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 1.5,
+   "current": 20
+  },
+  {
+   "id": "tominokoji-yamagishi25",
+   "couples": [
+    "A"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":35.007,"lng":135.765},
+   "mins": 150,
+   "category": "food",
+   "best": "evening",
+   "opens": 1080,
+   "closes": 1380,
+   "closedWeekdays": [
+    2
+   ],
+   "closedDates": [
+    "2026-12-23",
+    "2026-12-29",
+    "2026-12-30",
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 3.3,
+   "current": null
+  },
+  {
+   "id": "nanzenji-junsei26",
+   "couples": [
+    "A"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":35.011,"lng":135.79},
+   "mins": 90,
+   "category": "food",
+   "best": "midday",
+   "opens": 660,
+   "closes": 1260,
+   "closedWeekdays": [],
+   "closedDates": [
+    "2026-12-29",
+    "2026-12-30",
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "sake-bar-yoramu27",
+   "couples": [
+    "A"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":35.014,"lng":135.761},
+   "mins": 75,
+   "category": "nightlife",
+   "best": "night",
+   "opens": 1080,
+   "closes": 1440,
+   "closedWeekdays": [
+    0,
+    1,
+    2
+   ],
+   "closedDates": [
+    "2026-12-30",
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 3,
+   "current": 8
+  },
+  {
+   "id": "kyoto-botanical-gardens28",
+   "couples": [
+    "A"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":35.049,"lng":135.763},
+   "mins": 150,
+   "category": "experience",
+   "best": "morning",
+   "opens": 540,
+   "closes": 1020,
+   "closedWeekdays": [],
+   "closedDates": [
+    "2026-12-28",
+    "2026-12-29",
+    "2026-12-30",
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "kyoto-aquarium29",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":34.988,"lng":135.747},
+   "mins": 120,
+   "category": "sight",
+   "best": "morning",
+   "opens": 600,
+   "closes": 1020,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": 10
+  },
+  {
+   "id": "don-quijote-dotonbori-fe30",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "osaka",
+   "far": false,
+   "point": {"lat":34.686,"lng":135.502},
+   "mins": 30,
+   "category": "experience",
+   "best": "evening",
+   "opens": 660,
+   "closes": 1320,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": 13
+  },
+  {
+   "id": "kyoto-handicraft-center31",
+   "couples": [
+    "A"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":35.019,"lng":135.779},
+   "mins": 60,
+   "category": "shopping",
+   "best": "any",
+   "opens": 600,
+   "closes": 1140,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 1.5,
+   "current": 9
+  },
+  {
+   "id": "sennichimae-doguyasuji-s32",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "osaka",
+   "far": false,
+   "point": {"lat":34.664,"lng":135.503},
+   "mins": 60,
+   "category": "shopping",
+   "best": "morning",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 5,
+   "current": 13
+  },
+  {
+   "id": "hozenji-yokocho33",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "osaka",
+   "far": false,
+   "point": {"lat":34.668,"lng":135.503},
+   "mins": 45,
+   "category": "nightlife",
+   "best": "night",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": null
+  },
+  {
+   "id": "awomb-nishikiyamachi34",
+   "couples": [
+    "S"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":34.999,"lng":135.768},
+   "mins": 75,
+   "category": "food",
+   "best": "midday",
+   "opens": 690,
+   "closes": 1170,
+   "closedWeekdays": [],
+   "closedDates": [
+    "2026-12-30",
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 4,
+   "current": 11
+  },
+  {
+   "id": "nakatanidou35",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "osaka",
+   "far": true,
+   "point": {"lat":34.682,"lng":135.829},
+   "mins": 30,
+   "category": "food",
+   "best": "midday",
+   "opens": 600,
+   "closes": 1080,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4.3,
+   "current": null
+  },
+  {
+   "id": "ajinoya-dotonbori36",
+   "couples": [
+    "S"
+   ],
+   "base": "osaka",
+   "far": false,
+   "point": {"lat":34.668,"lng":135.501},
+   "mins": 60,
+   "category": "food",
+   "best": "afternoon",
+   "opens": 660,
+   "closes": 1320,
+   "closedWeekdays": [
+    1
+   ],
+   "closedDates": [
+    "2026-12-28"
+   ],
+   "openDates": [],
+   "priority": 4,
+   "current": 14
+  },
+  {
+   "id": "abeno-harukas-300-observ37",
+   "couples": [
+    "S"
+   ],
+   "base": "osaka",
+   "far": false,
+   "point": {"lat":34.646,"lng":135.513},
+   "mins": 90,
+   "category": "sight",
+   "best": "evening",
+   "opens": 540,
+   "closes": 1320,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": 12
+  },
+  {
+   "id": "tokyo-metropolitan-gover38",
+   "couples": [
+    "S"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.69,"lng":139.692},
+   "mins": 60,
+   "category": "sight",
+   "best": "evening",
+   "opens": 570,
+   "closes": 1320,
+   "closedWeekdays": [],
+   "closedDates": [
+    "2026-12-15",
+    "2026-12-29",
+    "2026-12-30",
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 3,
+   "current": 1
+  },
+  {
+   "id": "shinsaibashi-suji-shoppi39",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "osaka",
+   "far": false,
+   "point": {"lat":34.672,"lng":135.501},
+   "mins": 90,
+   "category": "shopping",
+   "best": "afternoon",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": null
+  },
+  {
+   "id": "jan-jan-yokocho40",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "osaka",
+   "far": false,
+   "point": {"lat":34.649,"lng":135.506},
+   "mins": 150,
+   "category": "nightlife",
+   "best": "afternoon",
+   "opens": 660,
+   "closes": 1350,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": null
+  },
+  {
+   "id": "tsutenkaku-tower41",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "osaka",
+   "far": false,
+   "point": {"lat":34.652,"lng":135.506},
+   "mins": 90,
+   "category": "sight",
+   "best": "evening",
+   "opens": 600,
+   "closes": 1200,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": null
+  },
+  {
+   "id": "philosopher-s-path-tetsu42",
+   "couples": [
+    "S"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":35.027,"lng":135.795},
+   "mins": 90,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": 8
+  },
+  {
+   "id": "tsukiji-outer-market-str43",
+   "couples": [
+    "S"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.665,"lng":139.77},
+   "mins": 90,
+   "category": "food",
+   "best": "morning",
+   "opens": 480,
+   "closes": 840,
+   "closedWeekdays": [
+    0,
+    3
+   ],
+   "closedDates": [
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 3,
+   "current": 3
+  },
+  {
+   "id": "mooken44",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "osaka",
+   "far": false,
+   "point": {"lat":34.686,"lng":135.502},
+   "mins": 90,
+   "category": "food",
+   "best": "morning",
+   "opens": 660,
+   "closes": 900,
+   "closedWeekdays": [
+    1,
+    2
+   ],
+   "closedDates": [
+    "2026-12-28",
+    "2026-12-29"
+   ],
+   "openDates": [],
+   "priority": 4,
+   "current": 13
+  },
+  {
+   "id": "chikichiki-tenma45",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "osaka",
+   "far": false,
+   "point": {"lat":34.706,"lng":135.512},
+   "mins": 90,
+   "category": "food",
+   "best": "evening",
+   "opens": 1020,
+   "closes": 1380,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 5.8,
+   "current": 14
+  },
+  {
+   "id": "tenma-backstreet-izakaya46",
+   "couples": [
+    "S"
+   ],
+   "base": "osaka",
+   "far": false,
+   "point": {"lat":34.696,"lng":135.513},
+   "mins": 90,
+   "category": "nightlife",
+   "best": "night",
+   "opens": 1020,
+   "closes": 1440,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": 12
+  },
+  {
+   "id": "hankyu-umeda-main-store-47",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "osaka",
+   "far": false,
+   "point": {"lat":34.705,"lng":135.499},
+   "mins": 120,
+   "category": "shopping",
+   "best": "morning",
+   "opens": 600,
+   "closes": 1200,
+   "closedWeekdays": [],
+   "closedDates": [
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 5,
+   "current": 12
+  },
+  {
+   "id": "umeda-sky-building-float48",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "osaka",
+   "far": false,
+   "point": {"lat":34.705,"lng":135.49},
+   "mins": 90,
+   "category": "sight",
+   "best": "evening",
+   "opens": 570,
+   "closes": 1350,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": 14
+  },
+  {
+   "id": "takiya49",
+   "couples": [
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.656,"lng":139.735},
+   "mins": 120,
+   "category": "food",
+   "best": "evening",
+   "opens": 1050,
+   "closes": 1380,
+   "closedWeekdays": [
+    0
+   ],
+   "closedDates": [
+    "2026-12-29",
+    "2026-12-30",
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 3.3,
+   "current": 4
+  },
+  {
+   "id": "tsuruhashi-korean-yakini50",
+   "couples": [
+    "S"
+   ],
+   "base": "osaka",
+   "far": false,
+   "point": {"lat":34.666,"lng":135.531},
+   "mins": 90,
+   "category": "food",
+   "best": "evening",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "ganso-kushikatsu-daruma-51",
+   "couples": [
+    "S"
+   ],
+   "base": "osaka",
+   "far": false,
+   "point": {"lat":34.652,"lng":135.506},
+   "mins": 60,
+   "category": "food",
+   "best": "evening",
+   "opens": 660,
+   "closes": 1350,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3.3,
+   "current": null
+  },
+  {
+   "id": "pizza-marumo52",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.681,"lng":139.767},
+   "mins": 90,
+   "category": "food",
+   "best": "midday",
+   "opens": 690,
+   "closes": 1380,
+   "closedWeekdays": [],
+   "closedDates": [
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 4.3,
+   "current": 16
+  },
+  {
+   "id": "gyu-kaku-kyoto-shijo-kaw53",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":35.003,"lng":135.759},
+   "mins": 90,
+   "category": "food",
+   "best": "evening",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": 10
+  },
+  {
+   "id": "garden-house-crafts-daik54",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.651,"lng":139.706},
+   "mins": 45,
+   "category": "cafe",
+   "best": "morning",
+   "opens": 510,
+   "closes": 1080,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4.3,
+   "current": 5
+  },
+  {
+   "id": "bar-trench55",
+   "couples": [
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.648,"lng":139.708},
+   "mins": 90,
+   "category": "nightlife",
+   "best": "night",
+   "opens": 1080,
+   "closes": 1440,
+   "closedWeekdays": [],
+   "closedDates": [
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 4,
+   "current": 17
+  },
+  {
+   "id": "afuri-ebisu56",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.648,"lng":139.711},
+   "mins": 60,
+   "category": "food",
+   "best": "night",
+   "opens": 660,
+   "closes": 1440,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": 5
+  },
+  {
+   "id": "muji-ginza-global-flagsh57",
+   "couples": [
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.674,"lng":139.765},
+   "mins": 90,
+   "category": "shopping",
+   "best": "any",
+   "opens": 660,
+   "closes": 1260,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3.5,
+   "current": 18
+  },
+  {
+   "id": "nezu-shrine58",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.72,"lng":139.761},
+   "mins": 45,
+   "category": "sight",
+   "best": "morning",
+   "opens": 360,
+   "closes": 1020,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 5,
+   "current": 16
+  },
+  {
+   "id": "hie-shrine59",
+   "couples": [
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.675,"lng":139.74},
+   "mins": 40,
+   "category": "sight",
+   "best": "morning",
+   "opens": 360,
+   "closes": 1020,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": 18
+  },
+  {
+   "id": "nakano-broadway60",
+   "couples": [
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.709,"lng":139.666},
+   "mins": 150,
+   "category": "shopping",
+   "best": "midday",
+   "opens": 600,
+   "closes": 1200,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": 20
+  },
+  {
+   "id": "koenji-pal-shopping-stre61",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.705,"lng":139.649},
+   "mins": 45,
+   "category": "shopping",
+   "best": "afternoon",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 5,
+   "current": 4
+  },
+  {
+   "id": "shimokitazawa-vintage-sh62",
+   "couples": [
+    "S"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.661,"lng":139.668},
+   "mins": 120,
+   "category": "shopping",
+   "best": "afternoon",
+   "opens": 720,
+   "closes": 1200,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4.5,
+   "current": 1
+  },
+  {
+   "id": "alpen-tokyo63",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.693,"lng":139.701},
+   "mins": 90,
+   "category": "shopping",
+   "best": "afternoon",
+   "opens": 660,
+   "closes": 1320,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": 7
+  },
+  {
+   "id": "akachan-honpo64",
+   "couples": [
+    "S"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.681,"lng":139.767},
+   "mins": 60,
+   "category": "shopping",
+   "best": "any",
+   "opens": 600,
+   "closes": 1200,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3.5,
+   "current": 3
+  },
+  {
+   "id": "kyoto-yakiniku-enen-pont65",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":35.003,"lng":135.759},
+   "mins": 90,
+   "category": "food",
+   "best": "evening",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": 9
+  },
+  {
+   "id": "tokyo-sea-life-park66",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.64,"lng":139.862},
+   "mins": 120,
+   "category": "sight",
+   "best": "morning",
+   "opens": 570,
+   "closes": 1020,
+   "closedWeekdays": [
+    3
+   ],
+   "closedDates": [
+    "2026-12-23",
+    "2026-12-24",
+    "2026-12-29",
+    "2026-12-30",
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 4,
+   "current": 6
+  },
+  {
+   "id": "shibuya-sky67",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.659,"lng":139.702},
+   "mins": 90,
+   "category": "sight",
+   "best": "evening",
+   "opens": 600,
+   "closes": 1350,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": 4
+  },
+  {
+   "id": "coredo-muromachi-and-nih68",
+   "couples": [
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.687,"lng":139.773},
+   "mins": 120,
+   "category": "shopping",
+   "best": "evening",
+   "opens": 660,
+   "closes": 1200,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4.5,
+   "current": 19
+  },
+  {
+   "id": "tempura-osaka69",
+   "couples": [
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.667,"lng":139.752},
+   "mins": 75,
+   "category": "food",
+   "best": "evening",
+   "opens": 675,
+   "closes": 1380,
+   "closedWeekdays": [
+    0
+   ],
+   "closedDates": [
+    "2026-12-19",
+    "2026-12-29",
+    "2026-12-30",
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 3.3,
+   "current": 15
+  },
+  {
+   "id": "mega-don-quijote-shibuya70",
+   "couples": [
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.66,"lng":139.698},
+   "mins": 90,
+   "category": "shopping",
+   "best": "morning",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3.5,
+   "current": 17
+  },
+  {
+   "id": "gotokuji-temple71",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.649,"lng":139.647},
+   "mins": 45,
+   "category": "sight",
+   "best": "morning",
+   "opens": 360,
+   "closes": 1020,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 5,
+   "current": 4
+  },
+  {
+   "id": "sumida-aquarium72",
+   "couples": [
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.71,"lng":139.81},
+   "mins": 90,
+   "category": "sight",
+   "best": "morning",
+   "opens": 600,
+   "closes": 1200,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": 19
+  },
+  {
+   "id": "roppongi-hills-christmas73",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.66,"lng":139.729},
+   "mins": 90,
+   "category": "shopping",
+   "best": "evening",
+   "opens": 660,
+   "closes": 1260,
+   "closedWeekdays": [],
+   "closedDates": [
+    "2026-12-12",
+    "2026-12-13",
+    "2026-12-14",
+    "2026-12-15",
+    "2026-12-16",
+    "2026-12-17",
+    "2026-12-18",
+    "2026-12-19",
+    "2026-12-20",
+    "2026-12-21",
+    "2026-12-22",
+    "2026-12-23",
+    "2026-12-24",
+    "2026-12-25",
+    "2026-12-26",
+    "2026-12-27",
+    "2026-12-28",
+    "2026-12-29",
+    "2026-12-30",
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 4,
+   "current": 5
+  },
+  {
+   "id": "hayakawa-hamonoten74",
+   "couples": [
+    "S"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":35.003,"lng":135.759},
+   "mins": 120,
+   "category": "shopping",
+   "best": "morning",
+   "opens": 540,
+   "closes": 1080,
+   "closedWeekdays": [
+    0,
+    6
+   ],
+   "closedDates": [
+    "2026-12-12",
+    "2026-12-13",
+    "2026-12-14",
+    "2026-12-15",
+    "2026-12-16",
+    "2026-12-17",
+    "2026-12-18",
+    "2026-12-19",
+    "2026-12-20",
+    "2026-12-21",
+    "2026-12-22",
+    "2026-12-23",
+    "2026-12-24",
+    "2026-12-25",
+    "2026-12-26",
+    "2026-12-27",
+    "2026-12-28",
+    "2026-12-29",
+    "2026-12-30",
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "tokyo-joypolis75",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.681,"lng":139.767},
+   "mins": 150,
+   "category": "experience",
+   "best": "morning",
+   "opens": 600,
+   "closes": 1200,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": 16
+  },
+  {
+   "id": "craftroom76",
+   "couples": [
+    "S"
+   ],
+   "base": "osaka",
+   "far": false,
+   "point": {"lat":34.699,"lng":135.496},
+   "mins": 75,
+   "category": "nightlife",
+   "best": "evening",
+   "opens": 960,
+   "closes": 1440,
+   "closedWeekdays": [
+    0
+   ],
+   "closedDates": [
+    "2026-12-30",
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 4,
+   "current": 13
+  },
+  {
+   "id": "uchitaka77",
+   "couples": [
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.736,"lng":139.848},
+   "mins": 60,
+   "category": "nightlife",
+   "best": "afternoon",
+   "opens": 840,
+   "closes": 1170,
+   "closedWeekdays": [
+    0
+   ],
+   "closedDates": [
+    "2026-12-28",
+    "2026-12-29",
+    "2026-12-30",
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 4.8,
+   "current": 15
+  },
+  {
+   "id": "tokyo-station-ramen-stre78",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.68,"lng":139.768},
+   "mins": 60,
+   "category": "food",
+   "best": "any",
+   "opens": 630,
+   "closes": 1380,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": 6
+  },
+  {
+   "id": "amerikamura-amemura79",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "osaka",
+   "far": false,
+   "point": {"lat":34.672,"lng":135.499},
+   "mins": 90,
+   "category": "shopping",
+   "best": "afternoon",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": null
+  },
+  {
+   "id": "kasagiya80",
+   "couples": [
+    "S"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":34.998,"lng":135.781},
+   "mins": 50,
+   "category": "cafe",
+   "best": "midday",
+   "opens": 600,
+   "closes": 1020,
+   "closedWeekdays": [
+    2
+   ],
+   "closedDates": [
+    "2026-12-29",
+    "2026-12-30",
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 4,
+   "current": 10
+  },
+  {
+   "id": "tokyo-toy-museum81",
+   "couples": [
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.69,"lng":139.718},
+   "mins": 120,
+   "category": "experience",
+   "best": "morning",
+   "opens": 600,
+   "closes": 960,
+   "closedWeekdays": [
+    4
+   ],
+   "closedDates": [
+    "2026-12-28",
+    "2026-12-29",
+    "2026-12-30",
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 3,
+   "current": 5
+  },
+  {
+   "id": "omoide-yokocho82",
+   "couples": [
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.693,"lng":139.7},
+   "mins": 90,
+   "category": "nightlife",
+   "best": "evening",
+   "opens": 1020,
+   "closes": 1440,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": 20
+  },
+  {
+   "id": "bar-benfiddich83",
+   "couples": [
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.689,"lng":139.697},
+   "mins": 90,
+   "category": "nightlife",
+   "best": "night",
+   "opens": 1080,
+   "closes": 1440,
+   "closedWeekdays": [
+    0
+   ],
+   "closedDates": [
+    "2026-12-29",
+    "2026-12-30",
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 3.3,
+   "current": 7
+  },
+  {
+   "id": "yanaka84",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.725,"lng":139.769},
+   "mins": 150,
+   "category": "sight",
+   "best": "morning",
+   "opens": 600,
+   "closes": 1080,
+   "closedWeekdays": [
+    1
+   ],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 5,
+   "current": 6
+  },
+  {
+   "id": "shinjuku-gyoen-national-85",
+   "couples": [
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.685,"lng":139.71},
+   "mins": 90,
+   "category": "sight",
+   "best": "morning",
+   "opens": 540,
+   "closes": 990,
+   "closedWeekdays": [
+    1
+   ],
+   "closedDates": [
+    "2026-12-12",
+    "2026-12-13",
+    "2026-12-14",
+    "2026-12-15",
+    "2026-12-16",
+    "2026-12-17",
+    "2026-12-18",
+    "2026-12-19",
+    "2026-12-20",
+    "2026-12-21",
+    "2026-12-22",
+    "2026-12-23",
+    "2026-12-24",
+    "2026-12-25",
+    "2026-12-26",
+    "2026-12-27",
+    "2026-12-28",
+    "2026-12-29",
+    "2026-12-30",
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 4,
+   "current": 7
+  },
+  {
+   "id": "teamlab-planets-tokyo86",
+   "couples": [
+    "S"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.649,"lng":139.79},
+   "mins": 90,
+   "category": "experience",
+   "best": "morning",
+   "opens": 480,
+   "closes": 1320,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": 3
+  },
+  {
+   "id": "golden-gai87",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.694,"lng":139.705},
+   "mins": 60,
+   "category": "nightlife",
+   "best": "night",
+   "opens": 1140,
+   "closes": 1440,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": 15
+  },
+  {
+   "id": "isetan-shinjuku-depachik88",
+   "couples": [
+    "S"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.692,"lng":139.705},
+   "mins": 90,
+   "category": "shopping",
+   "best": "morning",
+   "opens": 600,
+   "closes": 1200,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": 1
+  },
+  {
+   "id": "kodai-ji-temple-bamboo-g89",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":35.001,"lng":135.781},
+   "mins": 60,
+   "category": "sight",
+   "best": "afternoon",
+   "opens": 540,
+   "closes": 1050,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": 11
+  },
+  {
+   "id": "wakakusa-cafe90",
+   "couples": [
+    "S"
+   ],
+   "base": "osaka",
+   "far": true,
+   "point": {"lat":34.685,"lng":135.829},
+   "mins": 45,
+   "category": "cafe",
+   "best": "morning",
+   "opens": 540,
+   "closes": 1080,
+   "closedWeekdays": [
+    2
+   ],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "gyukatsu-motomura-namba-91",
+   "couples": [
+    "S"
+   ],
+   "base": "osaka",
+   "far": false,
+   "point": {"lat":34.667,"lng":135.501},
+   "mins": 60,
+   "category": "food",
+   "best": "afternoon",
+   "opens": 660,
+   "closes": 1320,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "tofuku-ji-temple92",
+   "couples": [
+    "A"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":34.976,"lng":135.774},
+   "mins": 90,
+   "category": "sight",
+   "best": "morning",
+   "opens": 540,
+   "closes": 960,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "tsuen-tea-tsuen93",
+   "couples": [
+    "S"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":34.893,"lng":135.807},
+   "mins": 60,
+   "category": "cafe",
+   "best": "midday",
+   "opens": 570,
+   "closes": 1050,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "stand-age94",
+   "couples": [
+    "A"
+   ],
+   "base": "osaka",
+   "far": false,
+   "point": {"lat":34.697,"lng":135.487},
+   "mins": 60,
+   "category": "nightlife",
+   "best": "evening",
+   "opens": 1020,
+   "closes": 1380,
+   "closedWeekdays": [
+    1
+   ],
+   "closedDates": [
+    "2026-12-28"
+   ],
+   "openDates": [],
+   "priority": 4.5,
+   "current": 12
+  },
+  {
+   "id": "ameyoko-shopping-street95",
+   "couples": [
+    "S"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.711,"lng":139.775},
+   "mins": 90,
+   "category": "shopping",
+   "best": "morning",
+   "opens": 600,
+   "closes": 1200,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3.5,
+   "current": 7
+  },
+  {
+   "id": "fushimi-inari-taisha96",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":34.968,"lng":135.779},
+   "mins": 120,
+   "category": "sight",
+   "best": "morning",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": 8
+  },
+  {
+   "id": "ties97",
+   "couples": [
+    "S"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.708,"lng":139.764},
+   "mins": 40,
+   "category": "cafe",
+   "best": "morning",
+   "opens": 720,
+   "closes": 1050,
+   "closedWeekdays": [
+    1,
+    2,
+    3
+   ],
+   "closedDates": [
+    "2026-12-28",
+    "2026-12-29",
+    "2026-12-30"
+   ],
+   "openDates": [],
+   "priority": 4.3,
+   "current": 7
+  },
+  {
+   "id": "fuunji98",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.687,"lng":139.697},
+   "mins": 75,
+   "category": "food",
+   "best": "afternoon",
+   "opens": 660,
+   "closes": 1260,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 5.3,
+   "current": 7
+  },
+  {
+   "id": "kyoto-railway-museum99",
+   "couples": [
+    "A"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":34.986,"lng":135.742},
+   "mins": 150,
+   "category": "sight",
+   "best": "morning",
+   "opens": 600,
+   "closes": 1020,
+   "closedWeekdays": [
+    3
+   ],
+   "closedDates": [
+    "2026-12-16",
+    "2026-12-30",
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "sanjokai-shopping-street100",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":35.009,"lng":135.744},
+   "mins": 60,
+   "category": "shopping",
+   "best": "midday",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 5.5,
+   "current": 11
+  },
+  {
+   "id": "panel-cafe-kyoto101",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":35.003,"lng":135.759},
+   "mins": 60,
+   "category": "cafe",
+   "best": "morning",
+   "opens": 600,
+   "closes": 1050,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 2.5,
+   "current": null
+  },
+  {
+   "id": "ichizawa-shinzaburo-hanp102",
+   "couples": [
+    "A"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":35.003,"lng":135.759},
+   "mins": 30,
+   "category": "shopping",
+   "best": "midday",
+   "opens": 540,
+   "closes": 1080,
+   "closedWeekdays": [
+    2
+   ],
+   "closedDates": [
+    "2026-12-30",
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 4.5,
+   "current": 9
+  },
+  {
+   "id": "marutake-tsukiji-outer-m103",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.665,"lng":139.77},
+   "mins": 20,
+   "category": "food",
+   "best": "morning",
+   "opens": 300,
+   "closes": 840,
+   "closedWeekdays": [
+    0,
+    3
+   ],
+   "closedDates": [
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 4,
+   "current": 6
+  },
+  {
+   "id": "hiraso-kakinohazushi-hir104",
+   "couples": [
+    "S"
+   ],
+   "base": "osaka",
+   "far": true,
+   "point": {"lat":34.68,"lng":135.83},
+   "mins": 60,
+   "category": "food",
+   "best": "any",
+   "opens": 600,
+   "closes": 1230,
+   "closedWeekdays": [
+    1
+   ],
+   "closedDates": [
+    "2026-12-28"
+   ],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "kitte-marunouchi105",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.68,"lng":139.765},
+   "mins": 90,
+   "category": "shopping",
+   "best": "afternoon",
+   "opens": 660,
+   "closes": 1260,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": 16
+  },
+  {
+   "id": "teramachi-and-shinkyogok106",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":35.006,"lng":135.769},
+   "mins": 90,
+   "category": "shopping",
+   "best": "morning",
+   "opens": 600,
+   "closes": 1200,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": 11
+  },
+  {
+   "id": "kappabashi-dougu-street107",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.714,"lng":139.789},
+   "mins": 90,
+   "category": "shopping",
+   "best": "morning",
+   "opens": 570,
+   "closes": 1020,
+   "closedWeekdays": [
+    0
+   ],
+   "closedDates": [
+    "2026-12-29",
+    "2026-12-30",
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 5.5,
+   "current": 5
+  },
+  {
+   "id": "umeda-sky-building-chris108",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "osaka",
+   "far": false,
+   "point": {"lat":34.705,"lng":135.49},
+   "mins": 60,
+   "category": "shopping",
+   "best": "evening",
+   "opens": 720,
+   "closes": 1320,
+   "closedWeekdays": [],
+   "closedDates": [
+    "2026-12-12",
+    "2026-12-13",
+    "2026-12-14",
+    "2026-12-15",
+    "2026-12-16",
+    "2026-12-17",
+    "2026-12-18",
+    "2026-12-19",
+    "2026-12-20",
+    "2026-12-21",
+    "2026-12-22",
+    "2026-12-23",
+    "2026-12-24",
+    "2026-12-25",
+    "2026-12-26",
+    "2026-12-27",
+    "2026-12-28",
+    "2026-12-29",
+    "2026-12-30",
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 4,
+   "current": 12
+  },
+  {
+   "id": "amanohashidate-view-land109",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "kyoto",
+   "far": true,
+   "point": {"lat":35.553,"lng":135.182},
+   "mins": 90,
+   "category": "sight",
+   "best": "morning",
+   "opens": 540,
+   "closes": 1020,
+   "closedWeekdays": [],
+   "closedDates": [
+    "2026-12-14",
+    "2026-12-15",
+    "2026-12-16",
+    "2026-12-17"
+   ],
+   "openDates": [],
+   "priority": 4,
+   "current": null
+  },
+  {
+   "id": "tenjinbashisuji-shopping110",
+   "couples": [
+    "S",
+    "A"
+   ],
+   "base": "osaka",
+   "far": false,
+   "point": {"lat":34.702,"lng":135.513},
+   "mins": 90,
+   "category": "shopping",
+   "best": "afternoon",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4.5,
+   "current": 14
+  },
+  {
+   "id": "ippodo-tea-kyoto-main-st111",
+   "couples": [
+    "A"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":35.012,"lng":135.766},
+   "mins": 60,
+   "category": "shopping",
+   "best": "any",
+   "opens": 600,
+   "closes": 1020,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4.5,
+   "current": 10
+  },
+  {
+   "id": "taiyo-no-tou-cafe112",
+   "couples": [
+    "S"
+   ],
+   "base": "osaka",
+   "far": false,
+   "point": {"lat":34.709,"lng":135.506},
+   "mins": 60,
+   "category": "cafe",
+   "best": "any",
+   "opens": 540,
+   "closes": 1320,
+   "closedWeekdays": [],
+   "closedDates": [
+    "2026-12-31"
+   ],
+   "openDates": [],
+   "priority": 3,
+   "current": 14
+  }
+ ],
+ "fixed": [
+  {
+   "day": 13,
+   "couples": [
+    "A",
+    "S"
+   ],
+   "point": null,
+   "start": null,
+   "mins": 180
+  }
+ ],
+ "expect": {
+  "stable": true,
+  "noIssueKinds": [
+   "hours"
+  ],
+  "away": {
+   "isetan-shinjuku-depachik88": "tokyo",
+   "shimokitazawa-vintage-sh62": "tokyo",
+   "tokyo-metropolitan-gover38": "tokyo",
+   "tsukiji-outer-market-str43": "tokyo",
+   "teamlab-planets-tokyo86": "tokyo",
+   "akachan-honpo64": "tokyo"
+  },
+  "awayMin": 6
+ }
+}

@@ -115,6 +115,8 @@
 .plan-meta { display: flex; align-items: center; min-width: 0; }
 .plan-kind { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .plan-meta .who-pill { flex: none; }
+/* a place in another city than the one you sleep in that day: quieter than the couple pill */
+.away-pill { background: color-mix(in srgb, var(--muted) 14%, transparent); color: var(--muted); }
 /* an opened plan item: its card, then what else is around it */
 .plan-back { align-self: flex-start; min-height: 36px; padding: 0; }
 .plan-near { margin-top: 20px; }
