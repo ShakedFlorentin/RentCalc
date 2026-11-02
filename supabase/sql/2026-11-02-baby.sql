@@ -1,5 +1,6 @@
 -- Baby details only for trips with a baby.
--- A trip "has a baby" when any member's profile answers include 'baby' (profiles.answers.with; 'kids' doesn't count).
+-- Baby details are hidden only when some member has answered (profiles.answers.with) and no answer includes 'baby'
+-- ('kids' doesn't count). Nobody answered = unknown = shown.
 -- profiles are readable only by their owner, so the app asks this function (members only). match_place stops copying
 -- the card's baby line into a new place's notes for trips without one. Existing places keep their notes.
 
@@ -13,12 +14,13 @@ begin
   if not exists (select 1 from public.members m where m.trip_id = tid and m.user_id = auth.uid()) then
     return false;
   end if;
-  return exists (
-    select 1 from public.members m
-      join public.profiles p on p.user_id = m.user_id
-     where m.trip_id = tid
-       and jsonb_typeof(p.answers -> 'with') = 'array'
-       and p.answers -> 'with' ? 'baby');
+  -- unknown (nobody has answered) counts as a baby; only answers without 'baby' hide it
+  return not exists (
+           select 1 from public.members m join public.profiles p on p.user_id = m.user_id
+            where m.trip_id = tid and jsonb_typeof(p.answers -> 'with') = 'array')
+      or exists (
+           select 1 from public.members m join public.profiles p on p.user_id = m.user_id
+            where m.trip_id = tid and jsonb_typeof(p.answers -> 'with') = 'array' and p.answers -> 'with' ? 'baby');
 end
 $function$;
 revoke all on function public.trip_has_baby(uuid) from public, anon;
@@ -89,8 +91,10 @@ begin
     values (tid, c.id, public.city_he(c.city), c.area, c.name,
             case when c.category in ('food', 'sight', 'shopping') then c.category
                  when c.category = 'cafe' then 'food' else 'other' end,
-            c.maps_url, nullif(concat_ws(E'\n', c.tip, case when exists (select 1 from public.members bm join public.profiles bp on bp.user_id = bm.user_id
-                              where bm.trip_id = tid and jsonb_typeof(bp.answers -> 'with') = 'array' and bp.answers -> 'with' ? 'baby')
+            c.maps_url, nullif(concat_ws(E'\n', c.tip, case when not exists (select 1 from public.members bm join public.profiles bp on bp.user_id = bm.user_id
+                                  where bm.trip_id = tid and jsonb_typeof(bp.answers -> 'with') = 'array')
+                      or exists (select 1 from public.members bm join public.profiles bp on bp.user_id = bm.user_id
+                                  where bm.trip_id = tid and jsonb_typeof(bp.answers -> 'with') = 'array' and bp.answers -> 'with' ? 'baby')
                  then 'עם התינוק: ' || c.baby_notes end), ''),
             c.lat, c.lng, c.verdict, c.audience, c.instagram_url, c.tiktok_url, c.photos, 'מאצ׳', target)
     on conflict do nothing

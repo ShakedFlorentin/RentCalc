@@ -25,14 +25,14 @@ export function writeCache(key: string, data: unknown) {
 }
 
 /**
- * Whether anyone in the trip travels with a baby (a member's profile answered "baby"; "kids" doesn't count). Profiles are
+ * Whether to show baby details: false only when some member answered the profile questions and none said "baby" ("kids" doesn't count). Profiles are
  * private, so the database answers (trip_has_baby). The last answer is kept on the phone for offline; until the first
- * one arrives there is no baby, so baby details stay hidden rather than flash.
+ * one arrives (and when nobody has answered) baby details are shown.
  */
 const babyAsks = new Map<string, Promise<boolean | null>>()
 export function useTripHasBaby(tripId: string): boolean {
   const key = 'baby:' + tripId
-  const [has, setHas] = useState<boolean>(() => readCache<boolean>(key)?.data ?? false)
+  const [has, setHas] = useState<boolean>(() => readCache<boolean>(key)?.data ?? true)
   useEffect(() => {
     let live = true
     const load = () => {
