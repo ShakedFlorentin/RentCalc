@@ -130,3 +130,8 @@
 /* the way between two stops in a row: a quiet line in the gap, not a card of its own */
 .plan-hop { display: flex; align-items: center; gap: 6px; margin: -4px 0; padding-inline-start: 18px; text-decoration: none; width: fit-content; }
 .plan-hop-go { opacity: 0.6; }
+
+/* where we sleep */
+.stays-open { margin-top: 8px; align-self: flex-start; gap: 6px; }
+.stay-row { display: block; width: 100%; text-align: start; font: inherit; color: inherit; cursor: pointer; }
+.stay-row > * + * { margin-top: 4px; }

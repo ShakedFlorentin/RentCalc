@@ -1,6 +1,25 @@
 // English for the UI strings of one group of files (see en.ts); key = the Hebrew exactly as passed to t().
 // This group: the plan (Itinerary, planUtils), Places (list, map, add place) and the Discover cards (Swipe).
 export const EN_B: Record<string, string> = {
+  // plan: where we sleep (stays)
+  'איפה ישנים': 'Where we sleep',
+  'הלינה לפי עיר תהיה זמינה אחרי עדכון השרת. עד אז התוכנית קוראת את הזמנות המלון.': 'Stays by city will be available after the server update. Until then the plan reads the hotel bookings.',
+  'עוד לא הוזנה לינה. הוסיפו עיר ולילות, והתוכנית תסתדר גם לפני שמזמינים מלון.': 'No stays yet. Add a city and nights, and the plan works even before a hotel is booked.',
+  'מאושר': 'Confirmed',
+  'מוצע': 'Proposed',
+  'נעול': 'Locked',
+  'נעול: התוכנית לא תזיז את הלינה הזו.': 'Locked: the planner will not move this stay.',
+  'אין הזמנה עדיין, השעות הן הערכה': 'No booking yet, times are estimates',
+  'הוספת לינה': 'Add a stay',
+  'עריכת לינה': 'Edit stay',
+  'לילה אחד': '1 night',
+  '{n} לילות': '{n} nights',
+  'אזור או שכונה (לא חובה)': 'Area or neighbourhood (optional)',
+  'סטטוס': 'Status',
+  'הזמנת מלון': 'Hotel booking',
+  'ללא הזמנה': 'No booking',
+  'הצ׳ק-אאוט חייב להיות אחרי הצ׳ק-אין.': 'Check-out must be after check-in.',
+  'השעות הן הערכה עד שמזמינים מלון.': 'Times are estimates until a hotel is booked.',
   // plan: day header, filters, rows
   'שלנו': 'Ours',
   'של כולם': "Everyone's",
