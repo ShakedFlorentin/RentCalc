@@ -2,6 +2,18 @@
 // This group: the shell (App, offline banner, sheets, tabs), Home, More, Login, trip picker, report, search, Say, Lists,
 // and the label maps in types.ts.
 export const EN_A: Record<string, string> = {
+  // wallet (settings) and the add-place price notice
+  'ארנק קרדיטים': 'Credit wallet',
+  'הקרדיטים שלי: {n}': 'My credits: {n}',
+  'קרדיטים של הטיול: {n}': 'Trip credits: {n}',
+  'חיפוש מקום חדש, קריאת הזמנה ותרגום עולים קרדיטים. קודם משתמשים בקרדיטים של הטיול, ואז באישיים. כל יום מתווספים קרדיטים חינם. מקום שכבר חיפשו בעבר, ותכנון המסלול, בחינם.':
+    'Looking up a new place, reading a booking and translating cost credits. The trip’s credits are used first, then yours. Free credits are added every day. A place already looked up before, and planning the route, are free.',
+  'להעביר לטיול': 'Give to the trip',
+  'העברה לטיול': 'Give to the trip',
+  'אין לך מספיק קרדיטים': 'You do not have enough credits',
+  'הועברו {n} קרדיטים לטיול': '{n} credits given to the trip',
+  'חיפוש מקום חדש עולה {n} קרדיטים, ויש לך {mine} אישיים ו־{trip} בקבוצה. כל יום מתווספים קרדיטים חינם, ובהגדרות הטיול (ארנק) אפשר להעביר קרדיטים לקבוצה. מקום שכבר חיפשו בעבר נשלף בחינם.':
+    'A new place lookup costs {n} credits; you have {mine} of your own and {trip} in the trip. Free credits are added every day, and in trip settings (wallet) you can give credits to the trip. A place already looked up before is free.',
   // shell: tab bar, top bar, loading and errors
   'בית': 'Home',
   'גילוי': 'Discover',

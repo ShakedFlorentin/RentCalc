@@ -5,6 +5,7 @@ import { zodOutputFormat } from 'npm:@anthropic-ai/sdk@1.1.0/helpers/zod'
 import { z } from 'npm:zod@4'
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
 import { logCall } from './ai-log.ts'
+import { creditsOn, hold, refund, settle, tripIdOf } from './credits.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -403,7 +404,7 @@ Deno.serve(async (req) => {
     new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
 
   // check the request before charging for it, so a malformed one doesn't use up the daily quota
-  const body = (await req.json().catch(() => null)) as { link?: unknown; text?: unknown; id?: unknown; stream?: unknown } | null
+  const body = (await req.json().catch(() => null)) as { link?: unknown; text?: unknown; id?: unknown; stream?: unknown; trip_id?: unknown } | null
   const live = body?.stream === true
   const link = typeof body?.link === 'string' ? body.link : undefined
   const text = typeof body?.text === 'string' ? body.text : undefined
@@ -453,8 +454,19 @@ Deno.serve(async (req) => {
     }
   }
 
+  // credits (behind CREDITS_ON): a cached answer above was free; a new search holds its price first and gives it back
+  // if it fails. The hold goes before the daily cap check so a refused search leaves no ai_usage row.
+  let creditOp: string | null = null
+  if (creditsOn()) {
+    const h = await hold(admin, userId, tripIdOf(body?.trip_id), 'suggest-place', id)
+    if (!h.ok) return json(h.body, h.status)
+    creditOp = h.opId
+  }
   const refused = await charge(admin, userId, 'suggest-place', json)
-  if (refused) return refused
+  if (refused) {
+    if (creditOp) await refund(admin, creditOp)
+    return refused
+  }
   await track({ status: 'running' })
 
   // the search runs on its own, so it finishes and saves its result even if the phone stops waiting
@@ -465,7 +477,11 @@ Deno.serve(async (req) => {
         .from('place_lookups')
         .update('places' in r ? { status: 'done', places: r.places, finished_at } : { status: 'failed', error: r.error, finished_at })
         .eq('id', id)
+      if (creditOp) await ('places' in r && r.places.length ? settle(admin, creditOp) : refund(admin, creditOp))
       return r
+    }, async (e) => {
+      if (creditOp) await refund(admin, creditOp)
+      throw e
     })
   if (live) {
     return streamed(async (send) => {

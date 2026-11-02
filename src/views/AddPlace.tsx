@@ -204,7 +204,7 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
     setErr('')
     setProgress(null)
     const id = crypto.randomUUID()
-    const body = link ? { link, id } : { text, id }
+    const body = link ? { link, id, trip_id: tripId } : { text, id, trip_id: tripId }
     stop.current?.abort()
     const live = (stop.current = new AbortController())
     // streamed when it can be, to show each step; otherwise (no session, no network) the plain call as before
@@ -221,6 +221,19 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
     const from = link || failedLink
     const found: Draft[] = (places ?? []).map((p) => ({ ...p, link: from }))
     if (!found.length) {
+      // out of credits (the function answers 402 with the price): say what it costs and where credits come from
+      if (error && status === 402) {
+        const need = (await (error as { context?: Response }).context?.clone().json().catch(() => null)) as
+          | { cost?: number; balance?: number; trip_balance?: number }
+          | null
+        return setErr(
+          t('חיפוש מקום חדש עולה {n} קרדיטים, ויש לך {mine} אישיים ו־{trip} בקבוצה. כל יום מתווספים קרדיטים חינם, ובהגדרות הטיול (ארנק) אפשר להעביר קרדיטים לקבוצה. מקום שכבר חיפשו בעבר נשלף בחינם.', {
+            n: need?.cost ?? 0,
+            mine: need?.balance ?? 0,
+            trip: need?.trip_balance ?? 0,
+          }),
+        )
+      }
       // out of lookups or offline: searching by name won't help either, so say why
       if (error && (status === 429 || status === 413 || !navigator.onLine)) return setErr(await aiError(error, ''))
       if (link) {

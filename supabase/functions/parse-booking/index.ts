@@ -5,6 +5,7 @@ import { zodOutputFormat } from 'npm:@anthropic-ai/sdk@1.1.0/helpers/zod'
 import { z } from 'npm:zod@4'
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
 import { logCall } from './ai-log.ts'
+import { creditsOn, hold, refund, settle, tripIdOf } from './credits.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -54,7 +55,7 @@ async function anthropicKey(admin: SupabaseClient) {
  * Lets a request spend the Claude key only for a signed-in member of a trip who is under today's cap, and records
  * the call. Returns the service client and the user, or the response to send instead.
  */
-async function admit(req: Request, fn: string, json: (body: unknown, status?: number) => Response) {
+async function admit(req: Request, fn: string, json: (body: unknown, status?: number) => Response, credits?: { tripId: string | null; key: string }) {
   // the anon key is also a valid JWT, so check there is a signed-in user behind the request
   const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
     global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } },
@@ -76,8 +77,15 @@ async function admit(req: Request, fn: string, json: (body: unknown, status?: nu
     .eq('fn', fn)
     .gte('at', since)
   if ((used ?? 0) >= DAILY_LIMIT) return json({ error: 'daily limit reached' }, 429)
+  // credits (behind CREDITS_ON): hold the price first; the caller settles or refunds it
+  let creditOp: string | null = null
+  if (credits && creditsOn()) {
+    const h = await hold(admin, auth.user.id, credits.tripId, fn, credits.key)
+    if (!h.ok) return json(h.body, h.status)
+    creditOp = h.opId
+  }
   await admin.from('ai_usage').insert({ user_id: auth.user.id, fn })
-  return { admin, userId: auth.user.id }
+  return { admin, userId: auth.user.id, creditOp }
 }
 
 Deno.serve(async (req) => {
@@ -86,7 +94,7 @@ Deno.serve(async (req) => {
     new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
 
   // check the request before admit(), so a malformed one doesn't use up the daily quota
-  const body = (await req.json().catch(() => null)) as { text?: unknown; file?: { data?: unknown; media_type?: unknown } } | null
+  const body = (await req.json().catch(() => null)) as { text?: unknown; id?: unknown; trip_id?: unknown; file?: { data?: unknown; media_type?: unknown } } | null
   const text = typeof body?.text === 'string' ? body.text : undefined
   const file =
     body?.file && typeof body.file.data === 'string' && typeof body.file.media_type === 'string'
@@ -96,9 +104,10 @@ Deno.serve(async (req) => {
   if ((text?.length ?? 0) > 50_000) return json({ error: 'text too long' }, 413)
   if (file && file.data.length * 0.75 > MAX_BYTES) return json({ error: 'file too large' }, 413)
 
-  const admitted = await admit(req, 'parse-booking', json)
+  const key = typeof body?.id === 'string' && tripIdOf(body.id) ? body.id : crypto.randomUUID()
+  const admitted = await admit(req, 'parse-booking', json, { tripId: tripIdOf(body?.trip_id), key })
   if (admitted instanceof Response) return admitted
-  const { admin, userId } = admitted
+  const { admin, userId, creditOp } = admitted
   // what was read, so the log shows whether PDFs, screenshots or pasted text cost the most
   const step = file ? (file.media_type === 'application/pdf' ? 'pdf' : 'image') : 'text'
 
@@ -111,6 +120,7 @@ Deno.serve(async (req) => {
       source: { type: 'base64', media_type: file.media_type as 'image/jpeg', data: file.data },
     })
   } else if (file) {
+    if (creditOp) await refund(admin, creditOp)
     return json({ error: 'unsupported file type' }, 415)
   }
   content.push({ type: 'text', text: text?.trim() ? text : 'Extract the bookings from the attached document.' })
@@ -127,12 +137,15 @@ Deno.serve(async (req) => {
     })
     logCall(admin, { fn: 'parse-booking', step, userId, model: MODEL, usage: response.usage, ms: performance.now() - t, stopReason: response.stop_reason })
     if (response.stop_reason === 'refusal' || !response.parsed_output) {
+      if (creditOp) await refund(admin, creditOp)
       return json({ error: 'could not read this confirmation' }, 422)
     }
     // the reply is shown as a link, so only a real web address may come through
     const bookings = response.parsed_output.bookings.map((b) => ({ ...b, url: b.url && /^https?:\/\//i.test(b.url) ? b.url : null }))
+    if (creditOp) await settle(admin, creditOp)
     return json({ bookings })
   } catch (error) {
+    if (creditOp) await refund(admin, creditOp)
     logCall(admin, { fn: 'parse-booking', step, userId, model: MODEL, ms: performance.now() - t, error: String(error instanceof Error ? error.message : error) })
     if (error instanceof Anthropic.AuthenticationError) return json({ error: 'ANTHROPIC_API_KEY is missing or invalid' }, 500)
     if (error instanceof Anthropic.RateLimitError) return json({ error: 'busy, try again in a minute' }, 429)

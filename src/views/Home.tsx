@@ -555,6 +555,7 @@ function Settings(props: { trip: Trip; me: string; userId: string; onClose: () =
       <button className="primary" onClick={save}>
         {t('שמירה')}
       </button>
+      <CreditWallet tripId={props.trip.id} />
       <LangPicker />
       <ThemePicker />
       <button className="secondary" onClick={props.onReport}>
@@ -573,6 +574,51 @@ function Settings(props: { trip: Trip; me: string; userId: string; onClose: () =
         <Icon as={LogOutIcon} /> {t('התנתקות')}
       </button>
     </Sheet>
+  )
+}
+
+/**
+ * AI credits: the user's own and the trip's, and a way to give some to the trip. Shown only once the credits tables
+ * exist (my_credits answers); a new search costs credits, a repeat of one already done is free.
+ */
+function CreditWallet({ tripId }: { tripId: string }) {
+  const [w, setW] = useState<{ balance: number; trip_balance: number | null } | null>(null)
+  const [give, setGive] = useState(1)
+  const [msg, setMsg] = useState('')
+  const load = async () => {
+    const { data, error } = await supabase.rpc('my_credits', { p_trip: tripId })
+    setW(error || !data ? null : (data as { balance: number; trip_balance: number | null }))
+  }
+  useEffect(() => {
+    load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tripId])
+  if (!w) return null
+  const send = async () => {
+    setMsg('')
+    const { data, error } = await supabase.rpc('give_to_trip', { p_trip: tripId, p_amount: give })
+    if (error) setMsg(error.message)
+    else if (!(data as { ok?: boolean } | null)?.ok) setMsg(t('אין לך מספיק קרדיטים'))
+    else setMsg(t('הועברו {n} קרדיטים לטיול', { n: give }))
+    load()
+  }
+  return (
+    <section>
+      <h3>{t('ארנק קרדיטים')}</h3>
+      <p className="muted small">
+        {t('הקרדיטים שלי: {n}', { n: w.balance })} · {t('קרדיטים של הטיול: {n}', { n: w.trip_balance ?? 0 })}
+      </p>
+      <p className="muted small">
+        {t('חיפוש מקום חדש, קריאת הזמנה ותרגום עולים קרדיטים. קודם משתמשים בקרדיטים של הטיול, ואז באישיים. כל יום מתווספים קרדיטים חינם. מקום שכבר חיפשו בעבר, ותכנון המסלול, בחינם.')}
+      </p>
+      <Field label={t('להעביר לטיול')}>
+        <input type="number" min={1} max={Math.max(w.balance, 1)} value={give} onChange={(e) => setGive(Math.max(1, Math.floor(+e.target.value || 1)))} />
+      </Field>
+      <button className="secondary" disabled={w.balance < 1 || give > w.balance} onClick={send}>
+        {t('העברה לטיול')}
+      </button>
+      {msg && <p className="msg">{msg}</p>}
+    </section>
   )
 }
 
