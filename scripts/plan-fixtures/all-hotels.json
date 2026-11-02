@@ -1,0 +1,469 @@
+{
+ "name": "all-hotels",
+ "description": "Two couples, every night has a base: days 1-3 both in Tokyo, 4-6 A in Kyoto and B in Osaka, 7-8 both in Kyoto. o-kuromon is for both but A (Kyoto, 43 km) and B (Osaka) are never in one city or within NEAR_KM of it together, so it must stay unplanned (no_day).",
+ "days": [
+  {
+   "day": 1,
+   "date": "2026-11-02",
+   "weekday": 1,
+   "at": {
+    "A": {
+     "base": "tokyo",
+     "hotel": {"lat":35.69,"lng":139.7},
+     "start": 540,
+     "end": 1260
+    },
+    "B": {
+     "base": "tokyo",
+     "hotel": {"lat":35.69,"lng":139.7},
+     "start": 540,
+     "end": 1260
+    }
+   }
+  },
+  {
+   "day": 2,
+   "date": "2026-11-03",
+   "weekday": 2,
+   "at": {
+    "A": {
+     "base": "tokyo",
+     "hotel": {"lat":35.69,"lng":139.7},
+     "start": 540,
+     "end": 1260
+    },
+    "B": {
+     "base": "tokyo",
+     "hotel": {"lat":35.69,"lng":139.7},
+     "start": 540,
+     "end": 1260
+    }
+   }
+  },
+  {
+   "day": 3,
+   "date": "2026-11-04",
+   "weekday": 3,
+   "at": {
+    "A": {
+     "base": "tokyo",
+     "hotel": {"lat":35.69,"lng":139.7},
+     "start": 540,
+     "end": 1260
+    },
+    "B": {
+     "base": "tokyo",
+     "hotel": {"lat":35.69,"lng":139.7},
+     "start": 540,
+     "end": 1260
+    }
+   }
+  },
+  {
+   "day": 4,
+   "date": "2026-11-05",
+   "weekday": 4,
+   "at": {
+    "A": {
+     "base": "kyoto",
+     "hotel": {"lat":35.011,"lng":135.768},
+     "start": 540,
+     "end": 1260
+    },
+    "B": {
+     "base": "osaka",
+     "hotel": {"lat":34.702,"lng":135.495},
+     "start": 540,
+     "end": 1260
+    }
+   }
+  },
+  {
+   "day": 5,
+   "date": "2026-11-06",
+   "weekday": 5,
+   "at": {
+    "A": {
+     "base": "kyoto",
+     "hotel": {"lat":35.011,"lng":135.768},
+     "start": 540,
+     "end": 1260
+    },
+    "B": {
+     "base": "osaka",
+     "hotel": {"lat":34.702,"lng":135.495},
+     "start": 540,
+     "end": 1260
+    }
+   }
+  },
+  {
+   "day": 6,
+   "date": "2026-11-07",
+   "weekday": 6,
+   "at": {
+    "A": {
+     "base": "kyoto",
+     "hotel": {"lat":35.011,"lng":135.768},
+     "start": 540,
+     "end": 1260
+    },
+    "B": {
+     "base": "osaka",
+     "hotel": {"lat":34.702,"lng":135.495},
+     "start": 540,
+     "end": 1260
+    }
+   }
+  },
+  {
+   "day": 7,
+   "date": "2026-11-08",
+   "weekday": 0,
+   "at": {
+    "A": {
+     "base": "kyoto",
+     "hotel": {"lat":35.011,"lng":135.768},
+     "start": 540,
+     "end": 1260
+    },
+    "B": {
+     "base": "kyoto",
+     "hotel": {"lat":35.011,"lng":135.768},
+     "start": 540,
+     "end": 1260
+    }
+   }
+  },
+  {
+   "day": 8,
+   "date": "2026-11-09",
+   "weekday": 1,
+   "at": {
+    "A": {
+     "base": "kyoto",
+     "hotel": {"lat":35.011,"lng":135.768},
+     "start": 540,
+     "end": 720
+    },
+    "B": {
+     "base": "kyoto",
+     "hotel": {"lat":35.011,"lng":135.768},
+     "start": 540,
+     "end": 720
+    }
+   }
+  }
+ ],
+ "units": [
+  {
+   "id": "t-senso",
+   "couples": [
+    "A",
+    "B"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.7148,"lng":139.7967},
+   "mins": 120,
+   "category": "sight",
+   "best": "any",
+   "opens": 540,
+   "closes": 1020,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": null
+  },
+  {
+   "id": "t-meiji",
+   "couples": [
+    "A",
+    "B"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.6764,"lng":139.6993},
+   "mins": 90,
+   "category": "sight",
+   "best": "any",
+   "opens": 360,
+   "closes": 1080,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "t-tsukiji",
+   "couples": [
+    "A",
+    "B"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.6655,"lng":139.7707},
+   "mins": 90,
+   "category": "food",
+   "best": "morning",
+   "opens": 300,
+   "closes": 840,
+   "closedWeekdays": [
+    0,
+    3
+   ],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "t-teamlab",
+   "couples": [
+    "A",
+    "B"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.649,"lng":139.7894},
+   "mins": 150,
+   "category": "sight",
+   "best": "any",
+   "opens": 600,
+   "closes": 1260,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": null
+  },
+  {
+   "id": "t-akiba-A",
+   "couples": [
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.6984,"lng":139.7731},
+   "mins": 120,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "t-ueno-B",
+   "couples": [
+    "B"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.7141,"lng":139.7774},
+   "mins": 120,
+   "category": "sight",
+   "best": "any",
+   "opens": 540,
+   "closes": 1020,
+   "closedWeekdays": [
+    1
+   ],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "t-ginza-dinner",
+   "couples": [
+    "A",
+    "B"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.6717,"lng":139.764},
+   "mins": 75,
+   "category": "food",
+   "best": "evening",
+   "opens": 1050,
+   "closes": 1380,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "k-fushimi",
+   "couples": [
+    "A",
+    "B"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":34.9671,"lng":135.7727},
+   "mins": 120,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": null
+  },
+  {
+   "id": "k-kinkaku",
+   "couples": [
+    "A",
+    "B"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":35.0394,"lng":135.7292},
+   "mins": 60,
+   "category": "sight",
+   "best": "any",
+   "opens": 540,
+   "closes": 1020,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "k-nishiki",
+   "couples": [
+    "A",
+    "B"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":35.005,"lng":135.765},
+   "mins": 90,
+   "category": "food",
+   "best": "any",
+   "opens": 600,
+   "closes": 1080,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "k-arashi-A",
+   "couples": [
+    "A"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":35.0094,"lng":135.6761},
+   "mins": 180,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "k-kiyomizu-A",
+   "couples": [
+    "A"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":34.9949,"lng":135.785},
+   "mins": 90,
+   "category": "sight",
+   "best": "any",
+   "opens": 360,
+   "closes": 1080,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "o-doton-B",
+   "couples": [
+    "B"
+   ],
+   "base": "osaka",
+   "far": false,
+   "point": {"lat":34.6687,"lng":135.5013},
+   "mins": 120,
+   "category": "food",
+   "best": "evening",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "o-castle-B",
+   "couples": [
+    "B"
+   ],
+   "base": "osaka",
+   "far": false,
+   "point": {"lat":34.6873,"lng":135.5262},
+   "mins": 120,
+   "category": "sight",
+   "best": "any",
+   "opens": 540,
+   "closes": 1020,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "o-kuromon",
+   "couples": [
+    "A",
+    "B"
+   ],
+   "base": "osaka",
+   "far": false,
+   "point": {"lat":34.6624,"lng":135.5064},
+   "mins": 90,
+   "category": "food",
+   "best": "any",
+   "opens": 540,
+   "closes": 900,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  }
+ ],
+ "fixed": [],
+ "expect": {
+  "noIssueKinds": [
+   "hours"
+  ],
+  "unplanned": {
+   "o-kuromon": "no_day"
+  },
+  "placedMin": 10
+ }
+}

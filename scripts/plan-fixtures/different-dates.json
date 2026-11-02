@@ -1,0 +1,342 @@
+{
+ "name": "different-dates",
+ "description": "A is in Tokyo days 1-5, B days 3-8. Engine rule (arrange: options): a unit is only offered days where EVERY one of its couples has presence, so shared places (e*) go on days 3-5 only; A-only places (a*) on days 1-5; B-only places (b*) on days 3-8. Nothing says shared places may go elsewhere.",
+ "days": [
+  {
+   "day": 1,
+   "date": "2026-11-02",
+   "weekday": 1,
+   "at": {
+    "A": {
+     "base": "tokyo",
+     "hotel": {"lat":35.69,"lng":139.7},
+     "start": 540,
+     "end": 1260
+    }
+   }
+  },
+  {
+   "day": 2,
+   "date": "2026-11-03",
+   "weekday": 2,
+   "at": {
+    "A": {
+     "base": "tokyo",
+     "hotel": {"lat":35.69,"lng":139.7},
+     "start": 540,
+     "end": 1260
+    }
+   }
+  },
+  {
+   "day": 3,
+   "date": "2026-11-04",
+   "weekday": 3,
+   "at": {
+    "A": {
+     "base": "tokyo",
+     "hotel": {"lat":35.69,"lng":139.7},
+     "start": 540,
+     "end": 1260
+    },
+    "B": {
+     "base": "tokyo",
+     "hotel": {"lat":35.69,"lng":139.7},
+     "start": 540,
+     "end": 1260
+    }
+   }
+  },
+  {
+   "day": 4,
+   "date": "2026-11-05",
+   "weekday": 4,
+   "at": {
+    "A": {
+     "base": "tokyo",
+     "hotel": {"lat":35.69,"lng":139.7},
+     "start": 540,
+     "end": 1260
+    },
+    "B": {
+     "base": "tokyo",
+     "hotel": {"lat":35.69,"lng":139.7},
+     "start": 540,
+     "end": 1260
+    }
+   }
+  },
+  {
+   "day": 5,
+   "date": "2026-11-06",
+   "weekday": 5,
+   "at": {
+    "A": {
+     "base": "tokyo",
+     "hotel": {"lat":35.69,"lng":139.7},
+     "start": 540,
+     "end": 1260
+    },
+    "B": {
+     "base": "tokyo",
+     "hotel": {"lat":35.69,"lng":139.7},
+     "start": 540,
+     "end": 1260
+    }
+   }
+  },
+  {
+   "day": 6,
+   "date": "2026-11-07",
+   "weekday": 6,
+   "at": {
+    "B": {
+     "base": "tokyo",
+     "hotel": {"lat":35.69,"lng":139.7},
+     "start": 540,
+     "end": 1260
+    }
+   }
+  },
+  {
+   "day": 7,
+   "date": "2026-11-08",
+   "weekday": 0,
+   "at": {
+    "B": {
+     "base": "tokyo",
+     "hotel": {"lat":35.69,"lng":139.7},
+     "start": 540,
+     "end": 1260
+    }
+   }
+  },
+  {
+   "day": 8,
+   "date": "2026-11-09",
+   "weekday": 1,
+   "at": {
+    "B": {
+     "base": "tokyo",
+     "hotel": {"lat":35.69,"lng":139.7},
+     "start": 540,
+     "end": 720
+    }
+   }
+  }
+ ],
+ "units": [
+  {
+   "id": "e1",
+   "couples": [
+    "A",
+    "B"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.7148,"lng":139.7967},
+   "mins": 90,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": null
+  },
+  {
+   "id": "e2",
+   "couples": [
+    "A",
+    "B"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.6764,"lng":139.6993},
+   "mins": 90,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "e3",
+   "couples": [
+    "A",
+    "B"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.649,"lng":139.7894},
+   "mins": 150,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "e4",
+   "couples": [
+    "A",
+    "B"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.7141,"lng":139.7774},
+   "mins": 90,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "a1",
+   "couples": [
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.6984,"lng":139.7731},
+   "mins": 90,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "a2",
+   "couples": [
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.6717,"lng":139.764},
+   "mins": 60,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "b1",
+   "couples": [
+    "B"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.6595,"lng":139.7005},
+   "mins": 90,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "b2",
+   "couples": [
+    "B"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.6655,"lng":139.7707},
+   "mins": 60,
+   "category": "food",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  }
+ ],
+ "fixed": [],
+ "expect": {
+  "onlyDays": {
+   "e1": [
+    3,
+    4,
+    5
+   ],
+   "e2": [
+    3,
+    4,
+    5
+   ],
+   "e3": [
+    3,
+    4,
+    5
+   ],
+   "e4": [
+    3,
+    4,
+    5
+   ],
+   "a1": [
+    1,
+    2,
+    3,
+    4,
+    5
+   ],
+   "a2": [
+    1,
+    2,
+    3,
+    4,
+    5
+   ],
+   "b1": [
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "b2": [
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ]
+  },
+  "placedMin": 6
+ }
+}

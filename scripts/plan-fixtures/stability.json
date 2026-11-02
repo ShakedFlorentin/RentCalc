@@ -1,0 +1,343 @@
+{
+ "name": "stability",
+ "description": "Plan once from scratch, then again with the first result as each unit's current day (what index.ts does through autoByPlace): the second run must move nothing and drop nothing.",
+ "days": [
+  {
+   "day": 1,
+   "date": "2026-11-02",
+   "weekday": 1,
+   "at": {
+    "A": {
+     "base": "tokyo",
+     "hotel": {"lat":35.69,"lng":139.7},
+     "start": 540,
+     "end": 1260
+    },
+    "B": {
+     "base": "tokyo",
+     "hotel": {"lat":35.69,"lng":139.7},
+     "start": 540,
+     "end": 1260
+    }
+   }
+  },
+  {
+   "day": 2,
+   "date": "2026-11-03",
+   "weekday": 2,
+   "at": {
+    "A": {
+     "base": "tokyo",
+     "hotel": {"lat":35.69,"lng":139.7},
+     "start": 540,
+     "end": 1260
+    },
+    "B": {
+     "base": "tokyo",
+     "hotel": {"lat":35.69,"lng":139.7},
+     "start": 540,
+     "end": 1260
+    }
+   }
+  },
+  {
+   "day": 3,
+   "date": "2026-11-04",
+   "weekday": 3,
+   "at": {
+    "A": {
+     "base": "tokyo",
+     "hotel": {"lat":35.69,"lng":139.7},
+     "start": 540,
+     "end": 1260
+    },
+    "B": {
+     "base": "tokyo",
+     "hotel": {"lat":35.69,"lng":139.7},
+     "start": 540,
+     "end": 1260
+    }
+   }
+  },
+  {
+   "day": 4,
+   "date": "2026-11-05",
+   "weekday": 4,
+   "at": {
+    "A": {
+     "base": "kyoto",
+     "hotel": {"lat":35.011,"lng":135.768},
+     "start": 540,
+     "end": 1260
+    },
+    "B": {
+     "base": "kyoto",
+     "hotel": {"lat":35.011,"lng":135.768},
+     "start": 540,
+     "end": 1260
+    }
+   }
+  },
+  {
+   "day": 5,
+   "date": "2026-11-06",
+   "weekday": 5,
+   "at": {
+    "A": {
+     "base": "kyoto",
+     "hotel": {"lat":35.011,"lng":135.768},
+     "start": 540,
+     "end": 1260
+    },
+    "B": {
+     "base": "kyoto",
+     "hotel": {"lat":35.011,"lng":135.768},
+     "start": 540,
+     "end": 1260
+    }
+   }
+  },
+  {
+   "day": 6,
+   "date": "2026-11-07",
+   "weekday": 6,
+   "at": {
+    "A": {
+     "base": "kyoto",
+     "hotel": {"lat":35.011,"lng":135.768},
+     "start": 540,
+     "end": 720
+    },
+    "B": {
+     "base": "kyoto",
+     "hotel": {"lat":35.011,"lng":135.768},
+     "start": 540,
+     "end": 720
+    }
+   }
+  }
+ ],
+ "units": [
+  {
+   "id": "s1",
+   "couples": [
+    "A",
+    "B"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.7148,"lng":139.7967},
+   "mins": 120,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": null
+  },
+  {
+   "id": "s2",
+   "couples": [
+    "A",
+    "B"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.6764,"lng":139.6993},
+   "mins": 90,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "s3",
+   "couples": [
+    "A",
+    "B"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.649,"lng":139.7894},
+   "mins": 150,
+   "category": "sight",
+   "best": "any",
+   "opens": 600,
+   "closes": 1260,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "s4",
+   "couples": [
+    "A",
+    "B"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.6655,"lng":139.7707},
+   "mins": 60,
+   "category": "food",
+   "best": "morning",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "s5",
+   "couples": [
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.6984,"lng":139.7731},
+   "mins": 90,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "s6",
+   "couples": [
+    "B"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {"lat":35.7141,"lng":139.7774},
+   "mins": 90,
+   "category": "sight",
+   "best": "any",
+   "opens": 540,
+   "closes": 1020,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "s7",
+   "couples": [
+    "A",
+    "B"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":34.9671,"lng":135.7727},
+   "mins": 120,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": null
+  },
+  {
+   "id": "s8",
+   "couples": [
+    "A",
+    "B"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":35.0394,"lng":135.7292},
+   "mins": 60,
+   "category": "sight",
+   "best": "any",
+   "opens": 540,
+   "closes": 1020,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "s9",
+   "couples": [
+    "A",
+    "B"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":35.005,"lng":135.765},
+   "mins": 90,
+   "category": "food",
+   "best": "any",
+   "opens": 600,
+   "closes": 1080,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "s10",
+   "couples": [
+    "A"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":35.0094,"lng":135.6761},
+   "mins": 180,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  },
+  {
+   "id": "s11",
+   "couples": [
+    "B"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {"lat":34.9949,"lng":135.785},
+   "mins": 90,
+   "category": "sight",
+   "best": "any",
+   "opens": 360,
+   "closes": 1080,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 3,
+   "current": null
+  }
+ ],
+ "fixed": [],
+ "expect": {
+  "stable": true,
+  "placedMin": 8
+ }
+}
