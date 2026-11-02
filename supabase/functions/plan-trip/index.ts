@@ -12,7 +12,7 @@ const cors = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-plan-token',
 }
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-const MEDIA_URL = 'https://shakedflorentin.github.io/RentCalc/media.json'
+const MEDIA_URL = 'https://shakedflorentin.github.io/trip-planner/media.json'
 const LEASE_MS = 60_000
 
 const BASE_POINT: Record<string, Point> = {

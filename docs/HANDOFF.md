@@ -1,6 +1,6 @@
 # Japan trip app — handoff (2026-10-26)
 
-Live: https://shakedflorentin.github.io/RentCalc/ · branch `japan-trip`, deployed by fast-forwarding `main`
+Live: https://shakedflorentin.github.io/trip-planner/ · branch `japan-trip`, deployed by fast-forwarding `main`
 (`git push origin japan-trip:main`; GitHub Pages builds on push). Supabase project `wbofjfwbdewgnwjmcpnv`.
 
 ## Travel between plan stops (2026-11-02)

@@ -143,7 +143,7 @@ create trigger bookings_replan after insert or update on public.bookings
 -- view cards_without_facts (backend only) lists the cards still planned from their kind alone.
 -- Filling them: research → JSON array like data/place-facts-2026-10.json, push it, then:
 --   with src as (select * from jsonb_to_recordset((select content::jsonb from extensions.http_get(
---     'https://raw.githubusercontent.com/ShakedFlorentin/RentCalc/japan-trip/data/<file>.json')))
+--     'https://raw.githubusercontent.com/ShakedFlorentin/trip-planner/japan-trip/data/<file>.json')))
 --     as x("table" text, id uuid, opens text, closes text, closed_weekdays int[], closed_dates date[], best_time text,
 --          visit_mins int, booking text, plan_line text, baby_block text, confidence text))
 --   update public.place_library l set ... from src s where s."table" = 'lib' and l.id = s.id;   -- and candidates:

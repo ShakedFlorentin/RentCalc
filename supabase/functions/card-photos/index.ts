@@ -257,7 +257,7 @@ const namesAll = (named: Iterable<string>, words: Iterable<string>) => {
   }
   return exact > 0 && (off === 0 || (off === 1 && exact >= 2))
 }
-const WIKI_UA = { 'User-Agent': 'JapanTripApp/1.0 (https://shakedflorentin.github.io/RentCalc/)' }
+const WIKI_UA = { 'User-Agent': 'JapanTripApp/1.0 (https://shakedflorentin.github.io/trip-planner/)' }
 
 /** The lead image of the Wikipedia article about the place, when the article's title is the place's name. */
 async function wikipedia(c: Card): Promise<Found[]> {
