@@ -411,7 +411,7 @@ function SwipeRow({ children, onEdit, onRemove }: { children: React.ReactNode; o
       openRow = () => settle(0)
     }
     if (reducedMotion()) return show(to)
-    stop.current = springTo(pos.current, to, v, { damping: 0.8, response: 0.35 }, (x) => show(x), () => (stop.current = null))
+    stop.current = springTo(pos.current, to, v, { damping: 0.62, response: 0.35 }, (x) => show(x), () => (stop.current = null))
   }
   useEffect(() => {
     if (!open) return
