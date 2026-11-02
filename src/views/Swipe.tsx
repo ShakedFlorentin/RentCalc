@@ -572,6 +572,13 @@ function Card({ c, top, likedBy, prior, onSwipe }: { c: Candidate; top: boolean;
     if (far || flick) fly(x > 0 ? 1 : -1, v)
     else settle(v)
   }
+  // the phone took the touch away (a scroll, a system gesture) while the finger was still down: that is not letting
+  // go, so it never votes; the card just goes back to the middle
+  const cancel = () => {
+    if (grab.current === null) return
+    grab.current = null
+    settle()
+  }
   const decide = (dir: 1 | -1) => {
     setMore(false)
     fly(dir)
@@ -589,7 +596,7 @@ function Card({ c, top, likedBy, prior, onSwipe }: { c: Candidate; top: boolean;
       onPointerDown={top ? down : undefined}
       onPointerMove={top ? move : undefined}
       onPointerUp={top ? up : undefined}
-      onPointerCancel={top ? up : undefined}
+      onPointerCancel={top ? cancel : undefined}
     >
       <div className="card-hero" style={{ background: style.bg }}>
         {cur ? (
