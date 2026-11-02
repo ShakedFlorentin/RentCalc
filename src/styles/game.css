@@ -68,3 +68,6 @@
 .veto-row .pill { flex: none; min-height: 44px; }
 .veto-row .veto-text { text-align: start; }
 .sheet-decide .round.chosen { box-shadow: 0 0 0 3px currentColor; }
+
+/* the "more places?" card at the end of a batch */
+.more-batch { display: grid; gap: 14px; justify-items: center; text-align: center; padding: 32px 20px; }
