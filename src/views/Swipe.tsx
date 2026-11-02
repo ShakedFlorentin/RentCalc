@@ -500,23 +500,38 @@ function Card({ c, top, likedBy, prior, onSwipe }: { c: Candidate; top: boolean;
   }
   // back to the middle; a little bounce only because a drag preceded it
   const settle = (v = 0) => animate(0, v, { damping: 0.8, response: 0.4 })
+  // off the screen at the speed the finger let go with, in a straight line (a slow drag or a button still leaves briskly)
   const fly = (dir: 1 | -1, v = 0) => {
     flying.current = true
     navigator.vibrate?.(12)
-    const off = dir * (window.innerWidth + 200)
-    animate(
-      off,
-      v,
-      { damping: 1, response: 0.3 },
-      async () => {
-        // the swipe didn't save (e.g. offline): bring the card back instead of leaving it off-screen on top
-        if (!(await onSwipe(dir === 1))) {
-          flying.current = false
-          settle()
-        }
-      },
-      (x) => Math.abs(x) > window.innerWidth * 0.8,
-    )
+    const leave = async () => {
+      // the swipe didn't save (e.g. offline): bring the card back instead of leaving it off-screen on top
+      if (!(await onSwipe(dir === 1))) {
+        flying.current = false
+        settle()
+      }
+    }
+    stop.current?.()
+    stop.current = null
+    const end = window.innerWidth + 100
+    if (reducedMotion()) {
+      show(dir * end)
+      void leave()
+      return
+    }
+    const speed = dir * Math.max(Math.abs(v) * (Math.sign(v) === dir ? 1 : 0), 1400)
+    let last = performance.now()
+    let id = requestAnimationFrame(function step(now) {
+      show(pos.current + (speed * Math.min(64, now - last)) / 1000)
+      last = now
+      if (Math.abs(pos.current) > end) {
+        stop.current = null
+        void leave()
+        return
+      }
+      id = requestAnimationFrame(step)
+    })
+    stop.current = () => cancelAnimationFrame(id)
   }
   const down = (e: PointerEvent) => {
     if (flying.current || (e.target as HTMLElement).closest('a,button')) return
