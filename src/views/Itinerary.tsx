@@ -1,13 +1,15 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { BedDouble, Check, ChevronLeft, ChevronRight, CircleAlert, Footprints, Heart, MapPin, Navigation, Pencil, PlaneLanding, Plus, Route, Share2, Undo2, Users } from 'lucide-react'
 import { supabase } from '../supabase'
-import { CATEGORIES, CITY_HE, TOGETHER, WHO_OPTIONS, type Booking, type Candidate, type DayInfo, type Member, type Place, type PlanSummary, type Trip } from '../types'
+import { CATEGORIES, CITY_HE, TOGETHER, whoOptions, type Booking, type Candidate, type DayInfo, type Member, type Place, type PlanSummary, type Trip } from '../types'
 import { cityLabel, couplesOf, currentDay, dayDate, keepRanges, dayOption, dayParts, fmtDayLong, mutate, replan, useMediaIndex, useTripTable, withMedia } from '../lib'
 import { isEn, t } from '../i18n'
 import { Empty, Field, Sheet, useRemembered } from '../ui'
 import { CARD_ICON, Icon } from '../icons'
 import { CardFull } from './Swipe'
 import { ShareSheet } from './Share'
+import StaysSheet from './Stays'
+import { useStays } from '../stays'
 import {
   ARRIVAL,
   dayEntries,
@@ -40,6 +42,8 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
   const [editItem, setEditItem] = useState<Partial<PlanItem> | null>(null)
   const [editDay, setEditDay] = useState(false)
   const [sharing, setSharing] = useState(false)
+  const [showStays, setShowStays] = useState(false)
+  const { stays, cities, available: staysAvailable } = useStays(trip.id)
   // the item whose sheet is open: what the place is and what else is around it
   const [openId, setOpenId] = useState<string | null>(null)
   const stripRef = useRef<HTMLDivElement>(null)
@@ -65,6 +69,8 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
   }, [day])
 
   const info = days.find((d) => d.day === day)
+  // the planner marks a day whose hotel is not booked yet: its times rest on a guess
+  const estimateDay = !!summary?.days?.find((d) => d.day === day)?.estimate
   // a day that has passed: a place nobody ticked can go back to the planner for a day still ahead
   const today = currentDay(trip.start_date, trip.num_days)
   const past = today != null && day < today
@@ -127,12 +133,23 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
             </>
           )}
         </div>
-        {hotelNights(nightLines(info?.hotel ?? null, bookings, date, couples).filter((l) => visible(l.who, mode, myCouple))).map((l) => (
+        {hotelNights(nightLines(info?.hotel ?? null, bookings, date, couples, stays, cities).filter((l) => visible(l.who, mode, myCouple))).map((l) => (
           <div key={l.text}>
             <Icon as={BedDouble} /> {l.who && mode === 'all' && <span className="muted small">{t(l.who)}: </span>}
             {l.text}
+            {l.proposed && <span className="muted small"> · {t('מוצע')}</span>}
           </div>
         ))}
+        {estimateDay && <div className="muted small">{t('השעות הן הערכה עד שמזמינים מלון.')}</div>}
+        <button
+          className="secondary stays-open"
+          onClick={(e) => {
+            e.stopPropagation()
+            setShowStays(true)
+          }}
+        >
+          <Icon as={BedDouble} /> {t('איפה ישנים')}
+        </button>
         {info?.notes && <div className="notes">{keepRanges(info.notes)}</div>}
       </section>
 
@@ -212,12 +229,25 @@ export default function Itinerary({ trip, day, setDay, members = [], userId }: P
       {editItem && (
         <ItemForm tripId={trip.id} start={trip.start_date} numDays={trip.num_days} couples={couples} item={editItem} onClose={() => setEditItem(null)} />
       )}
+      {showStays && (
+        <StaysSheet
+          tripId={trip.id}
+          date={date}
+          couples={couples}
+          stays={stays}
+          cities={cities}
+          bookings={bookings}
+          available={staysAvailable}
+          onClose={() => setShowStays(false)}
+        />
+      )}
       {editDay && (
         <DayForm
           tripId={trip.id}
           day={day}
           title={trip.start_date ? fmtDayLong(dayDate(trip.start_date, day)) : t('יום {day}', { day })}
           info={info}
+          couples={couples}
           onClose={() => setEditDay(false)}
         />
       )}
@@ -668,7 +698,7 @@ function ItemForm(props: { tripId: string; start: string | null; numDays: number
   )
 }
 
-function DayForm(props: { tripId: string; day: number; title: string; info?: DayInfo; onClose: () => void }) {
+function DayForm(props: { tripId: string; day: number; title: string; info?: DayInfo; couples: string[]; onClose: () => void }) {
   const [city, setCity] = useState(props.info?.city ?? '')
   const [hotel, setHotel] = useState(props.info?.hotel ?? '')
   const [notes, setNotes] = useState(props.info?.notes ?? '')
@@ -696,7 +726,7 @@ function DayForm(props: { tripId: string; day: number; title: string; info?: Day
       <Field label={t('מי ביפן')}>
         <select value={who} onChange={(e) => setWho(e.target.value)}>
           <option value="">{t(TOGETHER)}</option>
-          {[...new Set([...WHO_OPTIONS, ...(who ? [who] : [])])].map((w) => (
+          {[...new Set([...whoOptions(props.couples), ...(who ? [who] : [])])].map((w) => (
             <option key={w} value={w}>
               {t('רק {who}', { who: t(w) })}
             </option>

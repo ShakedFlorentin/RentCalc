@@ -42,6 +42,7 @@ import { Field, Sheet } from '../ui'
 import { cityPhoto } from '../cities'
 import { BOOKING_ICON, Icon } from '../icons'
 import type { MoreTab } from './More'
+import { useStays } from '../stays'
 import { dayEntries, fmtUntil, hotelFor, nightLines, stayInJapan, minutesOf, navUrl, ymd, type Entry, type PlanItem } from './planUtils'
 import ReportSheet from './Report'
 import ReviewCard from './Review'
@@ -68,6 +69,7 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
   const { rows: days } = useTripTable<DayInfo>('day_info', trip.id, 'day')
   const { rows: items } = useTripTable<PlanItem>('itinerary_items', trip.id, 'sort')
   const { rows: bookings } = useTripTable<Booking>('bookings', trip.id, 'starts_at')
+  const { stays, cities: stayCities } = useStays(trip.id)
   const { rows: todos } = useTripTable<ChecklistItem>('checklist_items', trip.id)
   const { rows: candidates } = useTripTable<Candidate>('candidates', trip.id)
   const { rows: swipes } = useTripTable<Swipe>('swipes', trip.id)
@@ -95,7 +97,7 @@ export default function Home({ trip, members, me, userId, onOpenDay, onOpenMore,
   const rest = entries.filter((e) => e !== next && e.item && !e.done)
   const todayBookings = entries.filter((e) => e.booking)
   const tonight = today
-    ? hotelFor(nightLines(todayInfo?.hotel ?? null, bookings, ymd(dayDate(trip.start_date, today)!), couples), myCouple)
+    ? hotelFor(nightLines(todayInfo?.hotel ?? null, bookings, ymd(dayDate(trip.start_date, today)!), couples, stays, stayCities), myCouple)
     : []
   const cities = runs(days, 'city')
   const destinations = Object.entries(

@@ -1,0 +1,157 @@
+{
+ "name": "stays-all-booked",
+ "description": "Every stay has a booking behind it: no day is an estimate, and the plan is the one the hotel bookings alone give.",
+ "presence": {
+  "startDate": "2026-12-01",
+  "numDays": 7,
+  "couples": [
+   "A",
+   "B"
+  ],
+  "dayWho": {},
+  "flights": [],
+  "capOf": {},
+  "sleeps": [
+   {
+    "party": null,
+    "checkIn": "2026-12-01",
+    "checkOut": "2026-12-04",
+    "city": "tokyo",
+    "point": {
+     "lat": 35.69,
+     "lng": 139.7
+    },
+    "label": "Hotel Tokyo",
+    "key": "Hotel Tokyo|",
+    "confirmed": true,
+    "booked": true
+   },
+   {
+    "party": null,
+    "checkIn": "2026-12-04",
+    "checkOut": "2026-12-07",
+    "city": "kyoto",
+    "point": {
+     "lat": 35.01,
+     "lng": 135.76
+    },
+    "label": "Hotel Kyoto",
+    "key": "Hotel Kyoto|",
+    "confirmed": true,
+    "booked": true
+   }
+  ]
+ },
+ "units": [
+  {
+   "id": "t1",
+   "couples": [
+    "A",
+    "B"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {
+    "lat": 35.69,
+    "lng": 139.7
+   },
+   "mins": 90,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": null
+  },
+  {
+   "id": "t2",
+   "couples": [
+    "A",
+    "B"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {
+    "lat": 35.69,
+    "lng": 139.7
+   },
+   "mins": 60,
+   "category": "food",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": null
+  },
+  {
+   "id": "k1",
+   "couples": [
+    "A",
+    "B"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {
+    "lat": 35.01,
+    "lng": 135.76
+   },
+   "mins": 90,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": null
+  },
+  {
+   "id": "k2",
+   "couples": [
+    "A",
+    "B"
+   ],
+   "base": "kyoto",
+   "far": false,
+   "point": {
+    "lat": 35.01,
+    "lng": 135.76
+   },
+   "mins": 120,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": null
+  }
+ ],
+ "fixed": [],
+ "expect": {
+  "placedMin": 4,
+  "estimateDays": [],
+  "presence": {
+   "3": {
+    "A": {
+     "base": "tokyo"
+    }
+   },
+   "5": {
+    "B": {
+     "base": "kyoto"
+    }
+   }
+  },
+  "stable": true
+ }
+}

@@ -19,7 +19,7 @@ const KEY = 'outbox'
 const WRITES = new Set(['POST', 'PATCH', 'DELETE'])
 // tables whose rows have a uuid `id`: a row added offline gets its id here, so a later edit or delete of it, made
 // before it reached the server, points at the same row
-const HAS_ID = new Set(['itinerary_items', 'places', 'expenses', 'checklist_items', 'bookings', 'essentials', 'candidates', 'reports'])
+const HAS_ID = new Set(['itinerary_items', 'places', 'expenses', 'checklist_items', 'bookings', 'essentials', 'candidates', 'reports', 'trip_stays'])
 // the columns that make a row unique, for laying an upsert over the rows on screen
 const ROW_KEY: Record<string, string[]> = { swipes: ['trip_id', 'candidate_id', 'user_id'], day_info: ['trip_id', 'day'] }
 

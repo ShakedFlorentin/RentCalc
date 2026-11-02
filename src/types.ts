@@ -27,6 +27,31 @@ export type DayInfo = {
 
 export const TOGETHER = 'כולם ביחד' // he-only: stored and compared; shown through t(TOGETHER)
 export const WHO_OPTIONS = ['שקד ומאור', 'אלמוג ושניר'] // he-only: couple names are stored as keys
+/** The parties a plan can be for: the couples in the trip (members.couple), else the founders' two. */
+export const whoOptions = (couples: string[]) => (couples.length ? couples : WHO_OPTIONS)
+
+/** A place a trip can sleep in (table cities): replaces the fixed list of Japanese cities. */
+export type City = { id: string; country: string; name_en: string; name_he: string; lat: number; lng: number; tz: string }
+
+/** Where a party sleeps for a run of nights (table trip_stays); the planner and the match read it before any hotel is booked. */
+export type TripStay = {
+  id: string
+  trip_id: string
+  /** a couple (members.couple), or null for everyone */
+  party: string | null
+  city: string
+  lat: number | null
+  lng: number | null
+  area: string | null
+  /** first night / the morning they leave (YYYY-MM-DD) */
+  check_in: string
+  check_out: string
+  status: 'proposed' | 'confirmed'
+  /** the planner never moves a locked stay */
+  locked: boolean
+  booking_id: string | null
+  source: 'manual' | 'booking' | 'auto'
+}
 
 export type ItineraryItem = {
   id: string
@@ -57,6 +82,8 @@ export type PlanSummary = {
   // there, outside opening hours, two meals too close
   issues?: { place_id: string; kind: 'overlap' | 'tight' | 'hours' | 'meals' }[]
   facts_pending: number
+  // per day the planner worked on: where each couple sleeps, and estimate:true when no hotel booking is behind it
+  days?: { day: number; estimate?: boolean; hotels: Record<string, string | null> }[]
 }
 
 /** Must-have info: hotel addresses in Japanese, phone numbers, insurance, documents. */

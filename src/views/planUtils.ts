@@ -9,7 +9,7 @@ import {
   TrainFront,
 } from 'lucide-react'
 import { CATEGORY_ICON, BOOKING_ICON, type LucideIcon } from '../icons'
-import { WHO_OPTIONS, type Booking, type ItineraryItem } from '../types'
+import { whoOptions, type Booking, type City, type ItineraryItem, type TripStay } from '../types'
 import { isEn, t } from '../i18n'
 
 /** itinerary_items.who is a new column (couple, or null for everyone); types.ts doesn't have it yet. */
@@ -166,7 +166,7 @@ export const stripMarker = (line: string) => line.replace(/^\p{Extended_Pictogra
 
 /** A day_info.hotel line like "שקד ומאור: Hotel X" (older ones carry a leading marker) belongs to that couple; any other line is for everyone. */
 export function hotelLines(hotel: string | null, couples: string[]) {
-  const names = couples.length ? couples : WHO_OPTIONS
+  const names = whoOptions(couples)
   return (hotel ?? '')
     .split('\n')
     .map((l) => stripMarker(l.trim()))
@@ -177,29 +177,55 @@ export function hotelLines(hotel: string | null, couples: string[]) {
     })
 }
 
+export type NightLine = { who: string | null; text: string; proposed?: boolean }
+
 /** Hotel bookings covering the night of this date (YYYY-MM-DD): checked in on or before it, out after it. */
-export function stayLines(bookings: Booking[], date: string) {
+export function stayLines(bookings: Booking[], date: string): NightLine[] {
   return bookings
     .filter((b) => b.kind === 'hotel' && b.starts_at && b.ends_at && b.starts_at.slice(0, 10) <= date && date < b.ends_at.slice(0, 10))
     .map((b) => ({ who: b.who, text: b.title }))
 }
 
+/** A city's name in the app's language, from the cities table (the id when it has no row). */
+export const cityName = (id: string, cities: City[]) => {
+  const c = cities.find((x) => x.id === id)
+  return c ? (isEn ? c.name_en : c.name_he) : id
+}
+
+/** What a stay is called: the linked hotel booking's title, else its area, else its city. */
+export function stayLabel(s: TripStay, bookings: Booking[], cities: City[]) {
+  const b = s.booking_id ? bookings.find((x) => x.id === s.booking_id) : undefined
+  return b?.title || s.area || cityName(s.city, cities)
+}
+
+/** Stays covering the night of this date, each as a line (one with no booking behind it and not confirmed is marked proposed). */
+export function staysOnNight(stays: TripStay[], bookings: Booking[], cities: City[], date: string): NightLine[] {
+  return stays
+    .filter((s) => s.check_in <= date && date < s.check_out)
+    .sort((a, b) => Number(b.status === 'confirmed') - Number(a.status === 'confirmed'))
+    .map((s) => ({ who: s.party, text: stayLabel(s, bookings, cities), ...(s.status === 'proposed' && !s.booking_id ? { proposed: true } : {}) }))
+}
+
 /**
- * A night's hotels, read straight from the bookings so an edit or a deletion shows at once, plus any hotel typed on
- * the day by hand that no booking already names.
+ * A night's hotels: the stays first (what the planner uses), then the hotel bookings no stay stands for yet (read
+ * straight from the bookings so an edit or a deletion shows at once), plus any hotel typed on the day by hand that
+ * nothing already names.
  */
-export function nightLines(hotel: string | null, bookings: Booking[], date: string, couples: string[]) {
-  const booked = stayLines(bookings, date)
-  const titles = new Set(booked.map((l) => l.text))
-  return [...booked, ...hotelLines(hotel, couples).filter((l) => !titles.has(l.text))]
+export function nightLines(hotel: string | null, bookings: Booking[], date: string, couples: string[], stays: TripStay[] = [], cities: City[] = []) {
+  const fromStays = staysOnNight(stays, bookings, cities, date)
+  const linked = new Set(stays.map((s) => s.booking_id).filter(Boolean))
+  const booked = stayLines(bookings.filter((b) => !linked.has(b.id)), date)
+  const lines = [...fromStays, ...booked]
+  const titles = new Set(lines.map((l) => l.text))
+  return [...lines, ...hotelLines(hotel, couples).filter((l) => !titles.has(l.text))]
 }
 
 /**
  * Each hotel once: both couples in the same hotel (two rooms, two bookings) is one line, named for a couple only when
  * it's that couple's alone.
  */
-export function hotelNights(lines: { who: string | null; text: string }[]) {
-  const out: { who: string | null; text: string }[] = []
+export function hotelNights(lines: NightLine[]) {
+  const out: NightLine[] = []
   for (const l of lines) {
     const same = out.find((o) => o.text === l.text)
     if (!same) out.push({ ...l })
@@ -209,7 +235,7 @@ export function hotelNights(lines: { who: string | null; text: string }[]) {
 }
 
 /** The hotel lines that apply to a couple: its own, or the shared ones when it has none. */
-export function hotelFor(lines: { who: string | null; text: string }[], mine: string | null) {
+export function hotelFor(lines: NightLine[], mine: string | null) {
   const own = lines.filter((l) => l.who && l.who === mine)
   return (own.length ? own : lines.filter((l) => !l.who)).map((l) => l.text)
 }

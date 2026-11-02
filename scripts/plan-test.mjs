@@ -12,10 +12,28 @@ const bundle = await build({
   entryPoints: [join(root, 'supabase/functions/plan-trip/plan.ts')],
   bundle: true, write: false, format: 'esm', platform: 'node', target: 'node18',
 })
+const PB = await build({
+  entryPoints: [join(root, 'supabase/functions/plan-trip/presence.ts')],
+  bundle: true, write: false, format: 'esm', platform: 'node', target: 'node18',
+})
+const P = await import('data:text/javascript;base64,' + Buffer.from(PB.outputFiles[0].text).toString('base64'))
 const E = await import('data:text/javascript;base64,' + Buffer.from(bundle.outputFiles[0].text).toString('base64'))
 
 // a fixture's days carry `at` as an object (as the dry run's `input` does); the engine wants a Map
-const load = (f) => ({ ...f, days: f.days.map((d) => ({ ...d, at: new Map(Object.entries(d.at)) })) })
+// a fixture with `presence` (stays, flights, day_info.who) gets its days from presence.ts, the way index.ts builds them
+const load = (f) => {
+  if (f.presence) {
+    const x = f.presence
+    const dateOf = (d) => new Date(Date.parse(x.startDate + 'T00:00:00Z') + (d - 1) * 86400000).toISOString().slice(0, 10)
+    const days = P.buildDays({
+      numDays: x.numDays, dateOf, sleeps: x.sleeps, couples: x.couples, flights: x.flights ?? [],
+      dayWho: new Map(Object.entries(x.dayWho ?? {}).map(([d, w]) => [Number(d), w])),
+      capOf: new Map(Object.entries(x.capOf ?? {})), past: () => false,
+    })
+    return { ...f, days }
+  }
+  return { ...f, days: f.days.map((d) => ({ ...d, at: new Map(Object.entries(d.at)) })) }
+}
 const NEAR_KM = 30 // mirrors plan.ts
 const rules = (f, out) => {
   const errs = []
@@ -63,6 +81,22 @@ const expectations = (f, out, run) => {
     for (const id of first) if (!days.includes(dayOfId(id))) errs.push(`${id}: expected on days ${days.join(',')}, is ${dayOfId(id) ?? 'unplanned'}`)
     if (firstIn.length < first.length)
       for (const id of then) if (days.includes(dayOfId(id))) errs.push(`${id}: on day ${dayOfId(id)} before the places for that base were placed`)
+  }
+  // presence: per day and couple, where they sleep (null = not there), the hours and whether the times are estimates
+  for (const [day, byCouple] of Object.entries(x.presence ?? {})) {
+    for (const [c, want] of Object.entries(byCouple)) {
+      const got = run.days.find((d) => d.day === Number(day))?.at.get(c)
+      if (want === null) { if (got) errs.push(`day ${day}: ${c} present, expected not`); continue }
+      if (!got) { errs.push(`day ${day}: ${c} missing`); continue }
+      if (want.base && got.base !== want.base) errs.push(`day ${day}: ${c} in ${got.base}, expected ${want.base}`)
+      if (want.start != null && got.start !== want.start) errs.push(`day ${day}: ${c} starts ${got.start}, expected ${want.start}`)
+      if (want.end != null && got.end !== want.end) errs.push(`day ${day}: ${c} ends ${got.end}, expected ${want.end}`)
+      if (!!got.estimate !== !!want.estimate) errs.push(`day ${day}: ${c} estimate ${!!got.estimate}, expected ${!!want.estimate}`)
+    }
+  }
+  if (x.estimateDays) {
+    const got = run.days.filter((d) => [...d.at.values()].some((p) => p.estimate)).map((d) => d.day)
+    if (got.join() !== x.estimateDays.join()) errs.push(`estimate days ${got.join(',') || '-'}, expected ${x.estimateDays.join(',') || '-'}`)
   }
   if (x.stable) {
     // second run: each unit's current is the day the first run gave it (index.ts: autoByPlace)
