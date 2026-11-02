@@ -582,12 +582,12 @@ function Settings(props: { trip: Trip; me: string; userId: string; onClose: () =
  * exist (my_credits answers); a new search costs credits, a repeat of one already done is free.
  */
 function CreditWallet({ tripId }: { tripId: string }) {
-  const [w, setW] = useState<{ balance: number; trip_balance: number | null } | null>(null)
+  const [w, setW] = useState<{ balance: number; free: number; paid: number; trip_balance: number | null } | null>(null)
   const [give, setGive] = useState(1)
   const [msg, setMsg] = useState('')
   const load = async () => {
     const { data, error } = await supabase.rpc('my_credits', { p_trip: tripId })
-    setW(error || !data ? null : (data as { balance: number; trip_balance: number | null }))
+    setW(error || !data ? null : (data as { balance: number; free: number; paid: number; trip_balance: number | null }))
   }
   useEffect(() => {
     load()
@@ -606,15 +606,16 @@ function CreditWallet({ tripId }: { tripId: string }) {
     <section>
       <h3>{t('ארנק קרדיטים')}</h3>
       <p className="muted small">
-        {t('הקרדיטים שלי: {n}', { n: w.balance })} · {t('קרדיטים של הטיול: {n}', { n: w.trip_balance ?? 0 })}
+        {t('הקרדיטים שלי: {n} (מתוכם {free} חינם להיום)', { n: w.balance, free: w.free })} · {t('קרדיטים של הטיול: {n}', { n: w.trip_balance ?? 0 })}
       </p>
       <p className="muted small">
         {t('חיפוש מקום חדש, קריאת הזמנה ותרגום עולים קרדיטים. קודם משתמשים בקרדיטים של הטיול, ואז באישיים. כל יום מתווספים קרדיטים חינם. מקום שכבר חיפשו בעבר, ותכנון המסלול, בחינם.')}
       </p>
+      <p className="muted small">{t('אפשר להעביר לטיול רק קרדיטים שלא ניתנו חינם: {n}.', { n: w.paid })}</p>
       <Field label={t('להעביר לטיול')}>
-        <input type="number" min={1} max={Math.max(w.balance, 1)} value={give} onChange={(e) => setGive(Math.max(1, Math.floor(+e.target.value || 1)))} />
+        <input type="number" min={1} max={Math.max(w.paid, 1)} value={give} onChange={(e) => setGive(Math.max(1, Math.floor(+e.target.value || 1)))} />
       </Field>
-      <button className="secondary" disabled={w.balance < 1 || give > w.balance} onClick={send}>
+      <button className="secondary" disabled={w.paid < 1 || give > w.paid} onClick={send}>
         {t('העברה לטיול')}
       </button>
       {msg && <p className="msg">{msg}</p>}

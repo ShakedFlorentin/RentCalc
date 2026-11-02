@@ -4,7 +4,8 @@
 export const EN_A: Record<string, string> = {
   // wallet (settings) and the add-place price notice
   'ארנק קרדיטים': 'Credit wallet',
-  'הקרדיטים שלי: {n}': 'My credits: {n}',
+  'הקרדיטים שלי: {n} (מתוכם {free} חינם להיום)': 'My credits: {n} ({free} of them free today)',
+  'אפשר להעביר לטיול רק קרדיטים שלא ניתנו חינם: {n}.': 'Only credits that were not free can be given to the trip: {n}.',
   'קרדיטים של הטיול: {n}': 'Trip credits: {n}',
   'חיפוש מקום חדש, קריאת הזמנה ותרגום עולים קרדיטים. קודם משתמשים בקרדיטים של הטיול, ואז באישיים. כל יום מתווספים קרדיטים חינם. מקום שכבר חיפשו בעבר, ותכנון המסלול, בחינם.':
     'Looking up a new place, reading a booking and translating cost credits. The trip’s credits are used first, then yours. Free credits are added every day. A place already looked up before, and planning the route, are free.',
