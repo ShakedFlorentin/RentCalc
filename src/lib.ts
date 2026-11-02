@@ -24,6 +24,45 @@ export function writeCache(key: string, data: unknown) {
   }
 }
 
+/**
+ * Whether anyone in the trip travels with a baby (a member's profile answered "baby"; "kids" doesn't count). Profiles are
+ * private, so the database answers (trip_has_baby). The last answer is kept on the phone for offline; until the first
+ * one arrives there is no baby, so baby details stay hidden rather than flash.
+ */
+const babyAsks = new Map<string, Promise<boolean | null>>()
+export function useTripHasBaby(tripId: string): boolean {
+  const key = 'baby:' + tripId
+  const [has, setHas] = useState<boolean>(() => readCache<boolean>(key)?.data ?? false)
+  useEffect(() => {
+    let live = true
+    const load = () => {
+      let ask = babyAsks.get(tripId)
+      if (!ask) {
+        ask = Promise.resolve(supabase.rpc('trip_has_baby', { tid: tripId }))
+          .then(({ data, error }) => (error || typeof data !== 'boolean' ? null : data))
+          .catch(() => null)
+          .finally(() => setTimeout(() => babyAsks.delete(tripId), 1000))
+        babyAsks.set(tripId, ask)
+      }
+      ask.then((v) => {
+        if (v === null) return
+        writeCache(key, v)
+        if (live) setHas(v)
+      })
+    }
+    load()
+    const refresh = () => document.visibilityState === 'visible' && load()
+    document.addEventListener('visibilitychange', refresh)
+    window.addEventListener('online', load)
+    return () => {
+      live = false
+      document.removeEventListener('visibilitychange', refresh)
+      window.removeEventListener('online', load)
+    }
+  }, [tripId, key])
+  return has
+}
+
 /** Forget every saved copy (on sign-out, so the next person on this phone doesn't see the old data). */
 export function clearCache() {
   try {

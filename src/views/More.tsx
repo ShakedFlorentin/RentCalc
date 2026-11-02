@@ -7,6 +7,7 @@ import Baby from './Baby'
 import Say from './Say'
 import Onboarding, { useProfile } from './Onboarding'
 import { answersOf } from '../prefs'
+import { useTripHasBaby } from '../lib'
 import { Icon, type LucideIcon } from '../icons'
 import { isEn, t } from '../i18n'
 import { Baby as BabyIcon, ChevronLeft, Languages, ListChecks, ShieldAlert, SlidersHorizontal, Wallet } from 'lucide-react'
@@ -23,9 +24,13 @@ export type MoreTab = (typeof MORE_TABS)[number]['id']
 type Props = { trip: Trip; members: Member[]; userId: string; sub: MoreTab; setSub: (s: MoreTab) => void }
 
 /** The fourth-row tools: shared expenses, checklists, emergency info, talking in Japanese and the baby corner. */
-export default function More({ trip, members, userId, sub, setSub }: Props) {
+export default function More({ trip, members, userId, sub: subProp, setSub }: Props) {
   const { profile, saved } = useProfile(userId)
   const [prefsOpen, setPrefsOpen] = useState(false)
+  const hasBaby = useTripHasBaby(trip.id)
+  // the baby corner is only for trips with a baby; a remembered 'baby' tab on another trip falls back to money
+  const tabs = MORE_TABS.filter((x) => x.id !== 'baby' || hasBaby)
+  const sub: MoreTab = subProp === 'baby' && !hasBaby ? 'money' : subProp
   // the tab pattern: one tab stop, arrows move between sections (in RTL the left arrow goes to the next one, in LTR the right)
   const arrows = (e: KeyboardEvent<HTMLDivElement>) => {
     const fwd = isEn ? 'ArrowRight' : 'ArrowLeft'
@@ -33,9 +38,9 @@ export default function More({ trip, members, userId, sub, setSub }: Props) {
     const step = { [fwd]: 1, [back]: -1, Home: -99, End: 99 }[e.key]
     if (!step) return
     e.preventDefault()
-    const i = Math.min(MORE_TABS.length - 1, Math.max(0, MORE_TABS.findIndex((t) => t.id === sub) + step))
-    setSub(MORE_TABS[i].id)
-    document.getElementById('more-tab-' + MORE_TABS[i].id)?.focus()
+    const i = Math.min(tabs.length - 1, Math.max(0, tabs.findIndex((t) => t.id === sub) + step))
+    setSub(tabs[i].id)
+    document.getElementById('more-tab-' + tabs[i].id)?.focus()
   }
   return (
     <div className="stack">
@@ -59,7 +64,7 @@ export default function More({ trip, members, userId, sub, setSub }: Props) {
         />
       )}
       <div className="more-tabs" role="tablist" aria-label={t('עוד')} onKeyDown={arrows}>
-        {MORE_TABS.map((t) => (
+        {tabs.map((t) => (
           <button
             key={t.id}
             id={'more-tab-' + t.id}

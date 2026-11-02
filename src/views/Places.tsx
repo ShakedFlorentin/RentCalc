@@ -1,7 +1,7 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabase'
 import { AUDIENCES, CATEGORIES, VERDICTS, type Candidate, type DayInfo, type GuidePlace, type ItineraryItem, type Member, type Place, type Trip } from '../types'
-import { cityLabel, couplesOf, dayOption, errorText, keepRanges, mapsUrl, mutate, normName, replan, safeUrl, useMediaIndex, useTripTable, withMedia } from '../lib'
+import { cityLabel, couplesOf, dayOption, errorText, keepRanges, mapsUrl, mutate, normName, replan, safeUrl, useMediaIndex, useTripHasBaby, useTripTable, withMedia } from '../lib'
 import { isEn, t } from '../i18n'
 import { BookOpen, CalendarCheck, CalendarPlus, Check, Heart, List, Map as MapIcon, MapPin, Plus, Users, Wand2 } from 'lucide-react'
 import { Empty, Field, LoadNote, Sheet, useRemembered } from '../ui'
@@ -35,6 +35,7 @@ type Props = { trip: Trip; me: string; userId: string; members: Member[] }
 export default function Places({ trip, me, userId, members }: Props) {
   const { rows: rawRows, loading, error, reload } = useTripTable<Place>('places', trip.id)
   const media = useMediaIndex()
+  const hasBaby = useTripHasBaby(trip.id)
   // places with neither a match nor an author were pre-seeded with the trip, before anyone chose anything
   const rows = useMemo(
     () => rawRows.filter((p) => p.candidate_id || p.added_by).map((p) => withMedia(p, media)),
@@ -184,7 +185,7 @@ export default function Places({ trip, me, userId, members }: Props) {
             <GuideCard g={guidePick} tripId={trip.id} userId={userId} me={me} onClose={() => setGuidePick(null)} />
           )}
           {picked && (
-            <PlaceRow p={picked} card={picked.candidate_id ? cardById.get(picked.candidate_id) : undefined} planned={plannedIds.has(picked.id)} onEdit={setEdit} onPlan={setPlanning}>
+            <PlaceRow hasBaby={hasBaby} p={picked} card={picked.candidate_id ? cardById.get(picked.candidate_id) : undefined} planned={plannedIds.has(picked.id)} onEdit={setEdit} onPlan={setPlanning}>
               {rateBox(picked)}
             </PlaceRow>
           )}
@@ -210,7 +211,7 @@ export default function Places({ trip, me, userId, members }: Props) {
                 <div key={a} className="stack">
                   {a !== '—' && <div className="area-title"><Icon as={MapPin} /> <bdi>{a}</bdi></div>}
                   {ps.map((p) => (
-                    <PlaceRow key={p.id} p={p} card={p.candidate_id ? cardById.get(p.candidate_id) : undefined} planned={plannedIds.has(p.id)} onEdit={setEdit} onPlan={setPlanning}>
+                    <PlaceRow key={p.id} hasBaby={hasBaby} p={p} card={p.candidate_id ? cardById.get(p.candidate_id) : undefined} planned={plannedIds.has(p.id)} onEdit={setEdit} onPlan={setPlanning}>
                       {rateBox(p)}
                     </PlaceRow>
                   ))}
@@ -225,9 +226,10 @@ export default function Places({ trip, me, userId, members }: Props) {
         <Icon as={Plus} size="1.5em" />
       </button>
       {adding && <AddPlace tripId={trip.id} userId={userId} me={me} defaultTo="list" onClose={() => setAdding(false)} />}
-      {edit && <PlaceForm tripId={trip.id} me={me} place={edit} card={edit.candidate_id ? cardById.get(edit.candidate_id) : undefined} onClose={() => setEdit(null)} />}
+      {edit && <PlaceForm hasBaby={hasBaby} tripId={trip.id} me={me} place={edit} card={edit.candidate_id ? cardById.get(edit.candidate_id) : undefined} onClose={() => setEdit(null)} />}
       {planning && (
         <AddToDay
+          hasBaby={hasBaby}
           trip={trip}
           place={planning}
           card={planning.candidate_id ? cardById.get(planning.candidate_id) : undefined}
@@ -250,7 +252,7 @@ async function setVisited(p: Place) {
   if (error) alert(errorText(error.message))
 }
 
-function PlaceRow(props: { p: Place; card?: Candidate; planned: boolean; onEdit: (p: Place) => void; onPlan: (p: Place) => void; children?: ReactNode }) {
+function PlaceRow(props: { hasBaby: boolean; p: Place; card?: Candidate; planned: boolean; onEdit: (p: Place) => void; onPlan: (p: Place) => void; children?: ReactNode }) {
   const { p } = props
   const mapLink = safeUrl(p.url) || mapsUrl([p.name, p.area, p.city].filter(Boolean).join(', '))
   return (
@@ -286,9 +288,9 @@ function PlaceRow(props: { p: Place; card?: Candidate; planned: boolean; onEdit:
           )}
         </div>
         {/* the baby line a match copies in is left to the place's own sheet: the row already says if it suits the baby */}
-        {notesShown(notesFor(p.notes, props.card)) && (
+        {notesShown(notesFor(p.notes, props.card, props.hasBaby)) && (
           <div className="notes" dir="auto">
-            {keepRanges(notesShown(notesFor(p.notes, props.card))!)}
+            {keepRanges(notesShown(notesFor(p.notes, props.card, props.hasBaby))!)}
           </div>
         )}
         {/* one row of chips under the text, the plan button among them, so the name gets the card's width */}
@@ -317,17 +319,17 @@ const BABY_EN = 'With the baby:'
  * A place's notes in the app's language. Notes a match copied from its card (exactly the card's Hebrew tip and baby
  * line) show in English from the card's `en`; notes people wrote themselves show as written.
  */
-function notesFor(notes: string | null | undefined, card?: Candidate) {
-  return (isEn && notesEn(notes, card)) || (notes ?? null)
+function notesFor(notes: string | null | undefined, card: Candidate | undefined, hasBaby: boolean) {
+  return (isEn && notesEn(notes, card, hasBaby)) || (notes ?? null)
 }
 
 /** The English of notes a match copied from the card; null for notes people wrote (or a card without English). */
-function notesEn(notes: string | null | undefined, card?: Candidate) {
+function notesEn(notes: string | null | undefined, card: Candidate | undefined, hasBaby: boolean) {
   if (!notes || !card?.en) return null
   const he = [card.tip, card.baby_notes && BABY_HE + ' ' + card.baby_notes].filter(Boolean).join('\n')
   if (notes !== he) return null
   const tip = card.en.tip ?? card.tip
-  const baby = card.en.baby_notes ?? card.baby_notes
+  const baby = hasBaby ? (card.en.baby_notes ?? card.baby_notes) : null
   return [tip, baby && BABY_EN + ' ' + baby].filter(Boolean).join('\n') || null
 }
 
@@ -343,9 +345,9 @@ function rank(city: string | null) {
   return i === -1 ? 99 : i
 }
 
-function PlaceForm(props: { tripId: string; me: string; place: Partial<Place>; card?: Candidate; onClose: () => void }) {
+function PlaceForm(props: { hasBaby: boolean; tripId: string; me: string; place: Partial<Place>; card?: Candidate; onClose: () => void }) {
   // in English a matched place's copied notes show in English; untouched, they are saved back as they were
-  const [shownNotes] = useState(() => notesFor(props.place.notes, props.card))
+  const [shownNotes] = useState(() => notesFor(props.place.notes, props.card, props.hasBaby))
   const [f, setF] = useState<Partial<Place>>({ ...props.place, notes: shownNotes })
   const set = (k: keyof Place) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value })
 
@@ -428,7 +430,7 @@ function PlaceForm(props: { tripId: string; me: string; place: Partial<Place>; c
   )
 }
 
-function AddToDay(props: { trip: Trip; place: Place; card?: Candidate; onClose: () => void }) {
+function AddToDay(props: { hasBaby: boolean; trip: Trip; place: Place; card?: Candidate; onClose: () => void }) {
   const [day, setDay] = useState(1)
   const [time, setTime] = useState('')
   const { rows: days } = useTripTable<DayInfo>('day_info', props.trip.id, 'day')
@@ -447,7 +449,7 @@ function AddToDay(props: { trip: Trip; place: Place; card?: Candidate; onClose: 
         location: [p.name, p.area, p.city].filter(Boolean).join(', '),
         notes: p.notes,
         // the same notes in English, for whoever uses the app in English
-        notes_en: notesEn(p.notes, props.card),
+        notes_en: notesEn(p.notes, props.card, props.hasBaby),
         category: p.category,
         place_id: p.id,
         who,

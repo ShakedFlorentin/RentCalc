@@ -2,7 +2,7 @@ import { PointerEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../supabase'
 import { AUDIENCES, CARD_STYLE, CITY_HE, KOSHER, VERDICTS, type Candidate, type Member, type Swipe, type Trip } from '../types'
-import { cityLabel, couplesOf, keepRanges, mutate, safeUrl, useMediaIndex, useTripTable, withMedia } from '../lib'
+import { cityLabel, couplesOf, keepRanges, mutate, safeUrl, useMediaIndex, useTripHasBaby, useTripTable, withMedia } from '../lib'
 import AddPlace from './AddPlace'
 import { CardRatings, useRatings } from './Ratings'
 import { t } from '../i18n'
@@ -45,6 +45,7 @@ export default function SwipeGame({ trip, userId, members, showCard, onCardShown
   // this person's questionnaire: places that are no use to them stay out of everything here (deck, lists, counts),
   // and the best fits come first. No answers: everything, as before
   const { profile } = useProfile(userId)
+  const hasBaby = useTripHasBaby(trip.id)
   const answers = useMemo(() => answersOf(profile), [profile])
   const prefsLoading = profile === undefined
   const visible = useMemo(
@@ -417,7 +418,7 @@ export default function SwipeGame({ trip, userId, members, showCard, onCardShown
             .slice(0, 2)
             .reverse()
             .map((c, i, arr) => (
-              <Card key={c.id} c={c} likedBy={othersLiked(c)} prior={catMean.get(c.category)} top={i === arr.length - 1} onSwipe={(liked) => swipe(c, liked)} />
+              <Card key={c.id} c={c} hasBaby={hasBaby} likedBy={othersLiked(c)} prior={catMean.get(c.category)} top={i === arr.length - 1} onSwipe={(liked) => swipe(c, liked)} />
             ))}
       </div>
       {((deck.length > 0 && !batchOver) || history.length > 0) && (
@@ -496,7 +497,7 @@ function springTo(
 const project = (v: number) => ((v / 1000) * 0.998) / (1 - 0.998)
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches
 
-function Card({ c, top, likedBy, prior, onSwipe }: { c: Candidate; top: boolean; likedBy: string[]; prior?: number; onSwipe: (liked: boolean) => Promise<boolean> }) {
+function Card({ c, top, likedBy, prior, hasBaby, onSwipe }: { c: Candidate; hasBaby: boolean; top: boolean; likedBy: string[]; prior?: number; onSwipe: (liked: boolean) => Promise<boolean> }) {
   const [dx, setDx] = useState(0)
   const [more, setMore] = useState(false)
   const [photo, setPhoto] = useState(0)
@@ -794,7 +795,7 @@ export function CardFull({ c, prior }: { c: Candidate; prior?: number }) {
           <p dir="auto">{keepRanges(c.reality)}</p>
         </div>
       )}
-      {c.baby_notes && (
+      {hasBaby && c.baby_notes && (
         <div className="fact">
           {c.audience === 'adults' ? <Label icon={Wine}>{t('למה בלי התינוק')}</Label> : <Label icon={Baby}>{t('עם תינוק')}</Label>}
           <p dir="auto">{keepRanges(c.baby_notes)}</p>

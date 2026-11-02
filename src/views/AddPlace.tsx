@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabase'
 import { AUDIENCES, CARD_STYLE, CITY_HE, VERDICTS, type Candidate } from '../types'
-import { aiError, cityLabel, localizeCard, mutate, safeUrl, samePlace } from '../lib'
+import { aiError, cityLabel, localizeCard, mutate, safeUrl, samePlace, useTripHasBaby } from '../lib'
 import { isEn, t } from '../i18n'
 import { ArrowRight, Check, Heart, List, LoaderCircle, Search, Star, X } from 'lucide-react'
 import { Field, Sheet } from '../ui'
@@ -153,6 +153,7 @@ async function lookupLive(body: object, opened: () => void, on: (e: Step) => voi
  */
 export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Props) {
   // one field: a link or a place's name
+  const hasBaby = useTripHasBaby(tripId)
   const [query, setQuery] = useState('')
   // a link that couldn't be read: kept for the card, while the place's name is searched instead
   const [failedLink, setFailedLink] = useState('')
@@ -400,7 +401,7 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
           city: CITY_HE[d.city] ?? d.city,
           category: cat,
           url: social.maps_url,
-          notes: [d.tip, d.baby_notes && 'עם התינוק: ' + d.baby_notes].filter(Boolean).join('\n') || null, // he-only
+          notes: [d.tip, hasBaby && d.baby_notes && 'עם התינוק: ' + d.baby_notes].filter(Boolean).join('\n') || null, // he-only
         })
       if (error?.code === '23505') return 'dup'
       if (error) {
@@ -507,6 +508,7 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
     return (
       <Sheet title={t('זה המקום?')} onClose={onClose}>
         <DraftForm
+          hasBaby={hasBaby}
           draft={typed ?? draft}
           busy={busy}
           err={err}
@@ -686,6 +688,7 @@ function Steps({ p, live }: { p: Progress; live: boolean }) {
 }
 
 function DraftForm(props: {
+  hasBaby: boolean
   draft: Draft
   busy: boolean
   err: string
@@ -774,7 +777,7 @@ function DraftForm(props: {
           <b>{t('בביקורות:')}</b> <span dir="auto">{shown.reality}</span>
         </div>
       )}
-      {d.baby_notes && (
+      {props.hasBaby && d.baby_notes && (
         <div className="small">
           <b>{t('עם תינוק:')}</b> <span dir="auto">{shown.baby_notes}</span>
         </div>
