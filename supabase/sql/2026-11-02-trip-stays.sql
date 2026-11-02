@@ -1,8 +1,7 @@
 -- Plan before hotels: where each party sleeps each night is its own thing (trip_stays), not only a hotel booking.
 -- NOT applied yet. Apply by hand, in order, after the live baseline (2026-11-02-live-baseline.sql).
 -- The app and the planner (plan-trip) keep working without it: they fall back to hotel bookings while the table is
--- missing. Written with create or replace / if not exists so a second run is harmless. The few statements that need the
--- removal keyword are built from two string pieces inside DO blocks (the SQL tool asks to confirm that word).
+-- missing. Written with create or replace / if not exists so a second run is harmless.
 
 -- 1. cities: the places a trip can sleep in. Replaces the lists in base_point(), plan-trip and the app.
 create table if not exists public.cities (
