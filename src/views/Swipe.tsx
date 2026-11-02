@@ -422,6 +422,7 @@ export default function SwipeGame({ trip, userId, members, showCard, onCardShown
             ))}
       </div>
       {((deck.length > 0 && !batchOver) || history.length > 0) && (
+        // small, big, big, small: the two votes sit in the middle and the row is centred
         <div className="swipe-buttons">
           <button className="round small-round" onClick={undo} disabled={!history.length} aria-label={t('ביטול החלקה אחרונה')}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3" /></svg>
@@ -429,11 +430,11 @@ export default function SwipeGame({ trip, userId, members, showCard, onCardShown
           <button className="round nope" onClick={() => deck[0] && swipe(deck[0], false)} disabled={!deck.length || batchOver} aria-label={t('דלג')}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
           </button>
-          <button className="round small-round" onClick={() => deck[0] && notNow(deck[0])} disabled={!deck.length || batchOver} aria-label={t('לא עכשיו')}>
-            <Icon as={Clock} />
-          </button>
           <button className="round like" onClick={() => deck[0] && swipe(deck[0], true)} disabled={!deck.length || batchOver} aria-label={t('אהבתי')}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path className="fill" d="M12 20.5s-7.5-4.6-9.2-9.4C1.6 7.7 4 4.5 7.2 4.5c1.9 0 3.4 1 4.8 2.8 1.4-1.8 2.9-2.8 4.8-2.8 3.2 0 5.6 3.2 4.4 6.6-1.7 4.8-9.2 9.4-9.2 9.4z" /></svg>
+          </button>
+          <button className="round small-round" onClick={() => deck[0] && notNow(deck[0])} disabled={!deck.length || batchOver} aria-label={t('לא עכשיו')}>
+            <Icon as={Clock} />
           </button>
           {deck.length > 0 && !batchOver && <span className="left-count" aria-live="polite">{Math.min(deck.length, batchLeft) === 1 ? t('נשאר אחד') : t('נשארו {n}', { n: Math.min(deck.length, batchLeft) })}</span>}
         </div>

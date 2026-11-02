@@ -648,7 +648,7 @@ html[dir='rtl'] .ja { text-align: right; }
 .small-round { width: 44px; height: 44px; }
 .small-round svg { width: 20px; height: 20px; stroke-width: 2.2; color: var(--muted); }
 .small-round:disabled { opacity: 0.35; }
-.left-count { position: absolute; left: 0; max-width: calc(50% - 120px); line-height: 1.2; direction: rtl; font-size: 0.8125rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.left-count { position: absolute; left: 0; max-width: calc(50% - 145px); line-height: 1.2; direction: rtl; font-size: 0.8125rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .center-modal { align-items: center; }
 .match-pop {
   width: min(340px, 90vw);
