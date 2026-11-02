@@ -468,6 +468,9 @@ function Card({ c, top, likedBy, prior, onSwipe }: { c: Candidate; top: boolean;
   const pos = useRef(0)
   const grab = useRef<number | null>(null) // pointer x minus card x: the card stays where the finger took it
   const downX = useRef(0)
+  const downY = useRef(0)
+  // which way this touch goes, decided once it has moved 10px: only a sideways one moves the card
+  const axis = useRef<'x' | 'y' | null>(null)
   const trail = useRef<{ t: number; x: number }[]>([])
   const stop = useRef<(() => void) | null>(null)
   const flying = useRef(false)
@@ -522,6 +525,8 @@ function Card({ c, top, likedBy, prior, onSwipe }: { c: Candidate; top: boolean;
     stop.current = null
     grab.current = e.clientX - pos.current
     downX.current = e.clientX
+    downY.current = e.clientY
+    axis.current = null
     trail.current = [{ t: e.timeStamp, x: pos.current }]
     moved.current = false
     onInfo.current = !!(e.target as HTMLElement).closest('.card-info')
@@ -529,7 +534,17 @@ function Card({ c, top, likedBy, prior, onSwipe }: { c: Candidate; top: boolean;
   }
   const move = (e: PointerEvent) => {
     if (grab.current === null) return
-    if (Math.abs(e.clientX - downX.current) > 6) moved.current = true
+    if (!axis.current) {
+      const ax = Math.abs(e.clientX - downX.current)
+      const ay = Math.abs(e.clientY - downY.current)
+      // a resting thumb or a small wobble is not a swipe; up and down is reading, not voting
+      if (Math.max(ax, ay) < 10) return
+      axis.current = ax > ay * 1.2 ? 'x' : 'y'
+      moved.current = true
+      // start from here, so the card doesn't jump by the 10px it took to decide
+      grab.current = e.clientX - pos.current
+    }
+    if (axis.current === 'y') return
     const x = e.clientX - grab.current
     trail.current = [...trail.current.filter((p) => e.timeStamp - p.t < 100), { t: e.timeStamp, x }]
     show(x)
@@ -543,6 +558,7 @@ function Card({ c, top, likedBy, prior, onSwipe }: { c: Candidate; top: boolean;
       setMore(true)
       return
     }
+    if (axis.current !== 'x') return settle()
     const tr = trail.current
     const a = tr[0]
     const b = tr[tr.length - 1]
