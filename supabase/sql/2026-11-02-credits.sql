@@ -52,6 +52,18 @@ grant select on public.credit_prices to authenticated;
 insert into public.credit_prices (fn, cost) values ('suggest-place', 4), ('parse-booking', 1), ('translate', 1)
   on conflict (fn) do update set cost = excluded.cost;
 
+-- Switches the app reads. 'credits' = whether AI credits are charged and shown. The edge functions use the same flag
+-- (the env CREDITS_ON overrides it when set), so one switch controls both. Turn on with:
+--   update public.app_flags set enabled = true where key = 'credits';
+create table if not exists public.app_flags (
+  key text primary key,
+  enabled boolean not null default false
+);
+alter table public.app_flags enable row level security;
+create policy app_flags_read on public.app_flags for select to authenticated using (true);
+grant select on public.app_flags to authenticated;
+insert into public.app_flags (key, enabled) values ('credits', false) on conflict (key) do nothing;
+
 -- Free credits: the free wallet is topped up to 5 once per day (so it never holds more than 5), idempotent per day.
 -- Free credit lives in its own wallet, so it can be spent but never given to a trip.
 create or replace function public.grant_daily_free(p_user uuid) returns int
@@ -77,7 +89,7 @@ end $$;
 -- (ok=false, needs_credits=true) when the trip alone, or the caller's free + paid together, cannot cover it.
 -- Locks are always taken user first, then trip, so two calls cannot wait on each other.
 -- Rows of one hold: p_op_id, and p_op_id || ':b' for the paid part of a split.
--- Trips that are never charged (the app owner's own trips). Backend only: RLS on, no policies.
+-- Trips that are never charged, for the trip's creator only (trips.created_by). Backend only: RLS on, no policies.
 create table if not exists public.credit_unlimited_trips (
   trip_id uuid primary key references public.trips(id) on delete cascade,
   note text,
@@ -112,8 +124,10 @@ begin
       'owner_id', existing.owner_id, 'cost', abs(existing.delta));
   end if;
 
-  -- the owner's own trips are never charged: a zero row keeps op_id, settle and refund working as usual
-  if trip_ok and exists (select 1 from public.credit_unlimited_trips u where u.trip_id = p_trip) then
+  -- the owner's own trips are never charged, and only when the owner (the trip's creator) asks: other members pay as
+  -- usual. A zero row keeps op_id, settle and refund working as usual
+  if trip_ok and exists (select 1 from public.credit_unlimited_trips u where u.trip_id = p_trip)
+     and exists (select 1 from public.trips t where t.id = p_trip and t.created_by = p_user) then
     insert into public.credit_ledger (owner_kind, owner_id, delta, reason, fn, op_id, state)
     values ('trip', p_trip, 0, 'unlimited trip', p_fn, p_op_id, 'reserved');
     return jsonb_build_object('ok', true, 'repeat', false, 'state', 'reserved', 'owner_kind', 'trip', 'owner_id', p_trip,
@@ -160,19 +174,25 @@ begin
 end $$;
 
 -- The operation failed: +cost rows give the credits back (the original rows stay as the record). Once only.
--- Free credit given back after the day it was granted is not restored (the free wallet never holds more than 5).
+-- Free credit is given back even after midnight, but only up to the cap: the free wallet never holds more than 5, so
+-- the refund is min(held, 5 - current free).
 create or replace function public.refund_credits(p_op_id text) returns boolean
 language plpgsql security definer set search_path = '' as $$
-declare r public.credit_ledger; any_done boolean := false;
+declare r public.credit_ledger; any_done boolean := false; amt int; cur int;
 begin
   for r in select * from public.credit_ledger where op_id in (p_op_id, p_op_id || ':b') and state = 'reserved' order by op_id loop
     perform pg_advisory_xact_lock(hashtextextended(case when r.owner_kind = 'trip' then 'trip:' else 'user:' end || r.owner_id::text, 0));
     update public.credit_ledger set state = 'refunded' where id = r.id and state = 'reserved';
     if found then
       any_done := true;
-      if r.owner_kind <> 'free' or (r.created_at at time zone 'utc')::date = (now() at time zone 'utc')::date then
+      amt := -r.delta;
+      if r.owner_kind = 'free' then
+        select coalesce(sum(delta), 0) into cur from public.credit_ledger where owner_kind = 'free' and owner_id = r.owner_id;
+        amt := least(amt, greatest(5 - cur, 0));
+      end if;
+      if amt > 0 then
         insert into public.credit_ledger (owner_kind, owner_id, delta, reason, fn, op_id, state)
-        values (r.owner_kind, r.owner_id, -r.delta, 'refund', r.fn, r.op_id || ':refund', 'refunded')
+        values (r.owner_kind, r.owner_id, amt, 'refund', r.fn, r.op_id || ':refund', 'refunded')
         on conflict (op_id) do nothing;
       end if;
     end if;
@@ -207,19 +227,30 @@ begin
   return jsonb_build_object('ok', true, 'repeat', false, 'balance', ub - p_amount);
 end $$;
 
--- What the wallet screen shows: balance = free + paid (after today's free top-up), the free part, the paid part (the
--- only part that can be given), and the trip's balance.
+-- What the wallet screen shows. {enabled:false} (and nothing written) while credits are off. For the creator of an
+-- unlimited trip: {enabled:true, unlimited:true} (nothing written). Otherwise balance = free + paid (after today's free
+-- top-up), the free part, the paid part (the only part that can be given), and the trip's balance.
 create or replace function public.my_credits(p_trip uuid default null) returns jsonb
 language plpgsql security definer set search_path = '' as $$
-declare me uuid := auth.uid(); fb int; ub int; tb int := null;
+declare me uuid := auth.uid(); fb int; ub int; tb int := null; member boolean := false;
 begin
   if me is null then raise exception 'not signed in'; end if;
+  if not coalesce((select f.enabled from public.app_flags f where f.key = 'credits'), false) then
+    return jsonb_build_object('enabled', false);
+  end if;
+  if p_trip is not null then
+    select exists (select 1 from public.members m where m.trip_id = p_trip and m.user_id = me) into member;
+  end if;
+  if member and exists (select 1 from public.credit_unlimited_trips u where u.trip_id = p_trip)
+     and exists (select 1 from public.trips t where t.id = p_trip and t.created_by = me) then
+    return jsonb_build_object('enabled', true, 'unlimited', true);
+  end if;
   fb := public.grant_daily_free(me);
   select coalesce(sum(delta), 0) into ub from public.credit_ledger where owner_kind = 'user' and owner_id = me;
-  if p_trip is not null and exists (select 1 from public.members m where m.trip_id = p_trip and m.user_id = me) then
+  if member then
     select coalesce(sum(delta), 0) into tb from public.credit_ledger where owner_kind = 'trip' and owner_id = p_trip;
   end if;
-  return jsonb_build_object('balance', fb + ub, 'free', fb, 'paid', ub, 'trip_balance', tb);
+  return jsonb_build_object('enabled', true, 'unlimited', false, 'balance', fb + ub, 'free', fb, 'paid', ub, 'trip_balance', tb);
 end $$;
 
 -- Who may call what

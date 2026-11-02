@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   BedDouble,
   Check,
@@ -583,29 +583,49 @@ function Settings(props: { trip: Trip; me: string; userId: string; onClose: () =
 }
 
 /**
- * AI credits: the user's own and the trip's, and a way to give some to the trip. Shown only once the credits tables
- * exist (my_credits answers); a new search costs credits, a repeat of one already done is free.
+ * AI credits: the user's own and the trip's, and a way to give some to the trip. Shown only while credits are on
+ * (my_credits says enabled); a new search costs credits, a repeat of one already done is free.
  */
 function CreditWallet({ tripId }: { tripId: string }) {
-  const [w, setW] = useState<{ balance: number; free: number; paid: number; trip_balance: number | null } | null>(null)
+  type Wallet = { enabled?: boolean; unlimited?: boolean; balance: number; free: number; paid: number; trip_balance: number | null }
+  const [w, setW] = useState<Wallet | null>(null)
   const [give, setGive] = useState(1)
   const [msg, setMsg] = useState('')
+  const [sending, setSending] = useState(false)
+  // one id per tap of a given amount: a double tap (or a retry) sends the same id, so credits move once
+  const tap = useRef<{ amount: number; op: string } | null>(null)
   const load = async () => {
     const { data, error } = await supabase.rpc('my_credits', { p_trip: tripId })
-    setW(error || !data ? null : (data as { balance: number; free: number; paid: number; trip_balance: number | null }))
+    const d = data as Wallet | null
+    setW(error || !d || !d.enabled ? null : d)
   }
   useEffect(() => {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tripId])
   if (!w) return null
+  if (w.unlimited) {
+    return (
+      <section>
+        <h3>{t('ארנק קרדיטים')}</h3>
+        <p className="muted small">{t('בטיול הזה אין הגבלה: החיפושים, ההזמנות והתרגומים שלך לא עולים קרדיטים.')}</p>
+      </section>
+    )
+  }
   const send = async () => {
+    if (sending) return
+    setSending(true)
     setMsg('')
-    const { data, error } = await supabase.rpc('give_to_trip', { p_trip: tripId, p_amount: give })
+    if (tap.current?.amount !== give) tap.current = { amount: give, op: crypto.randomUUID() }
+    const { data, error } = await supabase.rpc('give_to_trip', { p_trip: tripId, p_amount: give, p_op_id: tap.current.op })
     if (error) setMsg(error.message)
     else if (!(data as { ok?: boolean } | null)?.ok) setMsg(t('אין לך מספיק קרדיטים'))
-    else setMsg(t('הועברו {n} קרדיטים לטיול', { n: give }))
-    load()
+    else {
+      setMsg(t('הועברו {n} קרדיטים לטיול', { n: give }))
+      tap.current = null
+    }
+    await load()
+    setSending(false)
   }
   return (
     <section>
@@ -620,7 +640,7 @@ function CreditWallet({ tripId }: { tripId: string }) {
       <Field label={t('להעביר לטיול')}>
         <input type="number" min={1} max={Math.max(w.paid, 1)} value={give} onChange={(e) => setGive(Math.max(1, Math.floor(+e.target.value || 1)))} />
       </Field>
-      <button className="secondary" disabled={w.paid < 1 || give > w.paid} onClick={send}>
+      <button className="secondary" disabled={sending || w.paid < 1 || give > w.paid} onClick={send}>
         {t('העברה לטיול')}
       </button>
       {msg && <p className="msg">{msg}</p>}

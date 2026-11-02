@@ -1,6 +1,6 @@
 // AI credits for the edge functions (roadmap P3): hold credits before a Claude call, keep the charge when it works,
-// give them back when it fails. Off unless the env CREDITS_ON is "1" or "true", so deploying this changes nothing.
-// The same file sits in every function that charges (keep the copies identical).
+// give them back when it fails. Off unless switched on (see creditsOn), so deploying this changes nothing.
+// Shared by every function that charges: imported from ../_shared/credits.ts (deploys must include that file).
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -8,7 +8,17 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 // Used only if credit_prices has no row for the function (the table is the source of truth)
 const FALLBACK_COST: Record<string, number> = { 'suggest-place': 4, 'parse-booking': 1, translate: 1 }
 
-export const creditsOn = () => ['1', 'true'].includes((Deno.env.get('CREDITS_ON') ?? '').toLowerCase())
+/**
+ * Whether credits are charged. The env CREDITS_ON overrides when it is set ("1"/"true" on, anything else off);
+ * when it is not set, the DB flag app_flags('credits') decides, the same one the app reads (my_credits), so one switch
+ * turns the whole thing on or off. Not set and no flag: off.
+ */
+export async function creditsOn(admin: SupabaseClient): Promise<boolean> {
+  const env = Deno.env.get('CREDITS_ON')
+  if (env !== undefined && env !== '') return ['1', 'true'].includes(env.toLowerCase())
+  const { data } = await admin.from('app_flags').select('enabled').eq('key', 'credits').maybeSingle()
+  return data?.enabled === true
+}
 
 /** The trip id from a request body when it is well formed, else null. Membership is checked in reserve_credits. */
 export const tripIdOf = (v: unknown) => (typeof v === 'string' && UUID.test(v) ? v : null)

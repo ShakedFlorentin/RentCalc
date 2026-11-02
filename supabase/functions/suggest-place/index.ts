@@ -5,7 +5,7 @@ import { zodOutputFormat } from 'npm:@anthropic-ai/sdk@1.1.0/helpers/zod'
 import { z } from 'npm:zod@4'
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
 import { logCall } from './ai-log.ts'
-import { creditsOn, hold, refund, settle, tripIdOf } from './credits.ts'
+import { creditsOn, hold, refund, settle, tripIdOf } from '../_shared/credits.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -427,8 +427,19 @@ Deno.serve(async (req) => {
   const track = async (row: Record<string, unknown>) => {
     const { error } = await admin.from('place_lookups').insert({ id, user_id: userId, lookup_key: key, ...row })
     if (error?.code === '23505') {
-      id = crypto.randomUUID()
-      await admin.from('place_lookups').insert({ id, user_id: userId, lookup_key: key, ...row })
+      // The id is taken. If the row is the caller's own (a retry of the same lookup), reuse it, so the id the credit op
+      // was keyed on stays the one the result is saved under. Only if it is someone else's does this lookup get a new id.
+      const { data: own } = await admin
+        .from('place_lookups')
+        .update({ lookup_key: key, places: null, error: null, finished_at: null, ...row })
+        .eq('id', id)
+        .eq('user_id', userId)
+        .select('id')
+        .maybeSingle()
+      if (!own) {
+        id = crypto.randomUUID()
+        await admin.from('place_lookups').insert({ id, user_id: userId, lookup_key: key, ...row })
+      }
     }
   }
 
@@ -463,7 +474,7 @@ Deno.serve(async (req) => {
   // credits (behind CREDITS_ON): a cached answer above was free; a new search holds its price first and gives it back
   // if it fails. The hold goes before the daily cap check so a refused search leaves no ai_usage row.
   let creditOp: string | null = null
-  if (creditsOn()) {
+  if (await creditsOn(admin)) {
     const h = await hold(admin, userId, tripIdOf(body?.trip_id), 'suggest-place', id)
     if (h.repeat) {
       // this lookup id was already charged: never new AI work. Give back its finished result if it has one.

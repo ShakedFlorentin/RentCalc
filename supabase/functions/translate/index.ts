@@ -3,7 +3,7 @@
 import Anthropic from 'npm:@anthropic-ai/sdk@1.1.0'
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
 import { logCall } from './ai-log.ts'
-import { creditsOn, hold, refund, settle, tripIdOf } from './credits.ts'
+import { creditsOn, hold, refund, settle, tripIdOf } from '../_shared/credits.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -81,7 +81,7 @@ async function admit(req: Request, fn: string, json: (body: unknown, status?: nu
   if ((used ?? 0) >= DAILY_LIMIT) return json({ error: 'daily limit reached' }, 429)
   // credits (behind CREDITS_ON): hold the price first; the caller settles or refunds it
   let creditOp: string | null = null
-  if (credits && creditsOn()) {
+  if (credits && await creditsOn(admin)) {
     const h = await hold(admin, claimed, credits.tripId, fn, credits.key)
     if (!h.ok) return json(h.body, h.status)
     creditOp = h.opId

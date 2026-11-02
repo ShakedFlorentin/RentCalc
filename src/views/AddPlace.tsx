@@ -214,8 +214,9 @@ export default function AddPlace({ tripId, userId, me, defaultTo, onClose }: Pro
     if (live.signal.aborted) return
     const { data, error } = answer
     const status = (error as { context?: Response } | null)?.context?.status
-    // no answer at all (screen locked, another app) while the search went on: read what it found
-    const places = error && !status ? await savedResult(id) : (data?.places as Draft[] | undefined)
+    // no answer at all (screen locked, another app) while the search went on: read what it found. A 409 is the same:
+    // the live attempt with this id was already charged (and saved its result), so the retry reads that result
+    const places = error && (!status || status === 409) ? await savedResult(id) : (data?.places as Draft[] | undefined)
     setBusy(false)
     // the card keeps the post it came from, also when it was found by name
     const from = link || failedLink

@@ -5,7 +5,7 @@ import { zodOutputFormat } from 'npm:@anthropic-ai/sdk@1.1.0/helpers/zod'
 import { z } from 'npm:zod@4'
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
 import { logCall } from './ai-log.ts'
-import { creditsOn, hold, refund, settle, tripIdOf } from './credits.ts'
+import { creditsOn, hold, refund, settle, tripIdOf } from '../_shared/credits.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -79,7 +79,7 @@ async function admit(req: Request, fn: string, json: (body: unknown, status?: nu
   if ((used ?? 0) >= DAILY_LIMIT) return json({ error: 'daily limit reached' }, 429)
   // credits (behind CREDITS_ON): hold the price first; the caller settles or refunds it
   let creditOp: string | null = null
-  if (credits && creditsOn()) {
+  if (credits && await creditsOn(admin)) {
     const h = await hold(admin, auth.user.id, credits.tripId, fn, credits.key)
     if (!h.ok) return json(h.body, h.status)
     creditOp = h.opId
@@ -103,6 +103,10 @@ Deno.serve(async (req) => {
   if (!text?.trim() && !file) return json({ error: 'nothing to read' }, 400)
   if ((text?.length ?? 0) > 50_000) return json({ error: 'text too long' }, 413)
   if (file && file.data.length * 0.75 > MAX_BYTES) return json({ error: 'file too large' }, 413)
+  // unsupported file types are refused before admit(): no daily slot and no credit is used
+  if (file && file.media_type !== 'application/pdf' && !/^image\/(jpeg|png|gif|webp)$/.test(file.media_type)) {
+    return json({ error: 'unsupported file type' }, 415)
+  }
 
   // the operation id is made here, never taken from the request: a repeated id must not be a way to skip the charge
   const key = crypto.randomUUID()
@@ -120,15 +124,13 @@ Deno.serve(async (req) => {
       type: 'image',
       source: { type: 'base64', media_type: file.media_type as 'image/jpeg', data: file.data },
     })
-  } else if (file) {
-    if (creditOp) await refund(admin, creditOp)
-    return json({ error: 'unsupported file type' }, 415)
   }
   content.push({ type: 'text', text: text?.trim() ? text : 'Extract the bookings from the attached document.' })
 
-  const client = new Anthropic({ apiKey: await anthropicKey(admin) })
   const t = performance.now()
   try {
+    // inside the try: if the key lookup throws, the hold is refunded below
+    const client = new Anthropic({ apiKey: await anthropicKey(admin) })
     const response = await client.messages.parse({
       model: MODEL,
       max_tokens: 4000,

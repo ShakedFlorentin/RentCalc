@@ -12,6 +12,7 @@ export const EN_A: Record<string, string> = {
   'להעביר לטיול': 'Give to the trip',
   'העברה לטיול': 'Give to the trip',
   'אין לך מספיק קרדיטים': 'You do not have enough credits',
+  'בטיול הזה אין הגבלה: החיפושים, ההזמנות והתרגומים שלך לא עולים קרדיטים.': 'This trip has no limit: your searches, bookings and translations cost no credits.',
   'הועברו {n} קרדיטים לטיול': '{n} credits given to the trip',
   'חיפוש מקום חדש עולה {n} קרדיטים, ויש לך {mine} אישיים ו־{trip} בקבוצה. כל יום מתווספים קרדיטים חינם, ובהגדרות הטיול (ארנק) אפשר להעביר קרדיטים לקבוצה. מקום שכבר חיפשו בעבר נשלף בחינם.':
     'A new place lookup costs {n} credits; you have {mine} of your own and {trip} in the trip. Free credits are added every day, and in trip settings (wallet) you can give credits to the trip. A place already looked up before is free.',
