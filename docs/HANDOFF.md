@@ -13,6 +13,22 @@ Live: https://shakedflorentin.github.io/trip-planner/ · branch `japan-trip`, de
   trip name optional) and publishes it; `?share=<slug>` opens `views/SharedPlan.tsx` before login; "Plan a trip like this"
   copies the places as candidates into a new trip (localStorage `pendingShare` carries it through login).
 
+## Roadmap, first round (2026-11-02)
+- Repo renamed to `trip-planner`; live at https://shakedflorentin.github.io/trip-planner/ (the old /RentCalc/ address is 404).
+  Work happens on branch `roadmap` and is pushed with `git push origin roadmap:main`.
+- Live SQL now in the repo: `supabase/sql/2026-11-02-live-baseline.sql` (snapshot, reference only), and applied today:
+  `trip-stays`, `discovery`, `reviews-sharing`, `credits`, `credits-fixes`.
+- Where people sleep is `trip_stays` (synced from hotel bookings by trigger; manual stays from the "Where we sleep"
+  sheet). `trip_nights` and plan-trip (v21, `presence.ts`) read it. Cities are the `cities` table.
+- Planner tests: `npm run test:plan` (fixtures in `scripts/plan-fixtures/`); ranking tests: `node scripts/rank-test.mjs`.
+- AI credits are built but OFF. One switch: `update public.app_flags set enabled = true where key = 'credits'`
+  (the env CREDITS_ON overrides it for charging). The trip creator of a trip in `credit_unlimited_trips` (the Japan
+  trip) is never charged; other members are. Shared code: `supabase/functions/_shared/credits.ts`.
+- Deployed: suggest-place v30, parse-booking v10, translate v8 (each with `../_shared/credits.ts`). Their source was
+  sent by hand in the deploy call and could not be diffed against the repo afterwards; all three start and answer.
+- Open: the Yokohama report (cause not found in plan.ts; look at the real input), booking links (P4), rating notes
+  readable by every signed-in user, user-added cards auto-promoted into the shared library.
+
 ## Travel between plan stops (2026-11-02)
 - Between two stops in a row the day plan shows a quiet line: "5–10 min walk" under 1.2 km straight-line, otherwise a
   ride range ("15–30 min"), in 5-minute steps; none under 0.15 km (same spot) or over 25 km (no data). A tap opens
