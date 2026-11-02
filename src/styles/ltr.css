@@ -6,6 +6,8 @@ html[dir='ltr'] .flip-ltr { transform: scaleX(-1); }
 
 /* the tab bar's round search button and the add button sit on the right */
 html[dir='ltr'] .tabbar { left: max(12px, calc(50% - 308px)); right: max(84px, calc(50% - 308px + 72px)); }
+/* English labels are wider ("Bookings", "Discover"): 10px keeps them clear of their neighbours on a 375px phone; Hebrew stays 11px */
+html[dir='ltr'] .tabbar button { font-size: 0.625rem; }
 html[dir='ltr'] .tab-icon { translate: calc(var(--nudge, 0) * 1px); }
 html[dir='ltr'] .search-fab { left: auto; right: max(12px, calc(50% - 308px)); }
 html[dir='ltr'] .fab { left: auto; right: max(16px, calc(50% - 304px)); }
