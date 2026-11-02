@@ -1,0 +1,187 @@
+{
+ "name": "stays-different-dates",
+ "description": "A sleeps in Tokyo nights 1-4, B nights 3-6 (their own stays). Shared places only go where both are present; each couple's own places get their own days.",
+ "presence": {
+  "startDate": "2026-12-01",
+  "numDays": 7,
+  "couples": [
+   "A",
+   "B"
+  ],
+  "dayWho": {},
+  "flights": [],
+  "capOf": {},
+  "sleeps": [
+   {
+    "party": "A",
+    "checkIn": "2026-12-01",
+    "checkOut": "2026-12-05",
+    "city": "tokyo",
+    "point": {
+     "lat": 35.69,
+     "lng": 139.7
+    },
+    "label": "Hotel Tokyo",
+    "key": "Hotel Tokyo|",
+    "confirmed": false,
+    "booked": false
+   },
+   {
+    "party": "B",
+    "checkIn": "2026-12-03",
+    "checkOut": "2026-12-07",
+    "city": "tokyo",
+    "point": {
+     "lat": 35.69,
+     "lng": 139.7
+    },
+    "label": "Hotel Tokyo",
+    "key": "Hotel Tokyo|",
+    "confirmed": false,
+    "booked": false
+   }
+  ]
+ },
+ "units": [
+  {
+   "id": "t1",
+   "couples": [
+    "A",
+    "B"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {
+    "lat": 35.69,
+    "lng": 139.7
+   },
+   "mins": 90,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": null
+  },
+  {
+   "id": "t2",
+   "couples": [
+    "A",
+    "B"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {
+    "lat": 35.69,
+    "lng": 139.7
+   },
+   "mins": 60,
+   "category": "food",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": null
+  },
+  {
+   "id": "a1",
+   "couples": [
+    "A"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {
+    "lat": 35.69,
+    "lng": 139.7
+   },
+   "mins": 90,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": null
+  },
+  {
+   "id": "b1",
+   "couples": [
+    "B"
+   ],
+   "base": "tokyo",
+   "far": false,
+   "point": {
+    "lat": 35.69,
+    "lng": 139.7
+   },
+   "mins": 90,
+   "category": "sight",
+   "best": "any",
+   "opens": null,
+   "closes": null,
+   "closedWeekdays": [],
+   "closedDates": [],
+   "openDates": [],
+   "priority": 4,
+   "current": null
+  }
+ ],
+ "fixed": [],
+ "expect": {
+  "presence": {
+   "1": {
+    "A": {
+     "base": "tokyo",
+     "estimate": true
+    },
+    "B": null
+   },
+   "3": {
+    "A": {
+     "base": "tokyo",
+     "estimate": true
+    },
+    "B": {
+     "base": "tokyo",
+     "estimate": true
+    }
+   },
+   "7": {
+    "A": null,
+    "B": {
+     "base": "tokyo",
+     "estimate": true
+    }
+   }
+  },
+  "estimateDays": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7
+  ],
+  "onlyDays": {
+   "t1": [
+    3,
+    4,
+    5
+   ],
+   "t2": [
+    3,
+    4,
+    5
+   ]
+  }
+ }
+}
