@@ -494,7 +494,7 @@ button.chip { min-height: 36px; }
   touch-action: none;
   flex: none;
 }
-.sheet-head h2 { font-size: 1.0625rem; text-align: center; max-width: 52vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; grid-column: 2; grid-row: 1; }
+.sheet-head h2 { font-size: 1.0625rem; line-height: 1.25; text-align: center; max-width: 62vw; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow-wrap: anywhere; grid-column: 2; grid-row: 1; }
 .sheet-close { grid-column: 1; grid-row: 1; justify-self: start; min-height: 44px; min-width: 56px; padding: 0 12px; color: var(--accent); font-weight: 500; }
 /* Search sheet */
 .search-field { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border-radius: 999px; background: var(--card); color: var(--muted); }
