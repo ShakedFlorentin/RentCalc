@@ -614,7 +614,9 @@ html[dir='rtl'] .ja { text-align: right; }
 /* the whole card, read in a sheet at full height */
 .card-full { display: flex; flex-direction: column; gap: 14px; font-size: 0.9375rem; line-height: 1.55; }
 .card-full p { margin: 0; }
-.sheet-decide { position: sticky; bottom: 0; display: flex; justify-content: center; gap: 28px; direction: ltr; padding: 14px 0 calc(6px + env(safe-area-inset-bottom)); margin-top: 8px; background: linear-gradient(transparent, var(--bg) 30%); }
+/* an opaque bar: nothing scrolls visibly under or beside the buttons, and they sit in the middle of it */
+.sheet-body:has(.sheet-decide) { padding-bottom: 0; }
+.sheet-decide { position: sticky; bottom: 0; z-index: 1; display: flex; justify-content: center; align-items: center; gap: 28px; direction: ltr; margin: 8px -16px 0; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: var(--bg); border-top: 0.5px solid var(--line); }
 .card-info p { margin: 0; }
 .fact b { font-size: 0.8125rem; color: var(--muted); font-weight: 600; }
 .fact p { margin-top: 2px; }

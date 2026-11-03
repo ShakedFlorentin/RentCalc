@@ -760,12 +760,6 @@ export function CardFull({ c, prior }: { c: Candidate; prior?: number }) {
           )}
         </div>
       )}
-      {avoidsPork && c.kosher_note && (
-        <div className="fact">
-          <Label icon={UtensilsCrossed}>{t('חזיר ופירות ים')}</Label>
-          <p dir="auto">{keepRanges(c.kosher_note)}</p>
-        </div>
-      )}
       {c.todo && (
         <div className="fact">
           {c.serves ? <Label icon={ReceiptText}>{t('איך זה עובד')}</Label> : <Label icon={Target}>{t('מה עושים שם')}</Label>}
@@ -798,6 +792,12 @@ export function CardFull({ c, prior }: { c: Candidate; prior?: number }) {
         <div className="fact">
           <Label icon={Search}>{t('בביקורות')}</Label>
           <p dir="auto">{keepRanges(c.reality)}</p>
+        </div>
+      )}
+      {avoidsPork && c.kosher_note && (
+        <div className="fact">
+          <Label icon={UtensilsCrossed}>{t('חזיר ופירות ים')}</Label>
+          <p dir="auto">{keepRanges(c.kosher_note)}</p>
         </div>
       )}
       {hasBaby && c.baby_notes && (
