@@ -94,7 +94,7 @@
   flex-direction: column;
   gap: 8px;
   padding: 12px 0 calc(16px + env(safe-area-inset-bottom));
-  background: linear-gradient(transparent, var(--bg) 18px);
+  background: var(--bg);
 }
 
 /* the settings entry on the More tab */

@@ -760,11 +760,6 @@ function DraftForm(props: {
           <b>{t('מה מגישים:')}</b> <span dir="auto">{shown.serves}</span>
         </div>
       )}
-      {props.avoidsPork && d.kosher_note && (
-        <div className="small">
-          <b>{t('חזיר ופירות ים:')}</b> <span dir="auto">{shown.kosher_note}</span>
-        </div>
-      )}
       {d.todo && (
         <div className="small">
           <b>{t('מה עושים שם:')}</b> <span dir="auto">{shown.todo}</span>
@@ -778,6 +773,11 @@ function DraftForm(props: {
       {d.reality && (
         <div className="small">
           <b>{t('בביקורות:')}</b> <span dir="auto">{shown.reality}</span>
+        </div>
+      )}
+      {props.avoidsPork && d.kosher_note && (
+        <div className="small">
+          <b>{t('חזיר ופירות ים:')}</b> <span dir="auto">{shown.kosher_note}</span>
         </div>
       )}
       {props.hasBaby && d.baby_notes && (
