@@ -160,7 +160,7 @@ export function Sheet(props: { title: string; onClose: () => void; children: Rea
           <button className="sheet-close" onClick={onClose}>
             {t('סגירה')}
           </button>
-          <h2>{props.title}</h2>
+          <h2 dir="auto">{props.title}</h2>
           <span />
         </div>
         <div className="sheet-body">{props.children}</div>
