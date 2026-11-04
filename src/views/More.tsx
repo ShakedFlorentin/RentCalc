@@ -6,6 +6,7 @@ import Essentials from './Essentials'
 import Baby from './Baby'
 import Say from './Say'
 import Onboarding, { useProfile } from './Onboarding'
+import { PhotoReviewEntry } from './PlacePhotos'
 import { answersOf } from '../prefs'
 import { useTripHasBaby } from '../lib'
 import { Icon, type LucideIcon } from '../icons'
@@ -52,6 +53,7 @@ export default function More({ trip, members, userId, sub: subProp, setSub }: Pr
         </span>
         <Icon as={ChevronLeft} className="flip-ltr muted" />
       </button>
+      <PhotoReviewEntry />
       {prefsOpen && (
         <Onboarding
           userId={userId}

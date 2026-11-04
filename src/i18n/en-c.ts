@@ -313,4 +313,17 @@ export const EN_C: Record<string, string> = {
   'אין מספיק זמן להגיע לכאן מהקודם': 'Not enough time to get here from the previous stop',
   'מחוץ לשעות הפתיחה': 'Outside opening hours',
   'קרוב מדי לארוחה הקודמת': 'Too soon after the previous meal',
+  // a traveller's own photo of a place
+  'הוספת תמונה': 'Add a photo',
+  'בחירת תמונה': 'Choose a photo',
+  'לא הצלחתי לשלוח את התמונה. אפשר לנסות שוב.': "Couldn't send the photo. Please try again.",
+  'התמונה נשלחה לאישור. היא תופיע בכרטיס אחרי שנאשר אותה.': "Your photo was sent for approval. It will show on the card once we approve it.",
+  'צילמתי את התמונה בעצמי, ואני מרשה לאפליקציה להציג אותה לכל המשתמשים. אין בה אנשים שאפשר לזהות בלי הסכמתם.': 'I took this photo myself and allow the app to show it to all users. It has no recognisable people without their consent.',
+  'שליחה לאישור': 'Send for approval',
+  'תמונות לאישור': 'Photos to approve',
+  '{n} ממתינות': '{n} waiting',
+  'הפעולה לא הצליחה. אפשר לנסות שוב.': "That didn't work. Please try again.",
+  'אין תמונות שממתינות לאישור': 'No photos waiting for approval',
+  'אישור': 'Approve',
+  'דחייה': 'Reject',
 }

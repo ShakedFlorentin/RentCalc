@@ -7,11 +7,12 @@ import AddPlace from './AddPlace'
 import { CardRatings, useRatings } from './Ratings'
 import { t } from '../i18n'
 import { Empty, Sheet } from '../ui'
+import { AddPhoto } from './PlacePhotos'
 import { MediaActions } from '../media'
 import { useProfile } from './Onboarding'
 import { answersOf, hidden, score } from '../prefs'
 import { BATCH_SIZE, categoryMeans, learnTags, rankDeck } from '../rank'
-import { SkipForward, ChevronLeft, ChevronUp, Heart, Ban, X, Lightbulb, MapPin, MessageSquare, Plus, ReceiptText, Search, Sparkles, Star, Target, Timer, Users, Utensils, UtensilsCrossed, Wine, Baby } from 'lucide-react'
+import { Camera, SkipForward, ChevronLeft, ChevronUp, Heart, Ban, X, Lightbulb, MapPin, MessageSquare, Plus, ReceiptText, Search, Sparkles, Star, Target, Timer, Users, Utensils, UtensilsCrossed, Wine, Baby } from 'lucide-react'
 import { reducedMotion, springTo } from '../spring'
 import { AUDIENCE_ICON, CARD_ICON, Icon, type LucideIcon } from '../icons'
 import '../styles/game.css'
@@ -742,6 +743,7 @@ function Card({ c, top, likedBy, prior, onSwipe }: { c: Candidate; top: boolean;
 export function CardFull({ c, prior }: { c: Candidate; prior?: number }) {
   const hasBaby = useTripHasBaby(c.trip_id)
   const avoidsPork = useTripAvoidsPorkSeafood(c.trip_id)
+  const [addPhoto, setAddPhoto] = useState(false)
   return (
     <>
       <Tags c={c} />
@@ -814,7 +816,14 @@ export function CardFull({ c, prior }: { c: Candidate; prior?: number }) {
       )}
       {/* what travellers on earlier trips thought, once someone has rated it */}
       <CardRatings libraryId={c.library_id} prior={prior} />
-      <MediaActions name={c.name} maps={c.maps_url} website={c.website_url} m={c} />
+      <MediaActions name={c.name} maps={c.maps_url} website={c.website_url} m={c}>
+        {c.library_id && (
+          <button className="action" onClick={() => setAddPhoto(true)}>
+            <Icon as={Camera} /> <span>{t('הוספת תמונה')}</span>
+          </button>
+        )}
+      </MediaActions>
+      {addPhoto && c.library_id && <AddPhoto name={c.name} tripId={c.trip_id} libraryId={c.library_id} onClose={() => setAddPhoto(false)} />}
       {c.sources.some((s) => safeUrl(s)) && (
         <div className="row">
           {c.sources.flatMap((s) => safeUrl(s) ?? []).slice(0, 4).map((s, i) => (
