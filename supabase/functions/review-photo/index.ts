@@ -7,6 +7,7 @@ const cors = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const PATH = /^[0-9a-f-]{36}\/[0-9a-f-]{36}\/[0-9a-f-]{36}\.jpg$/
 const FROM = 'photo-submissions'
 const TO = 'card-photos'
 
@@ -30,6 +31,8 @@ Deno.serve(async (req) => {
   const { data: s } = await admin.from('photo_submissions').select('id,library_id,path,status').eq('id', id).maybeSingle()
   if (!s) return json({ error: 'not found' }, 404)
   if (s.status !== 'pending') return json({ error: 'already reviewed' }, 409)
+  // the row's path goes to the storage calls below, which run with full rights
+  if (!PATH.test(s.path)) return json({ error: 'bad path' }, 400)
   const done = { reviewed_at: new Date().toISOString(), reviewed_by: auth.user.id }
 
   if (!body.approve) {

@@ -50,7 +50,7 @@ create policy photo_submissions_add on public.photo_submissions for insert to au
     user_id = (select auth.uid())
     and public.is_trip_member(trip_id)
     and status = 'pending' and public_url is null and reviewed_at is null and reviewed_by is null
-    and path like trip_id::text || '/' || (select auth.uid())::text || '/%'
+    and path ~ ('^' || trip_id::text || '/' || (select auth.uid())::text || '/[0-9a-f-]{36}\.jpg$')
     and exists (select 1 from public.candidates c where c.trip_id = photo_submissions.trip_id and c.library_id = photo_submissions.library_id)
     and public.my_pending_photos() < 20
   );
