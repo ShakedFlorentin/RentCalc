@@ -34,6 +34,14 @@ alter table public.photo_submissions enable row level security;
 revoke all on public.photo_submissions from anon, authenticated;
 grant select, insert on public.photo_submissions to authenticated;
 
+-- a function, because a policy that reads its own table recurses
+create or replace function public.my_pending_photos() returns bigint
+language sql stable security definer set search_path to '' as $$
+  select count(*) from public.photo_submissions p where p.user_id = auth.uid() and p.status = 'pending'
+$$;
+revoke execute on function public.my_pending_photos() from public, anon;
+grant execute on function public.my_pending_photos() to authenticated;
+
 create policy photo_submissions_read on public.photo_submissions for select to authenticated
   using (user_id = (select auth.uid()) or public.is_app_admin());
 -- a member, for a place on their trip, in their own folder, nothing pre-approved, at most 20 waiting at a time
@@ -44,7 +52,7 @@ create policy photo_submissions_add on public.photo_submissions for insert to au
     and status = 'pending' and public_url is null and reviewed_at is null and reviewed_by is null
     and path like trip_id::text || '/' || (select auth.uid())::text || '/%'
     and exists (select 1 from public.candidates c where c.trip_id = photo_submissions.trip_id and c.library_id = photo_submissions.library_id)
-    and (select count(*) from public.photo_submissions p where p.user_id = (select auth.uid()) and p.status = 'pending') < 20
+    and public.my_pending_photos() < 20
   );
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
