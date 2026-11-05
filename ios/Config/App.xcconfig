@@ -1,0 +1,7 @@
+// Shared build settings for the app and its widgets.
+// The App Group lets the widgets read the trip the app last loaded (Shared/WidgetSnapshot.swift).
+APP_GROUP = group.com.shakedflorentin.japantrip
+
+// Supabase project address and public (anon) key: made from ../.env by `make config` (see README.md).
+// xcconfig treats // as a comment, so the host is kept without https://
+#include? "Supabase.xcconfig"

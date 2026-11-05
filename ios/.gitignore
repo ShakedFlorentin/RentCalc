@@ -1,0 +1,6 @@
+JapanTrip.xcodeproj/
+Config/Supabase.xcconfig
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/

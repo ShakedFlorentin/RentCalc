@@ -1,0 +1,87 @@
+# XcodeGen spec for the native iPhone app. On the Mac: `brew install xcodegen && xcodegen` in this folder,
+# then open JapanTrip.xcodeproj. The .xcodeproj is generated, never edited or committed.
+name: JapanTrip
+options:
+  bundleIdPrefix: com.shakedflorentin
+  deploymentTarget:
+    iOS: "17.0"
+  developmentLanguage: he
+  createIntermediateGroups: true
+
+configFiles:
+  Debug: Config/App.xcconfig
+  Release: Config/App.xcconfig
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    # your Apple team: set once in Xcode (Signing & Capabilities) or here
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+
+packages:
+  Supabase:
+    url: https://github.com/supabase/supabase-swift
+    from: "2.20.0"
+
+targets:
+  JapanTrip:
+    type: application
+    platform: iOS
+    sources:
+      - path: App
+      - path: Shared
+    dependencies:
+      - package: Supabase
+      - target: JapanTripWidgets
+        embed: true
+    entitlements:
+      path: App/JapanTrip.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - $(APP_GROUP)
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: יפן
+        CFBundleDevelopmentRegion: he
+        CFBundleLocalizations: [he]
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        SupabaseHost: $(SUPABASE_HOST)
+        SupabaseKey: $(SUPABASE_KEY)
+        AppGroup: $(APP_GROUP)
+        WebAppURL: https://shakedflorentin.github.io/trip-planner/
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.shakedflorentin.japantrip
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        TARGETED_DEVICE_FAMILY: "1"
+
+  JapanTripWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Widgets
+      - path: Shared
+    entitlements:
+      path: Widgets/JapanTripWidgets.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - $(APP_GROUP)
+    info:
+      path: Widgets/Info.plist
+      properties:
+        CFBundleDisplayName: יפן
+        CFBundleDevelopmentRegion: he
+        CFBundleLocalizations: [he]
+        AppGroup: $(APP_GROUP)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.shakedflorentin.japantrip.widgets
+        TARGETED_DEVICE_FAMILY: "1"
